@@ -1,5 +1,9 @@
+--extra-index-url=http://buildsba.lco.gtn/python
 django
 psycopg2
 flake8
 nose
 django-nose
+django-pgsphere
+djangorestframework
+django-filter
