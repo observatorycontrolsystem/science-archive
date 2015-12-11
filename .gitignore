@@ -1,3 +1,6 @@
+# VIM swap files
+*.swp
+*.swo
 # ide stuff
 .idea/
 # scratch directory
