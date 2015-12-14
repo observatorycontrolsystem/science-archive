@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'pgsphere',
     'rest_framework',
-    'django_nose'
+    'django_nose',
+    'archive.frames'
 ]
 
 MIDDLEWARE_CLASSES = [
