@@ -12,9 +12,9 @@ class Frame(models.Model):
         ('SKYFLAT', 'SKYFLAT'),
         ('STANDARD', 'STANDARD'),
     )
-    filename = models.CharField(max_length=1000, db_index=True)
+    filename = models.CharField(max_length=1000, db_index=True, unique=True)
     area = SBoxField()
-    related_frames = models.ManyToManyField('self')
+    related_frames = models.ManyToManyField('self', blank=True)
     DATE_OBS = models.DateTimeField(
         db_index=True,
         help_text="Time of observation in UTC. FITS header: DATE-OBS",
