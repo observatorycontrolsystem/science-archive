@@ -15,49 +15,52 @@ class Frame(models.Model):
     filename = models.CharField(max_length=1000, db_index=True)
     area = SBoxField()
     related_frames = models.ManyToManyField('self')
-    date_observed = models.DateTimeField(
+    DATE_OBS = models.DateTimeField(
         db_index=True,
-        help_text="Time of observation in UTC. FITS header: DATE-OBS"
+        help_text="Time of observation in UTC. FITS header: DATE-OBS",
+        verbose_name="DATE-OBS"
     )
-    user = models.CharField(
+    USERID = models.CharField(
         max_length=200,
         db_index=True,
         help_text="Textual user id of the frame. FITS header: USERID"
     )
-    proposal = models.CharField(
+    PROPID = models.CharField(
         max_length=200,
         db_index=True,
         help_text="Textual proposal id. FITS header: PROPID"
     )
-    instrument = models.CharField(
+    INSTRUME = models.CharField(
         max_length=10,
         db_index=True,
         help_text="Instrument used. FITS header: INSTRUME"
     )
-    object_name = models.CharField(
+    OBJECT = models.CharField(
         max_length=200,
         db_index=True,
         help_text="Target object name. FITS header: OBJECT"
     )
-    site = models.CharField(
+    SITE = models.CharField(
         max_length=3,
         help_text="Originating site. FITS header: SITEID"
     )
-    telescope = models.CharField(
+    TELID = models.CharField(
         max_length=4,
         help_text="Originating telescope. FITS header: TELID"
     )
-    exposure_time = models.IntegerField(
-        help_text="Exposure time, in MS. FITS header: EXPTIME"
+    EXPTIME = models.DecimalField(
+        max_digits=10,
+        decimal_places=5,
+        help_text="Exposure time, in seconds. FITS header: EXPTIME"
     )
-    filter_used = models.CharField(
+    FILTER = models.CharField(
         max_length=100,
         help_text="Filter used. FITS header: FILTER"
     )
-    proprietary_until = models.DateTimeField(
+    L1PUBDAT = models.DateTimeField(
         help_text="The date the frame becomes public. FITS header: L1PUBDAT"
     )
-    observation_type = models.CharField(
+    OBSTYPE = models.CharField(
         max_length=20,
         choices=OBSERVATION_TYPES,
         help_text="Type of observation. FITS header: OBSTYPE"
