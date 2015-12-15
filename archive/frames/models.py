@@ -40,7 +40,7 @@ class Frame(models.Model):
         db_index=True,
         help_text="Target object name. FITS header: OBJECT"
     )
-    SITE = models.CharField(
+    SITEID = models.CharField(
         max_length=3,
         help_text="Originating site. FITS header: SITEID"
     )
