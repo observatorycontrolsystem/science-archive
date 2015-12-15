@@ -7,11 +7,6 @@ class VersionSerializer(serializers.ModelSerializer):
         model = Version
         fields = ('id', 'timestamp', 'key', 'md5')
 
-    def create(self, validated_data):
-        print(validated_data)
-        version = Version.objects.create(**validated_data)
-        return version
-
 
 class FrameSerializer(serializers.ModelSerializer):
     version_set = VersionSerializer(many=True)
