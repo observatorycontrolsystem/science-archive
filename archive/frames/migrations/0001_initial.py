@@ -13,6 +13,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
+        ('pgsphere', '0001_initial')
     ]
 
     operations = [
