@@ -29,11 +29,12 @@ class FrameSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         version_data = validated_data.pop('version_set')
         header_data = validated_data.pop('header')
-        try:
-            frame = Frame.objects.get(filename=validated_data['filename'])
+        frame, created = Frame.objects.get_or_create(
+            defaults=validated_data,
+            filename=validated_data['filename']
+        )
+        if not created:
             frame = Frame(id=frame.id, **validated_data)
-        except Frame.DoesNotExist:
-            frame = Frame(**validated_data)
         frame.save()
         for version in version_data:
             Version.objects.create(frame=frame, **version)
