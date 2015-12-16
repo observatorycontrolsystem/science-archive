@@ -27,16 +27,13 @@ class FrameSerializer(serializers.ModelSerializer):
         )
 
     def create(self, validated_data):
+        version_data = validated_data.pop('version_set')
         try:
             frame = Frame.objects.get(filename=validated_data['filename'])
+            frame = Frame(id=frame.id, **validated_data)
         except Frame.DoesNotExist:
-            frame = Frame(filename=validated_data['filename'])
-        frame.area = tuple([tuple(x) for x in validated_data['area']])
-        for field in ['DATE_OBS', 'USERID', 'PROPID', 'INSTRUME',
-                      'OBJECT', 'SITEID', 'TELID', 'EXPTIME', 'FILTER',
-                      'L1PUBDAT', 'OBSTYPE']:
-                        setattr(frame, field, validated_data[field])
+            frame = Frame(**validated_data)
         frame.save()
-        for version in self.validated_data['version_set']:
+        for version in version_data:
             Version.objects.create(frame=frame, **version)
         return frame
