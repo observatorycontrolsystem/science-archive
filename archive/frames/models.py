@@ -72,7 +72,7 @@ class Frame(models.Model):
 
 
 class Headers(models.Model):
-    data = JSONField()
+    data = JSONField(default=dict)
     frame = models.OneToOneField(Frame)
 
 

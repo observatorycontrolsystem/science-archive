@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from archive.frames.models import Frame, Version
+from archive.frames.models import Frame, Version, Headers
 
 
 class VersionSerializer(serializers.ModelSerializer):
@@ -28,6 +28,7 @@ class FrameSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         version_data = validated_data.pop('version_set')
+        header_data = validated_data.pop('header')
         try:
             frame = Frame.objects.get(filename=validated_data['filename'])
             frame = Frame(id=frame.id, **validated_data)
@@ -36,4 +37,7 @@ class FrameSerializer(serializers.ModelSerializer):
         frame.save()
         for version in version_data:
             Version.objects.create(frame=frame, **version)
+        header, created = Headers.objects.get_or_create(frame=frame)
+        header.data = header_data
+        header.save()
         return frame
