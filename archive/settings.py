@@ -86,6 +86,7 @@ DATABASES = {
         'PASSWORD': 'postgres',
         'HOST': 'postgres',
         'PORT': '',
+        'ATOMIC_REQUESTS': True,
     }
 }
 

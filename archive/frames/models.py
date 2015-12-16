@@ -65,6 +65,7 @@ class Frame(models.Model):
         choices=OBSERVATION_TYPES,
         help_text="Type of observation. FITS header: OBSTYPE"
     )
+    modified = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.filename
