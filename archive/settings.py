@@ -157,6 +157,13 @@ STATIC_URL = '/static/'
 
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
+BUCKET = 'lcogtarchivetest'
+
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 100
+}
+
 try:
     from local_settings import *
 except ImportError:

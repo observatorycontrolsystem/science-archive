@@ -3,9 +3,11 @@ from archive.frames.models import Frame, Version, Headers
 
 
 class VersionSerializer(serializers.ModelSerializer):
+    url = serializers.CharField(read_only=True)
+
     class Meta:
         model = Version
-        fields = ('id', 'timestamp', 'key', 'md5')
+        fields = ('id', 'timestamp', 'key', 'md5', 'url')
 
 
 class FrameSerializer(serializers.ModelSerializer):

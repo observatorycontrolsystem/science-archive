@@ -1,7 +1,7 @@
 from archive.frames.models import Frame
 from archive.frames.serializers import FrameSerializer
 from archive.frames.utils import remove_dashes_from_keys, fits_keywords_only
-from rest_framework.views import APIView
+from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import status
 import logging
@@ -9,11 +9,9 @@ import logging
 logger = logging.getLogger()
 
 
-class FrameListView(APIView):
-    def get(self, request, format=None):
-        frames = Frame.objects.all()
-        serializer = FrameSerializer(frames, many=True)
-        return Response(serializer.data)
+class FrameListView(generics.ListCreateAPIView):
+    queryset = Frame.objects.all()
+    serializer_class = FrameSerializer
 
     def post(self, request, format=None):
         filename = request.data.get('filename')

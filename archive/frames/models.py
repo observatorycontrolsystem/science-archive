@@ -1,6 +1,9 @@
 from django.db import models
 from django.contrib.postgres.fields import JSONField
 from pgsphere.fields import SBoxField
+import hashlib
+import boto3
+from django.conf import settings
 
 
 class Frame(models.Model):
@@ -81,6 +84,13 @@ class Frame(models.Model):
     def __str__(self):
         return self.filename
 
+    @property
+    def s3_key(self):
+        return '/'.join((
+            hashlib.sha1(self.filename.encode('utf-8')).hexdigest()[0:4],
+            self.filename
+        ))
+
 
 class Headers(models.Model):
     data = JSONField(default=dict)
@@ -92,3 +102,16 @@ class Version(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     key = models.CharField(max_length=32, unique=True)
     md5 = models.CharField(max_length=32, unique=True)
+
+    @property
+    def url(self):
+        client = boto3.client('s3')
+        params = {
+            'Bucket': settings.BUCKET,
+            'Key': self.frame.s3_key,
+            'VersionId': self.key
+        }
+        return client.generate_presigned_url('get_object', Params=params)
+
+    def __str__(self):
+        return '{0}:{1}'.format(self.timestamp, self.key)
