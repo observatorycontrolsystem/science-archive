@@ -36,3 +36,8 @@ class FrameListView(generics.ListCreateAPIView):
             logger_tags['tags']['errors'] = frame_serializer.errors
             logger.fatal('Request to process frame failed', extra=logger_tags)
             return Response(frame_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class FrameView(generics.RetrieveAPIView):
+    queryset = Frame.objects.all()
+    serializer_class = FrameSerializer
