@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'pgsphere',
     'rest_framework',
     'django_nose',
+    'crispy_forms',
     'archive.frames'
 ]
 

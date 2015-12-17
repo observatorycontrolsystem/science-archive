@@ -4,6 +4,7 @@ from archive.frames.utils import remove_dashes_from_keys, fits_keywords_only
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework import filters
 import logging
 
 logger = logging.getLogger()
@@ -12,6 +13,14 @@ logger = logging.getLogger()
 class FrameListView(generics.ListCreateAPIView):
     queryset = Frame.objects.all()
     serializer_class = FrameSerializer
+    filter_backends = (
+        filters.DjangoFilterBackend,
+        filters.OrderingFilter,
+    )
+    filter_fields = ('id', 'filename', 'DATE_OBS', 'USERID',
+                     'PROPID', 'INSTRUME', 'OBJECT')
+    ordering_fields = ('id', 'filename', 'DATE_OBS', 'USERID',
+                       'PROPID', 'INSTRUME', 'OBJECT')
 
     def post(self, request, format=None):
         filename = request.data.get('filename')
