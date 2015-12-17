@@ -2,8 +2,8 @@
 django
 psycopg2
 flake8
-nose
 django-nose
 https://github.com/LCOGT/django-pgsphere/archive/master.zip
 djangorestframework
 django-filter
+lcogt-logging

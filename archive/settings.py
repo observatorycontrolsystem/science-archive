@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 """
 
 import os
+from lcogt_logging import LCOGTFormatter
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -112,6 +113,28 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'default': {
+            '()': LCOGTFormatter
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'default'
+        }
+    },
+    'loggers': {
+        '': {
+            'handlers': ['console'],
+            'level': 'INFO'
+        }
+    }
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.9/topics/i18n/
