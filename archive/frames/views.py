@@ -22,7 +22,7 @@ class FrameFilter(django_filters.FilterSet):
 
 
 class FrameListView(generics.ListCreateAPIView):
-    queryset = Frame.objects.exclude(DATE_OBS__isnull=True)
+    queryset = Frame.objects.exclude(version=None)
     serializer_class = FrameSerializer
     filter_backends = (
         filters.DjangoFilterBackend,

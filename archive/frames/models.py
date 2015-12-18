@@ -91,6 +91,13 @@ class Frame(models.Model):
             self.filename
         ))
 
+    @property
+    def url(self):
+        """
+        Returns the download URL for the latest version
+        """
+        return self.version_set.first().url
+
 
 class Headers(models.Model):
     data = JSONField(default=dict)
@@ -102,6 +109,9 @@ class Version(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     key = models.CharField(max_length=32, unique=True)
     md5 = models.CharField(max_length=32, unique=True)
+
+    class Meta:
+        ordering = ['-timestamp']
 
     @property
     def url(self):

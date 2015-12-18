@@ -13,6 +13,7 @@ class VersionSerializer(serializers.ModelSerializer):
 class FrameSerializer(serializers.ModelSerializer):
     filename = serializers.CharField(required=True)
     version_set = VersionSerializer(many=True)
+    url = serializers.CharField(read_only=True)
     area = serializers.ListField(
         child=serializers.ListField(
             child=serializers.FloatField()
@@ -23,7 +24,7 @@ class FrameSerializer(serializers.ModelSerializer):
         model = Frame
         fields = (
             'id', 'filename', 'area', 'related_frames', 'version_set',
-            'DATE_OBS', 'USERID', 'PROPID', 'INSTRUME',
+            'url', 'DATE_OBS', 'USERID', 'PROPID', 'INSTRUME',
             'OBJECT', 'SITEID', 'TELID', 'EXPTIME', 'FILTER',
             'L1PUBDAT', 'OBSTYPE',
         )
