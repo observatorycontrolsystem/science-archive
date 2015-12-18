@@ -6,19 +6,29 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import filters
 import logging
+import django_filters
 
 logger = logging.getLogger()
 
 
+class FrameFilter(django_filters.FilterSet):
+    start = django_filters.DateTimeFilter(name='DATE_OBS', lookup_type='gte')
+    end = django_filters.DateTimeFilter(name='DATE_OBS', lookup_type='lte')
+
+    class Meta:
+        model = Frame
+        fields = ['filename', 'DATE_OBS', 'USERID', 'PROPID',
+                  'INSTRUME', 'OBJECT', 'start', 'end']
+
+
 class FrameListView(generics.ListCreateAPIView):
-    queryset = Frame.objects.all()
+    queryset = Frame.objects.exclude(DATE_OBS__isnull=True)
     serializer_class = FrameSerializer
     filter_backends = (
         filters.DjangoFilterBackend,
         filters.OrderingFilter,
     )
-    filter_fields = ('id', 'filename', 'DATE_OBS', 'USERID',
-                     'PROPID', 'INSTRUME', 'OBJECT')
+    filter_class = FrameFilter
     ordering_fields = ('id', 'filename', 'DATE_OBS', 'USERID',
                        'PROPID', 'INSTRUME', 'OBJECT')
 
