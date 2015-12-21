@@ -14,6 +14,8 @@ class Frame(models.Model):
         ('EXPOSE', 'EXPOSE'),
         ('SKYFLAT', 'SKYFLAT'),
         ('STANDARD', 'STANDARD'),
+        ('TRAILED', 'TRAILED'),
+        ('GUIDE', 'GUIDE'),
     )
     filename = models.CharField(max_length=1000, db_index=True, unique=True)
     area = SBoxField(null=True)
