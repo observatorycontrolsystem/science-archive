@@ -9,3 +9,5 @@ django-filter
 lcogt-logging
 boto3
 django-crispy-forms
+factory-boy
+pytz

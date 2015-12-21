@@ -133,6 +133,11 @@ LOGGING = {
         '': {
             'handlers': ['console'],
             'level': 'INFO'
+        },
+        'django.request': {
+            'handLers': ['console'],
+            'level': 'INFO',
+            'propogate': True,
         }
     }
 }
