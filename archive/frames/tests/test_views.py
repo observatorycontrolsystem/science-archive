@@ -1,4 +1,6 @@
 from archive.frames.tests.factories import FrameFactory
+from unittest.mock import MagicMock
+import boto3
 from django.core.urlresolvers import reverse
 from django.test import TestCase
 import json
@@ -8,6 +10,7 @@ import random
 
 class TestFrameGet(TestCase):
     def setUp(self):
+        boto3.client = MagicMock()
         self.frames = FrameFactory.create_batch(5)
         self.frame = self.frames[0]
 
@@ -30,6 +33,7 @@ class TestFrameGet(TestCase):
 
 class TestFramePost(TestCase):
     def setUp(self):
+        boto3.client = MagicMock()
         self.header_json = json.load(open(os.path.join(os.path.dirname(__file__), 'frames.json')))
         f = self.header_json[random.choice(list(self.header_json.keys()))]
         f['filename'] = 'testfits.fits'
