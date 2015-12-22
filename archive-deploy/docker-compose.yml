@@ -1,0 +1,17 @@
+web:
+    image: docker.lcogt.net/archive
+    ports:
+        - "80:80"
+    links:
+        - postgres
+
+postgres:
+    image: docker.lcogt.net/postgres-pgsphere
+    ports:
+        - "5432:5432"
+    environment:
+        POSTGRES_PASSWORD: postgres
+        PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+        - "/home/eng/docker/archive/postgres:/var/lib/postgresql/data"
+

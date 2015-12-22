@@ -1,0 +1,29 @@
+FROM python:3.5
+MAINTAINER Austin Riba <ariba@lcogt.net>
+
+ENV PYTHONBUFFERED 1
+ENV APPLICATION_ROOT /app/
+
+RUN apt-get update
+RUN apt-get install -y nginx supervisor
+
+RUN mkdir -p $APPLICATION_ROOT
+ADD . $APPLICATION_ROOT
+WORKDIR $APPLICATION_ROOT
+
+run echo "daemon off;" >> /etc/nginx/nginx.conf
+run rm /etc/nginx/sites-enabled/default
+run cp archive-deploy/nginx-app.conf /etc/nginx/sites-enabled/
+run cp archive-deploy/supervisor-app.conf /etc/supervisor/conf.d/
+run cp archive-deploy/local_settings.py $APPLICATION_ROOT/archive/
+
+RUN pip install uwsgi
+RUN pip install -r requirements.txt --trusted-host buildsba.lco.gtn
+
+RUN python3 manage.py collectstatic --noinput
+
+expose 80
+cmd ["supervisord", "-n"]
+
+
+

@@ -5,6 +5,7 @@ flake8
 django-nose
 https://github.com/LCOGT/django-pgsphere/archive/master.zip
 djangorestframework
+django-extensions
 django-filter
 lcogt-logging
 boto3
