@@ -4,6 +4,11 @@ web:
         - "80:80"
     links:
         - postgres
+    environment:
+        AWS_ACCESS_KEY_ID: AKIAIZBYNSZZGYN3EAQQ
+        AWS_SECRET_ACCESS_KEY: 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
+        AWS_DEFAULT_REGION: us-west-2
+        BROKER_URL: redis://localhost
 
 postgres:
     image: docker.lcogt.net/postgres-pgsphere
@@ -12,10 +17,6 @@ postgres:
     environment:
         POSTGRES_PASSWORD: postgres
         PGDATA: /var/lib/postgresql/data/pgdata
-        AWS_ACCESS_KEY_ID: AKIAIZBYNSZZGYN3EAQQ
-        AWS_SECRET_ACCESS_KEY: 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
-        AWS_DEFAULT_REGION: us-west-2
-        BROKER_URL: redis://localhost
     volumes:
         - "/home/eng/docker/archive/postgres:/var/lib/postgresql/data"
 
