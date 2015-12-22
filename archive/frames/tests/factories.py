@@ -124,3 +124,14 @@ class FrameFactory(factory.django.DjangoModelFactory):
         if extracted:
             for frame in extracted:
                 self.related_frames.add(frame)
+
+    @factory.post_generation
+    def version_set(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for version in extracted:
+                self.version_set.add(version)
+        else:
+            version = VersionFactory(frame=self)
+            self.version_set.add(version)
