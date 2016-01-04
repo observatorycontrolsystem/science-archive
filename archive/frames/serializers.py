@@ -19,6 +19,12 @@ class FrameSerializer(serializers.ModelSerializer):
             child=serializers.FloatField()
         )
     )
+    related_frames = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Frame.objects.all(),
+        required=False,
+        style={'base_template': 'input.html'}
+    )
 
     class Meta:
         model = Frame
