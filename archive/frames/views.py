@@ -14,11 +14,12 @@ logger = logging.getLogger()
 class FrameFilter(django_filters.FilterSet):
     start = django_filters.DateTimeFilter(name='DATE_OBS', lookup_type='gte')
     end = django_filters.DateTimeFilter(name='DATE_OBS', lookup_type='lte')
+    area = django_filters.CharFilter(lookup_type='contains')
 
     class Meta:
         model = Frame
         fields = ['filename', 'DATE_OBS', 'USERID', 'PROPID',
-                  'INSTRUME', 'OBJECT', 'start', 'end']
+                  'INSTRUME', 'OBJECT', 'start', 'end', 'area']
 
 
 class FrameListView(generics.ListCreateAPIView):
