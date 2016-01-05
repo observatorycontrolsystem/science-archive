@@ -23,7 +23,7 @@ class FrameFilter(django_filters.FilterSet):
 
 
 class FrameListView(generics.ListCreateAPIView):
-    queryset = Frame.objects.exclude(version=None)
+    queryset = Frame.objects.exclude(version=None).prefetch_related('version_set')
     serializer_class = FrameSerializer
     filter_backends = (
         filters.DjangoFilterBackend,
