@@ -9,6 +9,8 @@ web:
         AWS_SECRET_ACCESS_KEY: vIN9d1kNm+9Ny7dAe6au2Ua9cGoy76WZ63zpAH2K
         AWS_DEFAULT_REGION: us-west-2
         BROKER_URL: redis://localhost
+        BOSUN_HOSTNAME: alerts.lco.gtn
+        OPENTSDB_HOSTNANE: opentsdb.lco.gtn
 
 postgres:
     image: docker.lcogt.net/postgres-pgsphere

@@ -7,6 +7,8 @@ from rest_framework import status
 from rest_framework import filters
 import logging
 import django_filters
+from opentsdb_python_metrics.metric_wrappers import send_tsdb_metric
+
 
 logger = logging.getLogger()
 
@@ -34,6 +36,7 @@ class FrameListView(generics.ListCreateAPIView):
                        'PROPID', 'INSTRUME', 'OBJECT')
 
     def post(self, request, format=None):
+        send_tsdb_metric('archive.frame_posted', 1)
         filename = request.data.get('filename')
         logger_tags = {'tags': {'filename': filename}}
         logger.info('Got request to process frame', extra=logger_tags)
