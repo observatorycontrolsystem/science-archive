@@ -19,11 +19,10 @@ class FrameSerializer(serializers.ModelSerializer):
             child=serializers.FloatField()
         )
     )
-    related_frames = serializers.HyperlinkedRelatedField(
+    related_frames = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Frame.objects.all(),
         required=False,
-        view_name='frame-detail',
         style={'base_template': 'input.html'}
     )
 
