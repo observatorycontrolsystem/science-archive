@@ -13,3 +13,4 @@ django-crispy-forms
 factory-boy
 pytz
 opentsdb_python_metrics
+markdown
