@@ -1,10 +1,10 @@
 from archive.frames.models import Frame
 from archive.frames.serializers import FrameSerializer
 from archive.frames.utils import remove_dashes_from_keys, fits_keywords_only
-from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import filters
+from rest_framework import viewsets
 import logging
 import django_filters
 from opentsdb_python_metrics.metric_wrappers import send_tsdb_metric
@@ -24,7 +24,7 @@ class FrameFilter(django_filters.FilterSet):
                   'INSTRUME', 'OBJECT', 'start', 'end', 'area']
 
 
-class FrameListView(generics.ListCreateAPIView):
+class FrameViewSet(viewsets.ModelViewSet):
     queryset = Frame.objects.exclude(version=None).prefetch_related('version_set')
     serializer_class = FrameSerializer
     filter_backends = (
@@ -35,7 +35,7 @@ class FrameListView(generics.ListCreateAPIView):
     ordering_fields = ('id', 'filename', 'DATE_OBS', 'USERID',
                        'PROPID', 'INSTRUME', 'OBJECT')
 
-    def post(self, request, format=None):
+    def create(self, request):
         send_tsdb_metric('archive.frame_posted', 1)
         filename = request.data.get('filename')
         logger_tags = {'tags': {'filename': filename}}
@@ -50,8 +50,3 @@ class FrameListView(generics.ListCreateAPIView):
             logger_tags['tags']['errors'] = frame_serializer.errors
             logger.fatal('Request to process frame failed', extra=logger_tags)
             return Response(frame_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class FrameView(generics.RetrieveAPIView):
-    queryset = Frame.objects.all()
-    serializer_class = FrameSerializer
