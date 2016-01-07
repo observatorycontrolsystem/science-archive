@@ -25,6 +25,24 @@ class FrameFilter(django_filters.FilterSet):
 
 
 class FrameViewSet(viewsets.ModelViewSet):
+    """
+    `/frames/` Returns a list of frames.
+
+    `/frames/<id>/` Returns a single frame.
+
+    The `/frames/` resource accepts several query paramters that can be
+    used to filter the returned results. These parameters are: `filename`,
+    `DATE-OBS`, `USERID`, `PROPID`, `INSTRUME`, `OBJECT`, `start`, `end`, `area`.
+
+    `start` and `end` accept dates from which to return data (via `DATE-OBS`). Ex:
+    `?start=2016-10-24&end=2016-10-25`
+
+    `area` accepts a ra, dec pair in the form of (RA,DEC). Ex:
+    `?area=(55.24,-8.4)`
+
+    All other fields use equality based filtering. Ex:
+    `?USERID=austin.riba&OBJECT=M42`
+    """
     queryset = Frame.objects.exclude(version=None).prefetch_related('version_set')
     serializer_class = FrameSerializer
     filter_backends = (
