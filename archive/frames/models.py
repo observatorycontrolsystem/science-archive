@@ -18,7 +18,7 @@ class Frame(models.Model):
         ('GUIDE', 'GUIDE'),
     )
     filename = models.CharField(max_length=1000, db_index=True, unique=True)
-    area = SBoxField(null=True)
+    area = SBoxField(blank=True, null=True)
     related_frames = models.ManyToManyField('self', blank=True)
     DATE_OBS = models.DateTimeField(
         db_index=True,
@@ -49,6 +49,11 @@ class Frame(models.Model):
         db_index=True,
         default='',
         help_text="Target object name. FITS header: OBJECT"
+    )
+    RLEVEL = models.SmallIntegerField(
+        db_index=True,
+        default=0,
+        help_text="Reduction level of the frame"
     )
     SITEID = models.CharField(
         default='',

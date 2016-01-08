@@ -21,7 +21,8 @@ class FrameFilter(django_filters.FilterSet):
     class Meta:
         model = Frame
         fields = ['filename', 'DATE_OBS', 'USERID', 'PROPID',
-                  'INSTRUME', 'OBJECT', 'start', 'end', 'area']
+                  'INSTRUME', 'OBJECT', 'start', 'end', 'area',
+                  'RLEVEL']
 
 
 class FrameViewSet(viewsets.ModelViewSet):
@@ -51,7 +52,7 @@ class FrameViewSet(viewsets.ModelViewSet):
     )
     filter_class = FrameFilter
     ordering_fields = ('id', 'filename', 'DATE_OBS', 'USERID',
-                       'PROPID', 'INSTRUME', 'OBJECT')
+                       'PROPID', 'INSTRUME', 'OBJECT', 'RLEVEL')
 
     def create(self, request):
         send_tsdb_metric('archive.frame_posted', 1)

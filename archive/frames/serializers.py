@@ -17,7 +17,8 @@ class FrameSerializer(serializers.ModelSerializer):
     area = serializers.ListField(
         child=serializers.ListField(
             child=serializers.FloatField()
-        )
+        ),
+        allow_null=True
     )
     related_frames = serializers.PrimaryKeyRelatedField(
         many=True,
@@ -30,7 +31,7 @@ class FrameSerializer(serializers.ModelSerializer):
         model = Frame
         fields = (
             'id', 'filename', 'area', 'related_frames', 'version_set',
-            'url', 'DATE_OBS', 'USERID', 'PROPID', 'INSTRUME',
+            'url', 'RLEVEL', 'DATE_OBS', 'USERID', 'PROPID', 'INSTRUME',
             'OBJECT', 'SITEID', 'TELID', 'EXPTIME', 'FILTER',
             'L1PUBDAT', 'OBSTYPE',
         )
@@ -57,7 +58,7 @@ class FrameSerializer(serializers.ModelSerializer):
 
     def create_related_frames(self, frame, data):
         related_frame_keys = [
-            'L1IDBIAS', 'L1IDDARK', 'L1IDFLAT', 'L1IDSHUT', 'L1IDMASK' 'L1IDFRNG'
+            'L1IDBIAS', 'L1IDDARK', 'L1IDFLAT', 'L1IDSHUT', 'L1IDMASK' 'L1IDFRNG', 'L1IDCAT'
         ]
         for key in related_frame_keys:
             filename = data.get(key)
