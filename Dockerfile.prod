@@ -4,8 +4,7 @@ MAINTAINER Austin Riba <ariba@lcogt.net>
 ENV PYTHONBUFFERED 1
 ENV APPLICATION_ROOT /app/
 
-RUN apt-get update
-RUN apt-get install -y nginx supervisor
+RUN apt-get update && apt-get install -y nginx supervisor gdal-bin
 
 RUN mkdir -p $APPLICATION_ROOT
 ADD . $APPLICATION_ROOT

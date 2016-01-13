@@ -1,6 +1,8 @@
 FROM python:3.5
 MAINTAINER Austin Riba <ariba@lcogt.net>
 
+RUN apt-get update && apt-get install gdal-bin
+
 ENV PYTHONBUFFERED 1
 ENV APPLICATION_ROOT /app/
 

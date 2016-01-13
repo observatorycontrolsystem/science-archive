@@ -30,6 +30,32 @@ class TestFrameGet(TestCase):
         self.assertEqual(response.json()['count'], 1)
         self.assertContains(response, self.frame.filename)
 
+    def test_filter_area(self):
+        frame = FrameFactory.create(
+            area='POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))'
+        )
+        response = self.client.get(
+            '{0}?covers=POINT(5 5)'.format(reverse('frame-list'))
+        )
+        self.assertContains(response, frame.filename)
+        response = self.client.get(
+            '{0}?covers=POINT(20 20)'.format(reverse('frame-list'))
+        )
+        self.assertNotContains(response, frame.filename)
+
+    def test_filer_area_wrap_0RA(self):
+        frame = FrameFactory.create(
+            area='POLYGON((350 -10, 350 10, 10 10, 10 -10, 350 -10))'
+        )
+        response = self.client.get(
+            '{0}?covers=POINT(0 0)'.format(reverse('frame-list'))
+        )
+        self.assertContains(response, frame.filename)
+        response = self.client.get(
+            '{0}?covers=POINT(340 0)'.format(reverse('frame-list'))
+        )
+        self.assertNotContains(response, frame.filename)
+
 
 class TestFramePost(TestCase):
     def setUp(self):
