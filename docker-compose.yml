@@ -9,9 +9,7 @@ web:
         - postgres
 
 postgres:
-    image: docker.lcogt.net/postgres-pgsphere
+    image: oslandia/pggis
     ports:
         - "5432:5432"
-    environment:
-        POSTGRES_PASSWORD: postgres
-
+    command: /sbin/my_init

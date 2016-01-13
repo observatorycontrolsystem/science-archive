@@ -38,8 +38,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'pgsphere',
+    'django.contrib.gis',
     'rest_framework',
+    'rest_framework_gis',
     'django_nose',
     'crispy_forms',
     'django_extensions',
@@ -83,12 +84,12 @@ WSGI_APPLICATION = 'archive.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'archive',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'pggis',
+        'USER': 'pggis',
+        'PASSWORD': 'pggis',
         'HOST': 'postgres',
-        'PORT': '',
+        'PORT': '5432',
         'ATOMIC_REQUESTS': True,
     }
 }

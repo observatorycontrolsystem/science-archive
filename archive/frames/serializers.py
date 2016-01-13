@@ -14,12 +14,6 @@ class FrameSerializer(serializers.ModelSerializer):
     filename = serializers.CharField(required=True)
     version_set = VersionSerializer(many=True)
     url = serializers.CharField(read_only=True)
-    area = serializers.ListField(
-        child=serializers.ListField(
-            child=serializers.FloatField()
-        ),
-        allow_null=True
-    )
     related_frames = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Frame.objects.all(),

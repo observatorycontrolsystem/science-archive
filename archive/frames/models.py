@@ -1,9 +1,8 @@
-from django.db import models
 from django.contrib.postgres.fields import JSONField
-from pgsphere.fields import SBoxField
 import hashlib
 import boto3
 from django.conf import settings
+from django.contrib.gis.db import models
 
 
 class Frame(models.Model):
@@ -18,7 +17,7 @@ class Frame(models.Model):
         ('GUIDE', 'GUIDE'),
     )
     filename = models.CharField(max_length=1000, db_index=True, unique=True)
-    area = SBoxField(blank=True, null=True)
+    area = models.PolygonField(geography=True, spatial_index=True, null=True, blank=True)
     related_frames = models.ManyToManyField('self', blank=True)
     DATE_OBS = models.DateTimeField(
         db_index=True,

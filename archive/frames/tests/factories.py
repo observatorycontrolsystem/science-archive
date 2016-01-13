@@ -49,8 +49,8 @@ def frange(x, y, step):
         yield x
         x += step
 
-RA_RANGE = [i for i in frange(0.0, 360.0, 0.01)]
-DEC_RANGE = [i for i in frange(-90.0, 90.0, 0.01)]
+RA_RANGE = [round(i, 2) for i in frange(0.0, 360.0, 0.01)]
+DEC_RANGE = [round(i, 2) for i in frange(-90.0, 90.0, 0.01)]
 
 
 def get_header_list():
@@ -66,9 +66,17 @@ class FuzzyArea(factory.fuzzy.BaseFuzzyAttribute):
         # most of our frames will have a FOV less than 5deg
         x = factory.fuzzy._random.choice(range(-5, 5))
         y = factory.fuzzy._random.choice(range(-5, 5))
-        corner1 = (ra + x, dec + y)
-        corner2 = (ra - x, dec - y)
-        return (corner1, corner2)
+        se = (ra, dec)
+        ne = (ra, dec + y)
+        nw = (ra + x, dec + y)
+        sw = (ra + x, dec)
+        return 'POLYGON(({0}, {1}, {2}, {3}, {4}))'.format(
+            '{} {}'.format(se[0], se[1]),
+            '{} {}'.format(ne[0], ne[1]),
+            '{} {}'.format(nw[0], nw[1]),
+            '{} {}'.format(sw[0], sw[1]),
+            '{} {}'.format(se[0], se[1])
+        )
 
 
 class HeaderFactory(factory.django.DjangoModelFactory):

@@ -8,15 +8,17 @@ from rest_framework import viewsets
 import logging
 import django_filters
 from opentsdb_python_metrics.metric_wrappers import send_tsdb_metric
+from rest_framework_gis.filterset import GeoFilterSet
+from rest_framework_gis import filters as geofilters
 
 
 logger = logging.getLogger()
 
 
-class FrameFilter(django_filters.FilterSet):
+class FrameFilter(GeoFilterSet):
     start = django_filters.DateTimeFilter(name='DATE_OBS', lookup_type='gte')
     end = django_filters.DateTimeFilter(name='DATE_OBS', lookup_type='lte')
-    area = django_filters.CharFilter(lookup_type='contains')
+    covers = geofilters.GeometryFilter(name='area', lookup_type='covers')
 
     class Meta:
         model = Frame

@@ -3,7 +3,6 @@ django
 psycopg2
 flake8
 django-nose
-https://github.com/LCOGT/django-pgsphere/archive/master.zip
 djangorestframework
 django-extensions
 django-filter
@@ -14,3 +13,4 @@ factory-boy
 pytz
 opentsdb_python_metrics
 markdown
+djangorestframework-gis

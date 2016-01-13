@@ -1,4 +1,4 @@
-from archive.frames.tests.factories import FrameFactory
+from archive.frames.tests.factories import FrameFactory, VersionFactory
 from unittest.mock import MagicMock
 import boto3
 from django.core.urlresolvers import reverse
@@ -36,10 +36,10 @@ class TestFramePost(TestCase):
         boto3.client = MagicMock()
         self.header_json = json.load(open(os.path.join(os.path.dirname(__file__), 'frames.json')))
         f = self.header_json[random.choice(list(self.header_json.keys()))]
-        f['filename'] = 'testfits.fits'
-        f['area'] = [[1, 2], [3, 4]]
+        f['filename'] = FrameFactory.filename.fuzz()
+        f['area'] = FrameFactory.area.fuzz()
         f['version_set'] = [
-            {'md5': '8725014a41be8cef2d12cda618fef534', 'key': 'ac44f65c61341e456ffa7898cb5f4449'}
+            {'md5': VersionFactory.md5.fuzz(), 'key': VersionFactory.key.fuzz()}
         ]
         self.single_frame_payload = f
 
@@ -47,10 +47,10 @@ class TestFramePost(TestCase):
         total_frames = len(self.header_json)
         for extension in self.header_json:
             frame_payload = self.header_json[extension]
-            frame_payload['filename'] = 'testframe-{0}.fits'.format(extension)
-            frame_payload['area'] = [[1, 1], [2, 2]]
+            frame_payload['filename'] = FrameFactory.filename.fuzz()
+            frame_payload['area'] = FrameFactory.area.fuzz()
             frame_payload['version_set'] = [
-                {'md5': 'md5-{0}'.format(extension), 'key': 'key-{0}'.format(extension)}
+                {'md5': VersionFactory.md5.fuzz(), 'key': VersionFactory.key.fuzz()}
             ]
             response = self.client.post(
                 reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
