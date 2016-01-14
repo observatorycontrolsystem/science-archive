@@ -85,9 +85,9 @@ WSGI_APPLICATION = 'archive.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'pggis',
-        'USER': 'pggis',
-        'PASSWORD': 'pggis',
+        'NAME': 'archive',
+        'USER': 'postgres',
+        'PASSWORD': 'postgres',
         'HOST': 'postgres',
         'PORT': '5432',
         'ATOMIC_REQUESTS': True,

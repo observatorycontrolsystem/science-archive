@@ -9,7 +9,6 @@ web:
         - postgres
 
 postgres:
-    image: oslandia/pggis
+    image: docker.lcogt.net/pg-archive
     ports:
         - "5432:5432"
-    command: /sbin/my_init

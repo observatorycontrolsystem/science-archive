@@ -13,10 +13,9 @@ web:
         OPENTSDB_HOSTNANE: opentsdb.lco.gtn
 
 postgres:
-    image: oslandia/pggis
+    image: docker.lcogt.net/pg-archive
     ports:
         - "5432:5432"
     volumes:
         - "/home/eng/docker/archive/postgres:/var/lib/postgresql/data"
-    command: /sbin/my_init
 
