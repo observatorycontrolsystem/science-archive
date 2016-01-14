@@ -12,3 +12,5 @@ postgres:
     image: docker.lcogt.net/pg-archive
     ports:
         - "5432:5432"
+    environment:
+        POSTGRES_PASSWORD: postgres
