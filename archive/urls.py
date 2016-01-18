@@ -39,7 +39,7 @@ class DocumentedRootRouter(routers.DefaultRouter):
         return APIRoot.as_view()
 
 router = DocumentedRootRouter()
-router.register(r'frames', views.FrameViewSet)
+router.register(r'frames', views.FrameViewSet, base_name="frames")
 
 urlpatterns = [
     url(r'^', include(router.urls)),
