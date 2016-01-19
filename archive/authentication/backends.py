@@ -11,7 +11,6 @@ class OAuth2Backend(object):
     """
 
     def authenticate(self, username=None, password=None):
-
         response = requests.post(
             settings.ODIN_OAUTH_CLIENT['TOKEN_URL'],
             data={
@@ -23,12 +22,13 @@ class OAuth2Backend(object):
             }
         )
         if response.status_code == 200:
-            access_token = response.json()['access_token']
-            refresh_token = response.json()['refresh_token']
             user, created = User.objects.get_or_create(username=username)
             Profile.objects.update_or_create(
                 user=user,
-                defaults={'access_token': access_token, 'refresh_token': refresh_token}
+                defaults={
+                    'access_token': response.json()['access_token'],
+                    'refresh_token': response.json()['refresh_token']
+                }
             )
             return user
         return None

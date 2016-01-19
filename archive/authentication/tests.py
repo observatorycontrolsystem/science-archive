@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django.conf import settings
 from unittest.mock import patch
+from archive.authentication.models import Profile
 import responses
 from django.test import TestCase
 import json
@@ -11,6 +12,8 @@ class TestAuthentication(TestCase):
     @patch('requests.post')
     def setUp(self, post_mock, get_mock):
         self.admin_user = User.objects.create_superuser('admin', 'admin@lcgot.net', 'password')
+        self.normal_user = User.objects.create(username='frodo')
+        Profile.objects.create(user=self.normal_user)
 
     @patch('requests.get')
     @patch('requests.post')
@@ -27,17 +30,10 @@ class TestAuthentication(TestCase):
             status=200,
             content_type='application/json'
         )
-        responses.add(
-            responses.GET,
-            settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
-            body=json.dumps([{'code': 'TestProposal'}]),
-            status=200,
-            content_type='application/json'
-        )
         self.assertTrue(self.client.login(username='testuser', password='password'))
         u = User.objects.get(username='testuser')
         self.assertEqual(u.profile.access_token, 'test_access')
-        self.assertIn('TestProposal', u.profile.proposals)
+        self.assertEqual(u.profile.refresh_token, 'test_refresh')
         self.assertTrue(u.auth_token)
 
         # Test relog
@@ -53,5 +49,27 @@ class TestAuthentication(TestCase):
             status=400,
             content_type='application/json'
         )
-        self.assertFalse(self.client.login(username='notauser', password='notapassword'))
-        self.assertFalse(User.objects.filter(username='notauser').exists())
+        self.assertFalse(self.client.login(username='testuser', password='password'))
+        self.assertFalse(User.objects.filter(username='testuser').exists())
+
+    @responses.activate
+    def test_proposals(self):
+        responses.add(
+            responses.GET,
+            settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
+            body=json.dumps([{'code': 'TestProposal'}]),
+            status=200,
+            content_type='application/json'
+        )
+        self.assertIn('TestProposal', self.normal_user.profile.proposals)
+
+    @responses.activate
+    def test_proposals_bad_token(self):
+        responses.add(
+            responses.GET,
+            settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
+            body=json.dumps({'error': 'Bad credentials'}),
+            status=401,
+            content_type='application/json'
+        )
+        self.assertFalse(self.normal_user.profile.proposals)

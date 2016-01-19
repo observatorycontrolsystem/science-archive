@@ -116,16 +116,8 @@ class TestFramePost(TestCase):
 
 
 class TestFrameFiltering(TestCase):
-    @responses.activate
     def setUp(self):
         boto3.client = MagicMock()
-        responses.add(
-            responses.GET,
-            settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
-            body=json.dumps([{'code': 'prop1'}]),
-            status=200,
-            content_type='application/json'
-        )
         self.admin_user = User.objects.create_superuser(username='admin', email='a@a.com', password='password')
         self.normal_user = User.objects.create(username='frodo', password='theone')
         Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
@@ -140,9 +132,16 @@ class TestFrameFiltering(TestCase):
         self.assertContains(response, self.proposal_frame.filename)
         self.assertContains(response, self.not_owned.filename)
 
+    @responses.activate
     def test_proposal_user(self):
-        self.client.login(username='frodo', password='theone')
-        print(self.normal_user.profile.proposals)
+        responses.add(
+            responses.GET,
+            settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
+            body=json.dumps([{'code': 'prop1'}]),
+            status=200,
+            content_type='application/json'
+        )
+        self.client.force_login(self.normal_user)
         response = self.client.get(reverse('frame-list'))
         self.assertContains(response, self.public_frame.filename)
         self.assertContains(response, self.proposal_frame.filename)
