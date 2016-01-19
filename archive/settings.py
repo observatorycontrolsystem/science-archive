@@ -41,10 +41,12 @@ INSTALLED_APPS = [
     'django.contrib.gis',
     'rest_framework',
     'rest_framework_gis',
+    'rest_framework.authtoken',
     'django_nose',
     'crispy_forms',
     'django_extensions',
-    'archive.frames'
+    'archive.frames',
+    'archive.authentication',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -56,6 +58,11 @@ MIDDLEWARE_CLASSES = [
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'archive.authentication.backends.OAuth2Backend',
 ]
 
 ROOT_URLCONF = 'archive.urls'
@@ -168,8 +175,22 @@ TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 BUCKET = 'lcogtarchivetest'
 
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'PAGE_SIZE': 100
+}
+
+ODIN_OAUTH_CLIENT = {
+    'CLIENT_ID': 'YncgdX6nFXhyUZgm9OeRExg2MZb5BgTgeWkKYHNE',
+    'CLIENT_SECRET': ('wQWHBIr2H1XBtRUHaTkPF1jkuyoGyU85J9F'
+                      'y1x8j1H5wyqgfIyGpuXEJMcLfeDo2T0FciD'
+                      'w1yaGgeyNQDk7dIoGosh4xGKawBr9sXidS5'
+                      '27lf3NhSOg2scYx8OJKBJ5m'),
+    'TOKEN_URL': 'http://lcogt.net/observe/o/token/',
+    'PROPOSALS_URL': 'http://lcogt.net/observe/api/proposals/',
 }
 
 try:

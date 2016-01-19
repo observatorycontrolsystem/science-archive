@@ -1,8 +1,13 @@
 from archive.frames.tests.factories import FrameFactory, VersionFactory
+from archive.authentication.models import Profile
+from django.contrib.auth.models import User
 from unittest.mock import MagicMock
-import boto3
 from django.core.urlresolvers import reverse
 from django.test import TestCase
+from django.conf import settings
+import boto3
+import responses
+import datetime
 import json
 import os
 import random
@@ -10,6 +15,8 @@ import random
 
 class TestFrameGet(TestCase):
     def setUp(self):
+        user = User.objects.create(username='admin', password='admin', is_staff=True)
+        self.client.force_login(user)
         boto3.client = MagicMock()
         self.frames = FrameFactory.create_batch(5)
         self.frame = self.frames[0]
@@ -59,6 +66,8 @@ class TestFrameGet(TestCase):
 
 class TestFramePost(TestCase):
     def setUp(self):
+        user = User.objects.create(username='admin', password='admin', is_staff=True)
+        self.client.force_login(user)
         boto3.client = MagicMock()
         self.header_json = json.load(open(os.path.join(os.path.dirname(__file__), 'frames.json')))
         f = self.header_json[random.choice(list(self.header_json.keys()))]
@@ -104,3 +113,42 @@ class TestFramePost(TestCase):
         )
         self.assertEqual(response.json()['version_set'], [{'md5': ['Version with this md5 already exists.']}])
         self.assertEqual(response.status_code, 400)
+
+
+class TestFrameFiltering(TestCase):
+    def setUp(self):
+        boto3.client = MagicMock()
+        self.admin_user = User.objects.create_superuser(username='admin', email='a@a.com', password='password')
+        self.normal_user = User.objects.create(username='frodo', password='theone')
+        Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
+        self.public_frame = FrameFactory(PROPID='public', L1PUBDAT=datetime.datetime(2000, 1, 1))
+        self.proposal_frame = FrameFactory(PROPID='prop1', L1PUBDAT=datetime.datetime(2099, 1, 1))
+        self.not_owned = FrameFactory(PROPID='notyours', L1PUBDAT=datetime.datetime(2099, 1, 1))
+
+    def test_admin_view_all(self):
+        self.client.login(username='admin', password='password')
+        response = self.client.get(reverse('frame-list'))
+        self.assertContains(response, self.public_frame.filename)
+        self.assertContains(response, self.proposal_frame.filename)
+        self.assertContains(response, self.not_owned.filename)
+
+    @responses.activate
+    def test_proposal_user(self):
+        responses.add(
+            responses.GET,
+            settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
+            body=json.dumps([{'code': 'prop1'}]),
+            status=200,
+            content_type='application/json'
+        )
+        self.client.force_login(self.normal_user)
+        response = self.client.get(reverse('frame-list'))
+        self.assertContains(response, self.public_frame.filename)
+        self.assertContains(response, self.proposal_frame.filename)
+        self.assertNotContains(response, self.not_owned.filename)
+
+    def test_anonymous_user(self):
+        response = self.client.get(reverse('frame-list'))
+        self.assertContains(response, self.public_frame.filename)
+        self.assertNotContains(response, self.proposal_frame.filename)
+        self.assertNotContains(response, self.not_owned.filename)

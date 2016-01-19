@@ -1,15 +1,16 @@
 from archive.frames.models import Frame
 from archive.frames.serializers import FrameSerializer
 from archive.frames.utils import remove_dashes_from_keys, fits_keywords_only
+from archive.frames.permissions import AdminOrReadOnly
 from rest_framework.response import Response
-from rest_framework import status
-from rest_framework import filters
-from rest_framework import viewsets
-import logging
-import django_filters
-from opentsdb_python_metrics.metric_wrappers import send_tsdb_metric
+from rest_framework import status, filters, viewsets
 from rest_framework_gis.filterset import GeoFilterSet
 from rest_framework_gis import filters as geofilters
+from django.db.models import Q
+from opentsdb_python_metrics.metric_wrappers import send_tsdb_metric
+import logging
+import django_filters
+import datetime
 
 
 logger = logging.getLogger()
@@ -46,7 +47,7 @@ class FrameViewSet(viewsets.ModelViewSet):
     All other fields use equality based filtering. Ex:
     `?USERID=austin.riba&OBJECT=M42`
     """
-    queryset = Frame.objects.exclude(version=None).prefetch_related('version_set')
+    permission_classes = (AdminOrReadOnly,)
     serializer_class = FrameSerializer
     filter_backends = (
         filters.DjangoFilterBackend,
@@ -55,6 +56,29 @@ class FrameViewSet(viewsets.ModelViewSet):
     filter_class = FrameFilter
     ordering_fields = ('id', 'filename', 'DATE_OBS', 'USERID',
                        'PROPID', 'INSTRUME', 'OBJECT', 'RLEVEL')
+
+    def get_queryset(self):
+        """
+        Filter frames depending on the logged in user.
+        Admin users see all frames, excluding ones which have no versions.
+        Authenticated users see all frames with a PUBDAT in the past, plus
+        all frames that belong to their proposals.
+        Non authenticated see all frames with a PUBDAT in the past
+        """
+        queryset = Frame.objects.exclude(version=None).prefetch_related('version_set')
+        if self.request.user.is_staff:
+            return queryset
+        elif self.request.user.is_authenticated():
+            return queryset.filter(
+                Q(PROPID__in=self.request.user.profile.proposals) |
+                Q(L1PUBDAT__lt=datetime.datetime.utcnow()) |
+                Q(L1PUBDAT=None)
+            )
+        else:
+            return queryset.filter(
+                Q(L1PUBDAT__lt=datetime.datetime.utcnow()) |
+                Q(L1PUBDAT=None)
+            )
 
     def create(self, request):
         send_tsdb_metric('archive.frame_posted', 1)
