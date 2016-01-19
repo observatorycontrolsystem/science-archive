@@ -25,21 +25,11 @@ class OAuth2Backend(object):
         if response.status_code == 200:
             access_token = response.json()['access_token']
             refresh_token = response.json()['refresh_token']
-            proposals = requests.get(
-                settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
-                headers={'Authorization': 'Bearer {}'.format(access_token)}
-            ).json()
-            try:
-                user = User.objects.get(username=username)
-                profile = user.profile
-            except User.DoesNotExist:
-                user = User(username=username)
-                user.save()
-                profile, created = Profile.objects.get_or_create(user=user)
-            profile.access_token = access_token
-            profile.refresh_token = refresh_token
-            profile.proposals = [proposal['code'] for proposal in proposals]
-            profile.save()
+            user, created = User.objects.get_or_create(username=username)
+            Profile.objects.update_or_create(
+                user=user,
+                defaults={'access_token': access_token, 'refresh_token': refresh_token}
+            )
             return user
         return None
 
