@@ -71,10 +71,14 @@ class FrameViewSet(viewsets.ModelViewSet):
         elif self.request.user.is_authenticated():
             return queryset.filter(
                 Q(PROPID__in=self.request.user.profile.proposals) |
-                Q(L1PUBDAT__lt=datetime.datetime.utcnow())
+                Q(L1PUBDAT__lt=datetime.datetime.utcnow()) |
+                Q(L1PUBDAT=None)
             )
         else:
-            return queryset.filter(L1PUBDAT__lt=datetime.datetime.utcnow())
+            return queryset.filter(
+                Q(L1PUBDAT__lt=datetime.datetime.utcnow()) |
+                Q(L1PUBDAT=None)
+            )
 
     def create(self, request):
         send_tsdb_metric('archive.frame_posted', 1)
