@@ -2,30 +2,15 @@ from archive.frames.models import Frame
 from archive.frames.serializers import FrameSerializer
 from archive.frames.utils import remove_dashes_from_keys, fits_keywords_only
 from archive.frames.permissions import AdminOrReadOnly
+from archive.frames.filters import FrameFilter
 from rest_framework.response import Response
 from rest_framework import status, filters, viewsets
-from rest_framework_gis.filterset import GeoFilterSet
-from rest_framework_gis import filters as geofilters
 from django.db.models import Q
 from opentsdb_python_metrics.metric_wrappers import send_tsdb_metric
 import logging
-import django_filters
 import datetime
 
-
 logger = logging.getLogger()
-
-
-class FrameFilter(GeoFilterSet):
-    start = django_filters.DateTimeFilter(name='DATE_OBS', lookup_type='gte')
-    end = django_filters.DateTimeFilter(name='DATE_OBS', lookup_type='lte')
-    covers = geofilters.GeometryFilter(name='area', lookup_type='covers')
-
-    class Meta:
-        model = Frame
-        fields = ['filename', 'DATE_OBS', 'USERID', 'PROPID',
-                  'INSTRUME', 'OBJECT', 'start', 'end', 'area',
-                  'RLEVEL']
 
 
 class FrameViewSet(viewsets.ModelViewSet):
