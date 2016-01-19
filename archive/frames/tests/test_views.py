@@ -128,7 +128,7 @@ class TestFrameFiltering(TestCase):
     def test_admin_view_all(self):
         self.client.login(username='admin', password='password')
         response = self.client.get(reverse('frame-list'))
-        self.assertContains(response, self.not_owned.filename)
+        self.assertContains(response, self.public_frame.filename)
         self.assertContains(response, self.proposal_frame.filename)
         self.assertContains(response, self.not_owned.filename)
 
