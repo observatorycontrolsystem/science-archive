@@ -41,7 +41,6 @@ class TestAuthentication(TestCase):
         self.assertTrue(u.auth_token)
 
         # Test relog
-
         self.client.logout()
         self.assertTrue(self.client.login(username='testuser', password='password'))
 
