@@ -52,11 +52,12 @@ class FrameSerializer(serializers.ModelSerializer):
 
     def create_related_frames(self, frame, data):
         related_frame_keys = [
-            'L1IDBIAS', 'L1IDDARK', 'L1IDFLAT', 'L1IDSHUT', 'L1IDMASK' 'L1IDFRNG', 'L1IDCAT'
+            'L1IDBIAS', 'L1IDDARK', 'L1IDFLAT', 'L1IDSHUT',
+            'L1IDMASK', 'L1IDFRNG', 'L1IDCAT', 'TARFILE',
         ]
         for key in related_frame_keys:
-            filename = data.get(key)
-            if filename and filename != 'N/A':
-                rf, created = Frame.objects.get_or_create(filename='{}.fits'.format(filename))
+            related_frame = data.get(key)
+            if related_frame:
+                rf, created = Frame.objects.get_or_create(filename=related_frame)
                 frame.related_frames.add(rf)
         frame.save()

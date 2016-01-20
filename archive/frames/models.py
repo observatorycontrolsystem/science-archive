@@ -15,6 +15,9 @@ class Frame(models.Model):
         ('STANDARD', 'STANDARD'),
         ('TRAILED', 'TRAILED'),
         ('GUIDE', 'GUIDE'),
+        ('SPECTRUM', 'SPECTRUM'),
+        ('ARC', 'ARC'),
+        ('LAMPFLAT', 'LAMPFLAT'),
     )
     filename = models.CharField(max_length=1000, db_index=True, unique=True)
     area = models.PolygonField(geography=True, spatial_index=True, null=True, blank=True)
