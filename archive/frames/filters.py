@@ -11,6 +11,6 @@ class FrameFilter(GeoFilterSet):
 
     class Meta:
         model = Frame
-        fields = ['filename', 'DATE_OBS', 'USERID', 'PROPID',
+        fields = ['filename', 'DATE_OBS', 'PROPID',
                   'INSTRUME', 'OBJECT', 'start', 'end', 'area',
                   'RLEVEL']

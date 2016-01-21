@@ -28,12 +28,6 @@ class Frame(models.Model):
         help_text="Time of observation in UTC. FITS header: DATE-OBS",
         verbose_name="DATE-OBS"
     )
-    USERID = models.CharField(
-        max_length=200,
-        db_index=True,
-        default='',
-        help_text="Textual user id of the frame. FITS header: USERID"
-    )
     PROPID = models.CharField(
         max_length=200,
         db_index=True,

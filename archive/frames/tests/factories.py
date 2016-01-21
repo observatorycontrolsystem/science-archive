@@ -110,7 +110,6 @@ class FrameFactory(factory.django.DjangoModelFactory):
         datetime.date(2015, 1, 1),
         datetime.date(2025, 1, 1)
     )
-    USERID = factory.fuzzy.FuzzyText(length=15)
     PROPID = factory.fuzzy.FuzzyText(length=10)
     INSTRUME = factory.fuzzy.FuzzyChoice(INSTRUMENTS)
     OBJECT = factory.fuzzy.FuzzyText(length=10)
