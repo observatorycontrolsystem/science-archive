@@ -1,13 +1,23 @@
 FROM python:3.5
 MAINTAINER Austin Riba <ariba@lcogt.net>
 
-RUN apt-get update && apt-get install gdal-bin
+EXPOSE 9000
+ENTRYPOINT [ "/init" ]
 
 ENV PYTHONBUFFERED 1
-ENV APPLICATION_ROOT /app/
+ENV PYTHONPATH /var/www/archive/
+ENV DJANGO_SETTINGS_MODULE archive.settings
 
-RUN mkdir -p $APPLICATION_ROOT
-WORKDIR $APPLICATION_ROOT
-ADD requirements.txt $APPLICATION_ROOT
-RUN pip install -r requirements.txt --trusted-host buildsba.lco.gtn
-ADD . $APPLICATION_ROOT
+RUN apt-get update && apt-get install -y supervisor gdal-bin
+
+COPY requirements.txt /var/www/archive/
+RUN pip install -r /var/www/archive/requirements.txt --trusted-host buildsba.lco.gtn
+
+COPY archive-deploy/init /init
+COPY archive-deploy/supervisor-app.conf /etc/supervisor/conf.d/
+COPY archive-deploy/uwsgi.ini /etc/
+COPY archive-deploy/local_settings.py /var/www/archive/archive/
+
+COPY . /var/www/archive/
+
+RUN python3 /var/www/archive/manage.py collectstatic --noinput

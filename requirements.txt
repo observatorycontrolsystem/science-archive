@@ -15,3 +15,4 @@ responses
 factory-boy
 flake8
 django-nose
+uWSGI

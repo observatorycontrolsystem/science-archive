@@ -1,10 +1,33 @@
-web:
-    build: .
-    command: python3 manage.py runserver 0.0.0.0:8000
-    volumes:
-        - .:/app
+nginx:
+    image: docker.lcogt.net/nginx_aws_zip:latest
     ports:
-        - "8000:8000"
+        - "80:80"
+    environment:
+        AWS_ACCESS_KEY_ID: AKIAIZBYNSZZGYN3EAQQ
+        AWS_SECRET_ACCESS_KEY: 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
+        AWS_DEFAULT_REGION: us-west-2
+        AWS_BUCKET: lcogtarchivetest
+    restart: always
+    mem_limit: 1g
+    volumes_from:
+        - uwsgi
+    links:
+        - uwsgi
+uwsgi:
+    image: docker.lcogt.net/archive:latest
+    environment:
+        AWS_ACCESS_KEY_ID: AKIAIZBYNSZZGYN3EAQQ
+        AWS_SECRET_ACCESS_KEY: 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
+        AWS_DEFAULT_REGION: us-west-2
+        AWS_BUCKET: lcogtarchivetest
+        DB_HOST: postgres
+        BROKER_URL: redis://localhost
+        BOSUN_HOSTNAME: alerts.lco.gtn
+        OPENTSDB_HOSTNANE: opentsdb.lco.gtn
+    volumes:
+        - ".:/var/www/archive/"
+        - "/var/www/static/"
+        - "/var/www/media/"
     links:
         - postgres
 

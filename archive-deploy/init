@@ -1,0 +1,19 @@
+#!/bin/bash
+# vim: set ts=4 sts=4 sw=4 et:
+
+stderr() {
+    echo -e "$@" >&2
+}
+
+die() {
+    stderr "$@"
+    exit 1
+}
+
+[[ -n "$AWS_ACCESS_KEY_ID" ]] || die "AWS_ACCESS_KEY_ID is empty"
+[[ -n "$AWS_SECRET_ACCESS_KEY" ]] || die "AWS_SECRET_ACCESS_KEY is empty"
+[[ -n "$AWS_DEFAULT_REGION" ]] || die "AWS_DEFAULT_REGION is empty"
+[[ -n "$AWS_BUCKET" ]] || die "AWS_BUCKET is empty"
+
+# run under supervisord
+exec /usr/bin/supervisord -n

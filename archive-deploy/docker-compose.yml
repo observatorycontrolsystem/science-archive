@@ -1,16 +1,34 @@
-web:
-    image: docker.lcogt.net/archive
+nginx:
+    image: docker.lcogt.net/nginx_aws_zip:latest
     ports:
         - "80:80"
-    links:
-        - postgres
     environment:
         AWS_ACCESS_KEY_ID: AKIAIZBYNSZZGYN3EAQQ
         AWS_SECRET_ACCESS_KEY: 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
         AWS_DEFAULT_REGION: us-west-2
+        AWS_BUCKET: lcogtarchivetest
+    restart: always
+    mem_limit: 1g
+    volumes_from:
+        - uwsgi
+    links:
+        - uwsgi
+uwsgi:
+    image: docker.lcogt.net/archive
+    environment:
+        AWS_ACCESS_KEY_ID: AKIAIZBYNSZZGYN3EAQQ
+        AWS_SECRET_ACCESS_KEY: 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
+        AWS_DEFAULT_REGION: us-west-2
+        AWS_BUCKET: lcogtarchivetest
+        DB_HOST: postgres
         BROKER_URL: redis://localhost
         BOSUN_HOSTNAME: alerts.lco.gtn
         OPENTSDB_HOSTNANE: opentsdb.lco.gtn
+    volumes:
+        - "/var/www/static/"
+        - "/var/www/media/"
+    links:
+        - postgres
 
 postgres:
     image: docker.lcogt.net/pg-archive
@@ -21,4 +39,3 @@ postgres:
         PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
         - "/home/eng/docker/archive/postgres:/var/lib/postgresql/data"
-
