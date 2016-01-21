@@ -1,7 +1,7 @@
 nginx:
     image: docker.lcogt.net/nginx_aws_zip:latest
     ports:
-        - "80:8000"
+        - "8000:80"
     environment:
         AWS_ACCESS_KEY_ID: AKIAIZBYNSZZGYN3EAQQ
         AWS_SECRET_ACCESS_KEY: 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
