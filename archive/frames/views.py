@@ -5,7 +5,7 @@ from archive.frames.permissions import AdminOrReadOnly
 from archive.frames.filters import FrameFilter
 from rest_framework.response import Response
 from rest_framework import status, filters, viewsets
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from opentsdb_python_metrics.metric_wrappers import send_tsdb_metric
 import logging
 import datetime
@@ -50,7 +50,11 @@ class FrameViewSet(viewsets.ModelViewSet):
         all frames that belong to their proposals.
         Non authenticated see all frames with a PUBDAT in the past
         """
-        queryset = Frame.objects.exclude(version=None).prefetch_related('version_set')
+        queryset = (
+            Frame.objects.exclude(version=None)
+            .prefetch_related('version_set')
+            .prefetch_related(Prefetch('related_frames', queryset=Frame.objects.all().only('id')))
+        )
         if self.request.user.is_staff:
             return queryset
         elif self.request.user.is_authenticated():
