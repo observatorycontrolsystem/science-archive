@@ -1,4 +1,5 @@
 from archive.frames.tests.factories import FrameFactory, VersionFactory
+from archive.frames.models import Frame
 from archive.authentication.models import Profile
 from django.contrib.auth.models import User
 from unittest.mock import MagicMock
@@ -152,3 +153,50 @@ class TestFrameFiltering(TestCase):
         self.assertContains(response, self.public_frame.filename)
         self.assertNotContains(response, self.proposal_frame.filename)
         self.assertNotContains(response, self.not_owned.filename)
+
+
+class TestZipDownload(TestCase):
+    def setUp(self):
+        boto3.client = MagicMock()
+        self.normal_user = User.objects.create(username='frodo', password='theone')
+        Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
+        self.public_frame = FrameFactory(PROPID='public', L1PUBDAT=datetime.datetime(2000, 1, 1))
+        self.proposal_frame = FrameFactory(PROPID='prop1', L1PUBDAT=datetime.datetime(2099, 1, 1))
+        self.not_owned = FrameFactory(PROPID='notyours', L1PUBDAT=datetime.datetime(2099, 1, 1))
+
+    def test_public_download(self):
+        response = self.client.post(
+            reverse('frame-zip'),
+            data=json.dumps({'frame_ids': [frame.id for frame in Frame.objects.all()]}),
+            content_type='application/json'
+        )
+        self.assertContains(response, self.public_frame.filename)
+        self.assertNotContains(response, self.proposal_frame.filename)
+        self.assertNotContains(response, self.not_owned.filename)
+
+    @responses.activate
+    def test_proposal_download(self):
+        responses.add(
+            responses.GET,
+            settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
+            body=json.dumps([{'code': 'prop1'}]),
+            status=200,
+            content_type='application/json'
+        )
+        self.client.force_login(self.normal_user)
+        response = self.client.post(
+            reverse('frame-zip'),
+            data=json.dumps({'frame_ids': [frame.id for frame in Frame.objects.all()]}),
+            content_type='application/json'
+        )
+        self.assertContains(response, self.public_frame.filename)
+        self.assertContains(response, self.proposal_frame.filename)
+        self.assertNotContains(response, self.not_owned.filename)
+
+    def test_empty_download(self):
+        response = self.client.post(
+            reverse('frame-zip'),
+            data=json.dumps({'frame_ids': [self.not_owned.id]}),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 404)
