@@ -93,6 +93,8 @@ class FrameViewSet(viewsets.ModelViewSet):
         serializer = ZipSerializer(data=request.data)
         if serializer.is_valid():
             frames = self.get_queryset().filter(pk__in=serializer.data['frame_ids'])
+            if not frames.exists():
+                return Response(status=status.HTTP_404_NOT_FOUND)
             body = build_nginx_zip_text(frames)
             response = HttpResponse(body, content_type='text/plain')
             response['X-Archive-Files'] = 'zip'
