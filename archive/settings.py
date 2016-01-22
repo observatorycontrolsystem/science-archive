@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_gis',
     'rest_framework.authtoken',
+    'corsheaders',
     'django_nose',
     'crispy_forms',
     'django_extensions',
@@ -52,6 +53,7 @@ INSTALLED_APPS = [
 MIDDLEWARE_CLASSES = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -192,6 +194,8 @@ ODIN_OAUTH_CLIENT = {
     'TOKEN_URL': 'http://lcogt.net/observe/o/token/',
     'PROPOSALS_URL': 'http://lcogt.net/observe/api/proposals/',
 }
+
+CORS_ORIGIN_ALLOW_ALL = True
 
 try:
     from .local_settings import *

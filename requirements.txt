@@ -16,3 +16,4 @@ factory-boy
 flake8
 django-nose
 uWSGI
+django-cors-headers
