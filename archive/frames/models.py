@@ -126,5 +126,15 @@ class Version(models.Model):
         }
         return client.generate_presigned_url('get_object', Params=params)
 
+    @property
+    def size(self):
+        client = boto3.client('s3')
+        params = {
+            'Bucket': settings.BUCKET,
+            'Key': self.frame.s3_key,
+            'VersionId': self.key
+        }
+        return client.head_object(**params)['ContentLength']
+
     def __str__(self):
         return '{0}:{1}'.format(self.timestamp, self.key)

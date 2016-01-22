@@ -12,3 +12,12 @@ def fits_keywords_only(dictionary):
         if k[0].isupper():
             new_dictionary[k] = dictionary[k]
     return new_dictionary
+
+
+def build_nginx_zip_text(frames):
+    nginx_line = '- {0} /s3/{1} /images/{2}\n'
+    return_line = ''
+    for frame in frames:
+        version = frame.version_set.last()
+        return_line += nginx_line.format(version.size, version.frame.s3_key, version.frame.filename)
+    return return_line

@@ -2,6 +2,12 @@ from rest_framework import serializers
 from archive.frames.models import Frame, Version, Headers
 
 
+class ZipSerializer(serializers.Serializer):
+    frame_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1)
+    )
+
+
 class VersionSerializer(serializers.ModelSerializer):
     url = serializers.CharField(read_only=True)
 

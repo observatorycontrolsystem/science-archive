@@ -1,10 +1,13 @@
 from archive.frames.models import Frame
-from archive.frames.serializers import FrameSerializer
-from archive.frames.utils import remove_dashes_from_keys, fits_keywords_only
+from archive.frames.serializers import FrameSerializer, ZipSerializer
+from archive.frames.utils import remove_dashes_from_keys, fits_keywords_only, build_nginx_zip_text
 from archive.frames.permissions import AdminOrReadOnly
 from archive.frames.filters import FrameFilter
+from rest_framework.decorators import list_route
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from rest_framework import status, filters, viewsets
+from django.http import HttpResponse
 from django.db.models import Q, Prefetch
 from opentsdb_python_metrics.metric_wrappers import send_tsdb_metric
 import logging
@@ -84,3 +87,15 @@ class FrameViewSet(viewsets.ModelViewSet):
             logger_tags['tags']['errors'] = frame_serializer.errors
             logger.fatal('Request to process frame failed', extra=logger_tags)
             return Response(frame_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @list_route(methods=['post'], permission_classes=[AllowAny])
+    def zip(self, request):
+        serializer = ZipSerializer(data=request.data)
+        if serializer.is_valid():
+            frames = self.get_queryset().filter(pk__in=serializer.data['frame_ids'])
+            body = build_nginx_zip_text(frames)
+            response = HttpResponse(body, content_type='text/plain')
+            response['X-Archive-Files'] = 'zip'
+            response['Content-Disposition'] = 'attachment; filename=lcogtdata.zip'
+            return response
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
