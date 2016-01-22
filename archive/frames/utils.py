@@ -1,3 +1,12 @@
+import boto3
+from functools import lru_cache
+
+
+@lru_cache(maxsize=1)
+def get_s3_client():
+    return boto3.client('s3')
+
+
 def remove_dashes_from_keys(dictionary):
     new_dictionary = {}
     for k in dictionary:

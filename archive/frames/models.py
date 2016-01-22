@@ -1,6 +1,7 @@
+from archive.frames.utils import get_s3_client
+from django.utils.functional import cached_property
 from django.contrib.postgres.fields import JSONField
 import hashlib
-import boto3
 from django.conf import settings
 from django.contrib.gis.db import models
 
@@ -87,7 +88,7 @@ class Frame(models.Model):
     def __str__(self):
         return self.filename
 
-    @property
+    @cached_property
     def s3_key(self):
         return '/'.join((
             hashlib.sha1(self.filename.encode('utf-8')).hexdigest()[0:4],
@@ -116,9 +117,9 @@ class Version(models.Model):
     class Meta:
         ordering = ['-timestamp']
 
-    @property
+    @cached_property
     def url(self):
-        client = boto3.client('s3')
+        client = get_s3_client()
         params = {
             'Bucket': settings.BUCKET,
             'Key': self.frame.s3_key,
@@ -126,9 +127,9 @@ class Version(models.Model):
         }
         return client.generate_presigned_url('get_object', Params=params)
 
-    @property
+    @cached_property
     def size(self):
-        client = boto3.client('s3')
+        client = get_s3_client()
         params = {
             'Bucket': settings.BUCKET,
             'Key': self.frame.s3_key,
