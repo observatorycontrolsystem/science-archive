@@ -13,7 +13,7 @@ class VersionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Version
-        fields = ('id', 'timestamp', 'key', 'md5', 'url')
+        fields = ('id', 'created', 'key', 'md5', 'url')
 
 
 class FrameSerializer(serializers.ModelSerializer):

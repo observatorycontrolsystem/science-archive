@@ -31,13 +31,11 @@ class Frame(models.Model):
     )
     PROPID = models.CharField(
         max_length=200,
-        db_index=True,
         default='',
         help_text="Textual proposal id. FITS header: PROPID"
     )
     INSTRUME = models.CharField(
         max_length=10,
-        db_index=True,
         default='',
         help_text="Instrument used. FITS header: INSTRUME"
     )
@@ -48,7 +46,6 @@ class Frame(models.Model):
         help_text="Target object name. FITS header: OBJECT"
     )
     RLEVEL = models.SmallIntegerField(
-        db_index=True,
         default=0,
         help_text="Reduction level of the frame"
     )
@@ -65,7 +62,7 @@ class Frame(models.Model):
     EXPTIME = models.DecimalField(
         null=True,
         max_digits=10,
-        decimal_places=5,
+        decimal_places=3,
         help_text="Exposure time, in seconds. FITS header: EXPTIME"
     )
     FILTER = models.CharField(
@@ -74,6 +71,7 @@ class Frame(models.Model):
         help_text="Filter used. FITS header: FILTER"
     )
     L1PUBDAT = models.DateTimeField(
+        db_index=True,
         null=True,
         help_text="The date the frame becomes public. FITS header: L1PUBDAT"
     )
@@ -84,6 +82,7 @@ class Frame(models.Model):
         help_text="Type of observation. FITS header: OBSTYPE"
     )
     modified = models.DateTimeField(auto_now=True)
+    created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.filename
@@ -110,12 +109,12 @@ class Headers(models.Model):
 
 class Version(models.Model):
     frame = models.ForeignKey(Frame)
-    timestamp = models.DateTimeField(auto_now_add=True)
     key = models.CharField(max_length=32, unique=True)
     md5 = models.CharField(max_length=32, unique=True)
+    created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-timestamp']
+        ordering = ['-created']
 
     @cached_property
     def url(self):
@@ -138,4 +137,4 @@ class Version(models.Model):
         return client.head_object(**params)['ContentLength']
 
     def __str__(self):
-        return '{0}:{1}'.format(self.timestamp, self.key)
+        return '{0}:{1}'.format(self.created, self.key)

@@ -91,7 +91,7 @@ class VersionFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Version
 
-    timestamp = factory.fuzzy.FuzzyDateTime(
+    created = factory.fuzzy.FuzzyDateTime(
         datetime.datetime(2015, 1, 1, tzinfo=UTC),
         datetime.datetime(2025, 1, 1, tzinfo=UTC)
     )
