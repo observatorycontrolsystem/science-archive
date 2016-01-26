@@ -3,6 +3,7 @@ from django.contrib import admin
 from rest_framework import routers
 from rest_framework.authtoken import views as apiviews
 from archive.frames import views
+from archive.authentication import urls as auth_urls
 
 
 class DocumentedRootRouter(routers.DefaultRouter):
@@ -43,6 +44,7 @@ router.register(r'frames', views.FrameViewSet, base_name="frame")
 
 urlpatterns = [
     url(r'^', include(router.urls)),
+    url(r'^', include(auth_urls)),
     url(r'^admin/', admin.site.urls),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     url(r'^api-token-auth/', apiviews.obtain_auth_token),
