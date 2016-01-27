@@ -85,7 +85,7 @@ class Frame(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-created']
+        ordering = ['-DATE_OBS']
 
     def __str__(self):
         return self.basename
