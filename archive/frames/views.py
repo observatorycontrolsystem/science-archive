@@ -24,7 +24,7 @@ class FrameViewSet(viewsets.ModelViewSet):
         filters.OrderingFilter,
     )
     filter_class = FrameFilter
-    ordering_fields = ('id', 'filename', 'DATE_OBS', 'FILTER', 'OBSTYPE',
+    ordering_fields = ('id', 'basename', 'DATE_OBS', 'FILTER', 'OBSTYPE',
                        'PROPID', 'INSTRUME', 'OBJECT', 'RLEVEL')
 
     def get_queryset(self):
@@ -56,8 +56,8 @@ class FrameViewSet(viewsets.ModelViewSet):
 
     def create(self, request):
         send_tsdb_metric('archive.frame_posted', 1)
-        filename = request.data.get('filename')
-        logger_tags = {'tags': {'filename': filename}}
+        basename = request.data.get('basename')
+        logger_tags = {'tags': {'filename': basename}}
         logger.info('Got request to process frame', extra=logger_tags)
         data = remove_dashes_from_keys(request.data)
         frame_serializer = FrameSerializer(data=data)

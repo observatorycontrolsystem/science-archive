@@ -24,19 +24,19 @@ class TestFrameGet(TestCase):
 
     def test_get_frame(self):
         response = self.client.get(reverse('frame-detail', args=(self.frame.id, )))
-        self.assertEqual(response.json()['filename'], self.frame.filename)
+        self.assertEqual(response.json()['basename'], self.frame.basename)
 
     def test_get_frame_list(self):
         response = self.client.get(reverse('frame-list'))
         self.assertEqual(response.json()['count'], 5)
-        self.assertContains(response, self.frame.filename)
+        self.assertContains(response, self.frame.basename)
 
     def test_get_frame_list_filter(self):
         response = self.client.get(
-            '{0}?filename={1}'.format(reverse('frame-list'), self.frame.filename)
+            '{0}?basename={1}'.format(reverse('frame-list'), self.frame.basename)
         )
         self.assertEqual(response.json()['count'], 1)
-        self.assertContains(response, self.frame.filename)
+        self.assertContains(response, self.frame.basename)
 
     def test_filter_area(self):
         frame = FrameFactory.create(
@@ -45,11 +45,11 @@ class TestFrameGet(TestCase):
         response = self.client.get(
             '{0}?covers=POINT(5 5)'.format(reverse('frame-list'))
         )
-        self.assertContains(response, frame.filename)
+        self.assertContains(response, frame.basename)
         response = self.client.get(
             '{0}?covers=POINT(20 20)'.format(reverse('frame-list'))
         )
-        self.assertNotContains(response, frame.filename)
+        self.assertNotContains(response, frame.basename)
 
     def test_filer_area_wrap_0RA(self):
         frame = FrameFactory.create(
@@ -58,11 +58,11 @@ class TestFrameGet(TestCase):
         response = self.client.get(
             '{0}?covers=POINT(0 0)'.format(reverse('frame-list'))
         )
-        self.assertContains(response, frame.filename)
+        self.assertContains(response, frame.basename)
         response = self.client.get(
             '{0}?covers=POINT(340 0)'.format(reverse('frame-list'))
         )
-        self.assertNotContains(response, frame.filename)
+        self.assertNotContains(response, frame.basename)
 
 
 class TestFramePost(TestCase):
@@ -72,10 +72,14 @@ class TestFramePost(TestCase):
         boto3.client = MagicMock()
         self.header_json = json.load(open(os.path.join(os.path.dirname(__file__), 'frames.json')))
         f = self.header_json[random.choice(list(self.header_json.keys()))]
-        f['filename'] = FrameFactory.filename.fuzz()
+        f['basename'] = FrameFactory.basename.fuzz()
         f['area'] = FrameFactory.area.fuzz()
         f['version_set'] = [
-            {'md5': VersionFactory.md5.fuzz(), 'key': VersionFactory.key.fuzz()}
+            {
+                'md5': VersionFactory.md5.fuzz(),
+                'key': VersionFactory.key.fuzz(),
+                'extension': VersionFactory.extension.fuzz()
+            }
         ]
         self.single_frame_payload = f
 
@@ -83,32 +87,38 @@ class TestFramePost(TestCase):
         total_frames = len(self.header_json)
         for extension in self.header_json:
             frame_payload = self.header_json[extension]
-            frame_payload['filename'] = FrameFactory.filename.fuzz()
+            frame_payload['basename'] = FrameFactory.basename.fuzz()
             frame_payload['area'] = FrameFactory.area.fuzz()
             frame_payload['version_set'] = [
-                {'md5': VersionFactory.md5.fuzz(), 'key': VersionFactory.key.fuzz()}
+                {
+                    'md5': VersionFactory.md5.fuzz(),
+                    'key': VersionFactory.key.fuzz(),
+                    'extension': VersionFactory.extension.fuzz()
+                }
             ]
             response = self.client.post(
                 reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
             )
-            self.assertContains(response, frame_payload['filename'], status_code=201)
+            self.assertContains(response, frame_payload['basename'], status_code=201)
         response = self.client.get(reverse('frame-list'))
         self.assertEqual(response.json()['count'], total_frames)
 
     def test_post_missing_data(self):
         frame_payload = self.single_frame_payload
-        del frame_payload['filename']
+        del frame_payload['basename']
         response = self.client.post(
             reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
         )
-        self.assertEqual(response.json()['filename'], ['This field is required.'])
+        self.assertEqual(response.json()['basename'], ['This field is required.'])
         self.assertEqual(response.status_code, 400)
 
     def test_post_duplicate_data(self):
         frame = FrameFactory()
         version = frame.version_set.all()[0]
         frame_payload = self.single_frame_payload
-        frame_payload['version_set'] = [{'md5': version.md5, 'key': 'random_key'}]
+        frame_payload['version_set'] = [
+            {'md5': version.md5, 'key': 'random_key', 'extension': '.fits.fz'}
+        ]
         response = self.client.post(
             reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
         )
@@ -129,9 +139,9 @@ class TestFrameFiltering(TestCase):
     def test_admin_view_all(self):
         self.client.login(username='admin', password='password')
         response = self.client.get(reverse('frame-list'))
-        self.assertContains(response, self.public_frame.filename)
-        self.assertContains(response, self.proposal_frame.filename)
-        self.assertContains(response, self.not_owned.filename)
+        self.assertContains(response, self.public_frame.basename)
+        self.assertContains(response, self.proposal_frame.basename)
+        self.assertContains(response, self.not_owned.basename)
 
     @responses.activate
     def test_proposal_user(self):
@@ -144,15 +154,15 @@ class TestFrameFiltering(TestCase):
         )
         self.client.force_login(self.normal_user)
         response = self.client.get(reverse('frame-list'))
-        self.assertContains(response, self.public_frame.filename)
-        self.assertContains(response, self.proposal_frame.filename)
-        self.assertNotContains(response, self.not_owned.filename)
+        self.assertContains(response, self.public_frame.basename)
+        self.assertContains(response, self.proposal_frame.basename)
+        self.assertNotContains(response, self.not_owned.basename)
 
     def test_anonymous_user(self):
         response = self.client.get(reverse('frame-list'))
-        self.assertContains(response, self.public_frame.filename)
-        self.assertNotContains(response, self.proposal_frame.filename)
-        self.assertNotContains(response, self.not_owned.filename)
+        self.assertContains(response, self.public_frame.basename)
+        self.assertNotContains(response, self.proposal_frame.basename)
+        self.assertNotContains(response, self.not_owned.basename)
 
 
 class TestZipDownload(TestCase):
@@ -170,9 +180,9 @@ class TestZipDownload(TestCase):
             data=json.dumps({'frame_ids': [frame.id for frame in Frame.objects.all()]}),
             content_type='application/json'
         )
-        self.assertContains(response, self.public_frame.filename)
-        self.assertNotContains(response, self.proposal_frame.filename)
-        self.assertNotContains(response, self.not_owned.filename)
+        self.assertContains(response, self.public_frame.basename)
+        self.assertNotContains(response, self.proposal_frame.basename)
+        self.assertNotContains(response, self.not_owned.basename)
 
     @responses.activate
     def test_proposal_download(self):
@@ -189,9 +199,9 @@ class TestZipDownload(TestCase):
             data=json.dumps({'frame_ids': [frame.id for frame in Frame.objects.all()]}),
             content_type='application/json'
         )
-        self.assertContains(response, self.public_frame.filename)
-        self.assertContains(response, self.proposal_frame.filename)
-        self.assertNotContains(response, self.not_owned.filename)
+        self.assertContains(response, self.public_frame.basename)
+        self.assertContains(response, self.proposal_frame.basename)
+        self.assertNotContains(response, self.not_owned.basename)
 
     def test_empty_download(self):
         response = self.client.post(

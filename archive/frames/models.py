@@ -20,7 +20,7 @@ class Frame(models.Model):
         ('ARC', 'ARC'),
         ('LAMPFLAT', 'LAMPFLAT'),
     )
-    filename = models.CharField(max_length=1000, db_index=True, unique=True)
+    basename = models.CharField(max_length=1000, db_index=True, unique=True)
     area = models.PolygonField(geography=True, spatial_index=True, null=True, blank=True)
     related_frames = models.ManyToManyField('self', blank=True)
     DATE_OBS = models.DateTimeField(
@@ -84,14 +84,17 @@ class Frame(models.Model):
     modified = models.DateTimeField(auto_now=True)
     created = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['-created']
+
     def __str__(self):
-        return self.filename
+        return self.basename
 
     @cached_property
     def s3_key(self):
         return '/'.join((
-            hashlib.sha1(self.filename.encode('utf-8')).hexdigest()[0:4],
-            self.filename
+            hashlib.sha1(self.basename.encode('utf-8')).hexdigest()[0:4],
+            self.basename
         ))
 
     @property
@@ -111,6 +114,7 @@ class Version(models.Model):
     frame = models.ForeignKey(Frame)
     key = models.CharField(max_length=32, unique=True)
     md5 = models.CharField(max_length=32, unique=True)
+    extension = models.CharField(max_length=20)
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -13,11 +13,11 @@ class VersionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Version
-        fields = ('id', 'created', 'key', 'md5', 'url')
+        fields = ('id', 'created', 'key', 'md5', 'extension', 'url')
 
 
 class FrameSerializer(serializers.ModelSerializer):
-    filename = serializers.CharField(required=True)
+    basename = serializers.CharField(required=True)
     version_set = VersionSerializer(many=True)
     url = serializers.CharField(read_only=True)
     related_frames = serializers.PrimaryKeyRelatedField(
@@ -30,7 +30,7 @@ class FrameSerializer(serializers.ModelSerializer):
     class Meta:
         model = Frame
         fields = (
-            'id', 'filename', 'area', 'related_frames', 'version_set',
+            'id', 'basename', 'area', 'related_frames', 'version_set',
             'url', 'RLEVEL', 'DATE_OBS', 'PROPID', 'INSTRUME',
             'OBJECT', 'SITEID', 'TELID', 'EXPTIME', 'FILTER',
             'L1PUBDAT', 'OBSTYPE',
@@ -46,7 +46,7 @@ class FrameSerializer(serializers.ModelSerializer):
         return frame
 
     def create_or_update_frame(self, data):
-        frame, created = Frame.objects.update_or_create(defaults=data, filename=data['filename'])
+        frame, created = Frame.objects.update_or_create(defaults=data, basename=data['basename'])
         return frame
 
     def create_or_update_versions(self, frame, data):
@@ -64,6 +64,6 @@ class FrameSerializer(serializers.ModelSerializer):
         for key in related_frame_keys:
             related_frame = data.get(key)
             if related_frame:
-                rf, created = Frame.objects.get_or_create(filename=related_frame)
+                rf, created = Frame.objects.get_or_create(basename=related_frame)
                 frame.related_frames.add(rf)
         frame.save()

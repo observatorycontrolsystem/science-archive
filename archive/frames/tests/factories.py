@@ -97,6 +97,7 @@ class VersionFactory(factory.django.DjangoModelFactory):
     )
     key = factory.fuzzy.FuzzyText(length=32)
     md5 = factory.fuzzy.FuzzyText(length=32)
+    extension = factory.fuzzy.FuzzyText(length=7)
     frame = factory.SubFactory('archive.frames.tests.factories.FrameFactory')
 
 
@@ -104,7 +105,7 @@ class FrameFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Frame
 
-    filename = factory.fuzzy.FuzzyText(length=30, suffix='.fits')
+    basename = factory.fuzzy.FuzzyText(length=30)
     area = FuzzyArea()
     DATE_OBS = factory.fuzzy.FuzzyDate(
         datetime.date(2015, 1, 1),
