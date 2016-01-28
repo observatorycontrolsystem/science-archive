@@ -9,6 +9,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework import status, filters, viewsets
 from django.http import HttpResponse
 from django.db.models import Q, Prefetch
+from django.views.decorators.clickjacking import xframe_options_exempt
 from opentsdb_python_metrics.metric_wrappers import send_tsdb_metric
 import logging
 import datetime
@@ -70,6 +71,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             logger.fatal('Request to process frame failed', extra=logger_tags)
             return Response(frame_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @xframe_options_exempt
     @list_route(methods=['post'], permission_classes=[AllowAny])
     def zip(self, request):
         serializer = ZipSerializer(data=request.data)
