@@ -81,5 +81,6 @@ class FrameViewSet(viewsets.ModelViewSet):
             response = HttpResponse(body, content_type='text/plain')
             response['X-Archive-Files'] = 'zip'
             response['Content-Disposition'] = 'attachment; filename=lcogtdata.zip'
+            response['Set-Cookie'] = 'fileDownload=true; path=/'
             return response
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
