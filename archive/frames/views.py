@@ -7,9 +7,11 @@ from rest_framework.decorators import list_route
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework import status, filters, viewsets
+from rest_framework.authtoken.models import Token
 from django.http import HttpResponse
 from django.db.models import Q, Prefetch
 from django.views.decorators.clickjacking import xframe_options_exempt
+from django.shortcuts import get_object_or_404
 from opentsdb_python_metrics.metric_wrappers import send_tsdb_metric
 import logging
 import datetime
@@ -74,6 +76,9 @@ class FrameViewSet(viewsets.ModelViewSet):
     @xframe_options_exempt
     @list_route(methods=['post'], permission_classes=[AllowAny])
     def zip(self, request):
+        if request.data.get('auth_token'):  # Needed for hacky ajax file download nonsense
+            token = get_object_or_404(Token, key=request.data['auth_token'])
+            request.user = token.user
         serializer = ZipSerializer(data=request.data)
         if serializer.is_valid():
             frames = self.get_queryset().filter(pk__in=serializer.data['frame_ids'])
