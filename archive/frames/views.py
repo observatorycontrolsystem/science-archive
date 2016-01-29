@@ -3,7 +3,7 @@ from archive.frames.serializers import FrameSerializer, ZipSerializer
 from archive.frames.utils import remove_dashes_from_keys, fits_keywords_only, build_nginx_zip_text
 from archive.frames.permissions import AdminOrReadOnly
 from archive.frames.filters import FrameFilter
-from rest_framework.decorators import list_route
+from rest_framework.decorators import list_route, detail_route
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework import status, filters, viewsets
@@ -72,6 +72,12 @@ class FrameViewSet(viewsets.ModelViewSet):
             logger_tags['tags']['errors'] = frame_serializer.errors
             logger.fatal('Request to process frame failed', extra=logger_tags)
             return Response(frame_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @detail_route()
+    def related(self, request, pk=None):
+        frame = self.get_object()
+        serializer = self.get_serializer(frame.related_frames, many=True)
+        return Response(serializer.data)
 
     @xframe_options_exempt
     @list_route(methods=['post'], permission_classes=[AllowAny])

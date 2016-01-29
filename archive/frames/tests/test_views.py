@@ -64,6 +64,12 @@ class TestFrameGet(TestCase):
         )
         self.assertNotContains(response, frame.basename)
 
+    def test_get_related(self):
+        frame = FrameFactory.create()
+        related_frame = FrameFactory.create(related_frames=[frame])
+        response = self.client.get(reverse('frame-related', args=(frame.id,)))
+        self.assertContains(response, related_frame.basename)
+
 
 class TestFramePost(TestCase):
     def setUp(self):
