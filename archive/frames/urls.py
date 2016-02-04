@@ -7,5 +7,4 @@ router.register(r'frames', views.FrameViewSet, base_name="frame")
 
 urlpatterns = [
     url(r'^', include(router.urls)),
-    url(r'^aggregate/$', views.AggregateFrameView.as_view(), name='frame-aggregate'),
 ]

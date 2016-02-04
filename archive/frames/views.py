@@ -8,7 +8,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework import status, filters, viewsets
 from rest_framework.authtoken.models import Token
-from rest_framework.views import APIView
 from django.http import HttpResponse
 from django.db.models import Q, Prefetch
 from django.views.decorators.clickjacking import xframe_options_exempt
@@ -95,9 +94,8 @@ class FrameViewSet(viewsets.ModelViewSet):
             return response
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-class AggregateFrameView(APIView):
-    def get(self, request):
+    @list_route()
+    def aggregate(self, request):
         sites = [i[0] for i in Frame.objects.order_by().values_list('SITEID').distinct()]
         telescopes = [i[0] for i in Frame.objects.order_by().values_list('TELID').distinct()]
         filters = [i[0] for i in Frame.objects.order_by().values_list('FILTER').distinct()]
