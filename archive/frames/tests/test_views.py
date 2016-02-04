@@ -216,3 +216,18 @@ class TestZipDownload(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, 404)
+
+
+class TestFrameAggregate(TestCase):
+    def setUp(self):
+        boto3.client = MagicMock()
+        FrameFactory.create(OBSTYPE='EXPOSE', TELID='1m0a', SITEID='bpl', INSTRUME='kb46')
+        FrameFactory.create(OBSTYPE='BIAS', TELID='0m4a', SITEID='coj', INSTRUME='en05')
+        FrameFactory.create(OBSTYPE='SKYFLAT', TELID='2m0b', SITEID='ogg', INSTRUME='fl10')
+
+    def test_frame_aggregate(self):
+        response = self.client.get(reverse('frame-aggregate'))
+        self.assertEqual(set(response.json()['obstypes']), set(['EXPOSE', 'BIAS', 'SKYFLAT']))
+        self.assertEqual(set(response.json()['telescopes']), set(['1m0a', '0m4a', '2m0b']))
+        self.assertEqual(set(response.json()['sites']), set(['bpl', 'coj', 'ogg']))
+        self.assertEqual(set(response.json()['instruments']), set(['kb46', 'en05', 'fl10']))
