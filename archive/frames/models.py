@@ -104,6 +104,13 @@ class Frame(models.Model):
         """
         return self.version_set.first().url
 
+    @property
+    def filename(self):
+        """
+        Returns the full filename for the latest version
+        """
+        return '{0}{1}'.format(self.basename, self.version_set.first().extension)
+
 
 class Headers(models.Model):
     data = JSONField(default=dict)
