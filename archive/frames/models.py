@@ -32,6 +32,7 @@ class Frame(models.Model):
     PROPID = models.CharField(
         max_length=200,
         default='',
+        blank=True,
         help_text="Textual proposal id. FITS header: PROPID"
     )
     INSTRUME = models.CharField(
@@ -43,6 +44,7 @@ class Frame(models.Model):
         max_length=200,
         db_index=True,
         default='',
+        blank=True,
         help_text="Target object name. FITS header: OBJECT"
     )
     RLEVEL = models.SmallIntegerField(
