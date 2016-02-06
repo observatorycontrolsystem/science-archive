@@ -1,11 +1,11 @@
-from archive.frames.models import Frame
-from archive.frames.serializers import FrameSerializer, ZipSerializer
+from archive.frames.models import Frame, Version
+from archive.frames.serializers import FrameSerializer, ZipSerializer, VersionSerializer
 from archive.frames.utils import remove_dashes_from_keys, fits_keywords_only, build_nginx_zip_text
 from archive.frames.permissions import AdminOrReadOnly
 from archive.frames.filters import FrameFilter
 from rest_framework.decorators import list_route, detail_route
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework import status, filters, viewsets
 from rest_framework.authtoken.models import Token
 from django.http import HttpResponse
@@ -109,3 +109,11 @@ class FrameViewSet(viewsets.ModelViewSet):
             'obstypes': obstypes
         }
         return Response(response_dict)
+
+
+class VersionViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = (IsAdminUser,)
+    serializer_class = VersionSerializer
+    queryset = Version.objects.all()
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_fields = ('md5',)
