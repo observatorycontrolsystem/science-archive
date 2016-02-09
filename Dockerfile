@@ -18,6 +18,8 @@ COPY archive-deploy/supervisor-app.conf /etc/supervisor/conf.d/
 COPY archive-deploy/uwsgi.ini /etc/
 COPY archive-deploy/local_settings.py /var/www/archive/archive/
 
+WORKDIR /var/www/archive/
+
 COPY . /var/www/archive/
 
 RUN python3 /var/www/archive/manage.py collectstatic --noinput

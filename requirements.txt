@@ -3,6 +3,7 @@ django
 psycopg2
 djangorestframework
 django-extensions
+ipython
 django-filter
 lcogt-logging
 boto3

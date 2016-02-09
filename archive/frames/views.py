@@ -101,12 +101,18 @@ class FrameViewSet(viewsets.ModelViewSet):
         filters = [i[0] for i in Frame.objects.order_by().values_list('FILTER').distinct()]
         instruments = [i[0] for i in Frame.objects.order_by().values_list('INSTRUME').distinct()]
         obstypes = [i[0] for i in Frame.objects.order_by().values_list('OBSTYPE').distinct()]
+        proposals = [
+            i[0] for i in Frame.objects.filter(L1PUBDAT__lte=datetime.datetime.utcnow())
+                                       .order_by().values_list('PROPID')
+                                       .distinct()
+        ]
         response_dict = {
             'sites': sites,
             'telescopes': telescopes,
             'filters': filters,
             'instruments': instruments,
-            'obstypes': obstypes
+            'obstypes': obstypes,
+            'proposals': proposals
         }
         return Response(response_dict)
 
