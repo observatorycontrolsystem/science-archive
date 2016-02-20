@@ -39,7 +39,7 @@ class FrameViewSet(viewsets.ModelViewSet):
         Non authenticated see all frames with a PUBDAT in the past
         """
         queryset = (
-            Frame.objects.exclude(version=None)
+            Frame.objects.exclude(DATE_OBS=None)
             .prefetch_related('version_set')
             .prefetch_related(Prefetch('related_frames', queryset=Frame.objects.all().only('id')))
         )
