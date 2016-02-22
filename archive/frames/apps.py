@@ -2,4 +2,9 @@ from django.apps import AppConfig
 
 
 class FramesConfig(AppConfig):
-    name = 'frames'
+    name = 'archive.frames'
+    verbose_name = 'Frames'
+
+    def ready(self):
+        import archive.frames.signals.handlers  # noqa
+        super().ready()

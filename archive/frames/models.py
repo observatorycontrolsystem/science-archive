@@ -2,8 +2,11 @@ from archive.frames.utils import get_s3_client
 from django.utils.functional import cached_property
 from django.contrib.postgres.fields import JSONField
 import hashlib
+import logging
 from django.conf import settings
 from django.contrib.gis.db import models
+
+logger = logging.getLogger()
 
 
 class Frame(models.Model):
@@ -130,24 +133,27 @@ class Version(models.Model):
         ordering = ['-created']
 
     @cached_property
-    def url(self):
-        client = get_s3_client()
-        params = {
+    def data_params(self):
+        return {
             'Bucket': settings.BUCKET,
             'Key': self.frame.s3_key,
             'VersionId': self.key
         }
-        return client.generate_presigned_url('get_object', Params=params)
+
+    @cached_property
+    def url(self):
+        client = get_s3_client()
+        return client.generate_presigned_url('get_object', Params=self.data_params)
 
     @cached_property
     def size(self):
         client = get_s3_client()
-        params = {
-            'Bucket': settings.BUCKET,
-            'Key': self.frame.s3_key,
-            'VersionId': self.key
-        }
-        return client.head_object(**params)['ContentLength']
+        return client.head_object(**self.data_params)['ContentLength']
+
+    def delete_data(self):
+        client = get_s3_client()
+        logger.info('Deleting version', extra={'tags': {'key': self.key, 'frame': self.frame.id}})
+        client.delete_object(**self.data_params)
 
     def __str__(self):
         return '{0}:{1}'.format(self.created, self.key)

@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'django_nose',
     'crispy_forms',
     'django_extensions',
-    'archive.frames',
+    'archive.frames.apps.FramesConfig',
     'archive.authentication',
 ]
 
