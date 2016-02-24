@@ -12,7 +12,6 @@ from django.http import HttpResponse
 from django.db.models import Q, Prefetch
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.shortcuts import get_object_or_404
-from opentsdb_python_metrics.metric_wrappers import send_tsdb_metric
 import logging
 import datetime
 
@@ -54,7 +53,6 @@ class FrameViewSet(viewsets.ModelViewSet):
             return queryset.filter(L1PUBDAT__lt=datetime.datetime.utcnow())
 
     def create(self, request):
-        send_tsdb_metric('archive.frame_posted', 1)
         basename = request.data.get('basename')
         logger_tags = {'tags': {'filename': basename}}
         logger.info('Got request to process frame', extra=logger_tags)

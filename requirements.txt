@@ -9,7 +9,6 @@ lcogt-logging
 boto3
 django-crispy-forms
 pytz
-opentsdb_python_metrics
 markdown
 djangorestframework-gis
 responses

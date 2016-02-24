@@ -6,8 +6,6 @@ from django.conf import settings
 from django.core.urlresolvers import reverse
 import json
 import responses
-import opentsdb_python_metrics.metric_wrappers
-opentsdb_python_metrics.metric_wrappers.test_mode = True
 
 
 class TestUserView(TestCase):
