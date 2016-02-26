@@ -29,6 +29,7 @@ uwsgi:
         - "/var/www/media/"
     links:
         - postgres
+        - memcached
 
 postgres:
     image: docker.lcogt.net/pg-archive
@@ -39,3 +40,10 @@ postgres:
         PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
         - "/home/eng/docker/archive/postgres:/var/lib/postgresql/data"
+
+memcached:
+    image: memcached
+    restart: always
+    mem_limit: 256m
+    ports:
+        - "11211:11211"

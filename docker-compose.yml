@@ -25,11 +25,11 @@ uwsgi:
         BOSUN_HOSTNAME: alerts.lco.gtn
         OPENTSDB_HOSTNANE: opentsdb.lco.gtn
     volumes:
-        - ".:/var/www/archive/"
         - "/var/www/static/"
         - "/var/www/media/"
     links:
         - postgres
+        - memcached
 
 postgres:
     image: docker.lcogt.net/pg-archive
@@ -37,3 +37,10 @@ postgres:
         - "5432:5432"
     environment:
         POSTGRES_PASSWORD: postgres
+
+memcached:
+    image: memcached
+    restart: always
+    mem_limit: 256m
+    ports:
+        - "11211:11211"

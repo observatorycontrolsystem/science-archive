@@ -17,3 +17,4 @@ flake8
 django-nose
 uWSGI
 django-cors-headers
+python3-memcached

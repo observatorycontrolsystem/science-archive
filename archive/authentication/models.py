@@ -3,8 +3,8 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.core.cache import cache
 from rest_framework.authtoken.models import Token
-from django.utils.functional import cached_property
 import requests
 import logging
 
@@ -16,22 +16,28 @@ class Profile(models.Model):
     access_token = models.CharField(max_length=255, default='')
     refresh_token = models.CharField(max_length=255, default='')
 
-    @cached_property
+    @property
     def proposals(self):
-        response = requests.get(
-            settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
-            headers={'Authorization': 'Bearer {}'.format(self.access_token)}
-        )
-        if response.status_code == 200:
-            return [proposal['code'] for proposal in response.json()]
-        else:
-            # TODO implement getting new token via refresh token
-            # As of this writing tokens never expire in Odin
-            logger.warn(
-                'User auth token was invalid!',
-                extra={'tags': {'username': self.user.username}}
+        cache_key = '{0}_proposals'.format(self.user.id)
+        cached_proposals = cache.get(cache_key)
+        if not cached_proposals:
+            proposals = []
+            response = requests.get(
+                settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
+                headers={'Authorization': 'Bearer {}'.format(self.access_token)}
             )
-            return []
+            if response.status_code == 200:
+                proposals = [proposal['code'] for proposal in response.json()]
+            else:
+                # TODO implement getting new token via refresh token
+                # As of this writing tokens never expire in Odin
+                logger.warn(
+                    'User auth token was invalid!',
+                    extra={'tags': {'username': self.user.username}}
+                )
+            cache.set(cache_key, proposals, 3600)
+            return proposals
+        return cached_proposals
 
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
