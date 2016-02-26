@@ -64,7 +64,7 @@ MIDDLEWARE_CLASSES = [
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    'archive.authentication.backends.OAuth2Backend',
+    'archive.authentication.backends.OAuth2Backend',  # Allows Oauth login with username/pass
 ]
 
 ROOT_URLCONF = 'archive.urls'
@@ -180,6 +180,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
+        'archive.authentication.backends.BearerAuthentication',  # Allows auth using oauth bearer
     ),
     'DEFAULT_METADATA_CLASS': 'archive.frames.metadata.MinimalMetadata',
     'DEFAULT_PAGINATION_CLASS': 'archive.frames.pagination.LimitedLimitOffsetPagination',
@@ -193,6 +194,7 @@ ODIN_OAUTH_CLIENT = {
                       '27lf3NhSOg2scYx8OJKBJ5m'),
     'TOKEN_URL': 'http://lcogt.net/observe/o/token/',
     'PROPOSALS_URL': 'http://lcogt.net/observe/api/proposals/',
+    'PROFILE_URL': 'http://lcogt.net/observe/api/profile/',
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
