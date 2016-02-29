@@ -12,6 +12,7 @@ from django.http import HttpResponse
 from django.db.models import Q, Prefetch
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.shortcuts import get_object_or_404
+from rest_framework_extensions.cache.decorators import cache_response
 import logging
 import datetime
 
@@ -93,6 +94,7 @@ class FrameViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @list_route()
+    @cache_response(60 * 60)
     def aggregate(self, request):
         sites = [i[0] for i in Frame.objects.order_by().values_list('SITEID').distinct()]
         telescopes = [i[0] for i in Frame.objects.order_by().values_list('TELID').distinct()]
