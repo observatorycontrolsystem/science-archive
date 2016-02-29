@@ -22,6 +22,7 @@ class Frame(models.Model):
         ('SPECTRUM', 'SPECTRUM'),
         ('ARC', 'ARC'),
         ('LAMPFLAT', 'LAMPFLAT'),
+        ('CATALOG', 'CATALOG'),
     )
     basename = models.CharField(max_length=1000, db_index=True, unique=True)
     area = models.PolygonField(geography=True, spatial_index=True, null=True, blank=True)
