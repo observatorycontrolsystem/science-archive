@@ -100,15 +100,15 @@ class FrameViewSet(viewsets.ModelViewSet):
     @list_route()
     @cache_response(60 * 60)
     def aggregate(self, request):
-        sites = [i[0] for i in Frame.objects.order_by().values_list('SITEID').distinct()]
-        telescopes = [i[0] for i in Frame.objects.order_by().values_list('TELID').distinct()]
-        filters = [i[0] for i in Frame.objects.order_by().values_list('FILTER').distinct()]
-        instruments = [i[0] for i in Frame.objects.order_by().values_list('INSTRUME').distinct()]
-        obstypes = [i[0] for i in Frame.objects.order_by().values_list('OBSTYPE').distinct()]
+        sites = [i[0] for i in Frame.objects.order_by().values_list('SITEID').distinct() if i[0]]
+        telescopes = [i[0] for i in Frame.objects.order_by().values_list('TELID').distinct() if i[0]]
+        filters = [i[0] for i in Frame.objects.order_by().values_list('FILTER').distinct()if i[0]]
+        instruments = [i[0] for i in Frame.objects.order_by().values_list('INSTRUME').distinct() if i[0]]
+        obstypes = [i[0] for i in Frame.objects.order_by().values_list('OBSTYPE').distinct() if i[0]]
         proposals = [
             i[0] for i in Frame.objects.filter(L1PUBDAT__lte=datetime.datetime.utcnow())
                                        .order_by().values_list('PROPID')
-                                       .distinct()
+                                       .distinct() if i[0]
         ]
         response_dict = {
             'sites': sites,
