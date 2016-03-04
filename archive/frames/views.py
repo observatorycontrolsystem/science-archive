@@ -85,10 +85,14 @@ class FrameViewSet(viewsets.ModelViewSet):
             frames = self.get_queryset().filter(pk__in=serializer.data['frame_ids'])
             if not frames.exists():
                 return Response(status=status.HTTP_404_NOT_FOUND)
-            body = build_nginx_zip_text(frames)
+            filename = 'lcogtdata-{0}-{1}'.format(
+                datetime.date.strftime(datetime.date.today(), '%Y%m%d'),
+                frames.count()
+            )
+            body = build_nginx_zip_text(frames, filename)
             response = HttpResponse(body, content_type='text/plain')
             response['X-Archive-Files'] = 'zip'
-            response['Content-Disposition'] = 'attachment; filename=lcogtdata.zip'
+            response['Content-Disposition'] = 'attachment; filename={0}.zip'.format(filename)
             response['Set-Cookie'] = 'fileDownload=true; path=/'
             return response
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
