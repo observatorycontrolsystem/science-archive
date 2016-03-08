@@ -28,7 +28,7 @@ class FrameViewSet(viewsets.ModelViewSet):
     )
     filter_class = FrameFilter
     ordering_fields = ('id', 'basename', 'DATE_OBS', 'FILTER', 'OBSTYPE',
-                       'PROPID', 'INSTRUME', 'OBJECT', 'RLEVEL')
+                       'PROPID', 'INSTRUME', 'OBJECT', 'RLEVEL', 'EXPTIME')
 
     def get_queryset(self):
         """
