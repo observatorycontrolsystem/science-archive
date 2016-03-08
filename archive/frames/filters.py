@@ -12,6 +12,7 @@ class FrameFilter(GeoFilterSet):
     basename = django_filters.CharFilter(name='basename', lookup_type='icontains')
     OBJECT = django_filters.CharFilter(name='OBJECT', lookup_type='icontains')
     public = django_filters.MethodFilter(action='public_filter')
+    EXPTIME = django_filters.NumberFilter(name='EXPTIME', lookup_type='gte')
 
     def public_filter(self, queryset, value):
         if value == 'false':
@@ -20,6 +21,6 @@ class FrameFilter(GeoFilterSet):
 
     class Meta:
         model = Frame
-        fields = ['basename', 'DATE_OBS', 'PROPID', 'OBSTYPE',
+        fields = ['basename', 'DATE_OBS', 'PROPID', 'OBSTYPE', 'EXPTIME',
                   'INSTRUME', 'OBJECT', 'start', 'end', 'area', 'public',
                   'RLEVEL', 'SITEID', 'TELID', 'FILTER', 'L1PUBDAT']
