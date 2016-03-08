@@ -61,10 +61,11 @@ class FrameSerializer(serializers.ModelSerializer):
         related_frame_keys = [
             'L1IDBIAS', 'L1IDDARK', 'L1IDFLAT', 'L1IDSHUT',
             'L1IDMASK', 'L1IDFRNG', 'L1IDCAT', 'TARFILE',
+            'ORIGNAME',
         ]
         for key in related_frame_keys:
             related_frame = data.get(key)
-            if related_frame:
+            if related_frame and related_frame != frame.basename:
                 rf, created = Frame.objects.get_or_create(basename=related_frame)
                 frame.related_frames.add(rf)
         frame.save()
