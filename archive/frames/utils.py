@@ -27,7 +27,7 @@ def build_nginx_zip_text(frames, filename):
     nginx_line = '- {0} /s3/{1} {2}/{3}{4}\n'
     return_line = ''
     for frame in frames:
-        version = frame.version_set.last()
+        version = frame.version_set.first()
         return_line += nginx_line.format(
             version.size, version.frame.s3_key, filename, version.frame.basename, version.extension
         )
