@@ -1,8 +1,16 @@
+# Ctags
+tags
+
+# Venv files
+.venv
+
 # VIM swap files
 *.swp
 *.swo
+
 # ide stuff
 .idea/
+
 # scratch directory
 scratch/
 
