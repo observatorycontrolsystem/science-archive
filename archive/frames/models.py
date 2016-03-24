@@ -87,6 +87,11 @@ class Frame(models.Model):
         choices=OBSERVATION_TYPES,
         help_text="Type of observation. FITS header: OBSTYPE"
     )
+    BLKUID = models.PositiveIntegerField(
+        null=True,
+        db_index=True,
+        help_text='Block id from the pond. FITS header: BLKUID'
+    )
     modified = models.DateTimeField(auto_now=True)
     created = models.DateTimeField(auto_now_add=True)
 

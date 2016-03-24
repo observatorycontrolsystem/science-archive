@@ -34,7 +34,7 @@ class FrameSerializer(serializers.ModelSerializer):
             'id', 'basename', 'area', 'related_frames', 'version_set',
             'filename', 'url', 'RLEVEL', 'DATE_OBS', 'PROPID', 'INSTRUME',
             'OBJECT', 'SITEID', 'TELID', 'EXPTIME', 'FILTER',
-            'L1PUBDAT', 'OBSTYPE',
+            'L1PUBDAT', 'OBSTYPE', 'BLKUID',
         )
 
     def create(self, validated_data):

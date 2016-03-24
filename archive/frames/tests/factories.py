@@ -123,6 +123,7 @@ class FrameFactory(factory.django.DjangoModelFactory):
         datetime.datetime(2025, 1, 1, tzinfo=UTC)
     )
     OBSTYPE = factory.fuzzy.FuzzyChoice(OBSERVATION_TYPES)
+    BLKUID = factory.fuzzy.FuzzyInteger(9000000)
     headers = factory.RelatedFactory(HeaderFactory, 'frame')
 
     @factory.post_generation
