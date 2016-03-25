@@ -9,6 +9,7 @@ class FrameFilter(GeoFilterSet):
     start = django_filters.DateTimeFilter(name='DATE_OBS', lookup_type='gte')
     end = django_filters.DateTimeFilter(name='DATE_OBS', lookup_type='lte')
     covers = geofilters.GeometryFilter(name='area', lookup_type='covers')
+    intersects = geofilters.GeometryFilter(name='area', lookup_type='intersects')
     basename = django_filters.CharFilter(name='basename', lookup_type='icontains')
     OBJECT = django_filters.CharFilter(name='OBJECT', lookup_type='icontains')
     public = django_filters.MethodFilter(action='public_filter')
