@@ -122,6 +122,11 @@ class Frame(models.Model):
         """
         return '{0}{1}'.format(self.basename, self.version_set.first().extension)
 
+    @cached_property
+    def size(self):
+        client = get_s3_client()
+        return client.head_object(Bucket=settings.BUCKET, Key=self.s3_key)['ContentLength']
+
 
 class Headers(models.Model):
     data = JSONField(default=dict)
@@ -150,11 +155,6 @@ class Version(models.Model):
     def url(self):
         client = get_s3_client()
         return client.generate_presigned_url('get_object', Params=self.data_params)
-
-    @cached_property
-    def size(self):
-        client = get_s3_client()
-        return client.head_object(**self.data_params)['ContentLength']
 
     def delete_data(self):
         client = get_s3_client()
