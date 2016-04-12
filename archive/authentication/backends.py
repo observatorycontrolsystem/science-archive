@@ -12,6 +12,8 @@ class OAuth2Backend(object):
     """
 
     def authenticate(self, username=None, password=None):
+        if username == 'eng':
+            return None  # disable eng account
         response = requests.post(
             settings.ODIN_OAUTH_CLIENT['TOKEN_URL'],
             data={
