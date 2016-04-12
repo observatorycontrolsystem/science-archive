@@ -73,7 +73,9 @@ class FrameViewSet(viewsets.ModelViewSet):
     @detail_route()
     def related(self, request, pk=None):
         frame = self.get_object()
-        serializer = self.get_serializer(frame.related_frames.exclude(version=None), many=True)
+        serializer = self.get_serializer(
+            self.get_queryset().filter(pk__in=frame.related_frames.all()), many=True
+        )
         return Response(serializer.data)
 
     @detail_route()

@@ -29,7 +29,7 @@ class FrameSerializer(serializers.ModelSerializer):
     filename = serializers.CharField(read_only=True)
     related_frames = serializers.PrimaryKeyRelatedField(
         many=True,
-        queryset=Frame.objects.exclude(version=None),
+        queryset=Frame.objects.exclude(DATE_OBS=None),
         required=False,
         style={'base_template': 'input.html'}
     )
