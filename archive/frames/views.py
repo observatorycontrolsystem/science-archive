@@ -1,5 +1,7 @@
 from archive.frames.models import Frame, Version
-from archive.frames.serializers import FrameSerializer, ZipSerializer, VersionSerializer
+from archive.frames.serializers import (
+    FrameSerializer, ZipSerializer, VersionSerializer, HeadersSerializer
+)
 from archive.frames.utils import remove_dashes_from_keys, fits_keywords_only, build_nginx_zip_text
 from archive.frames.permissions import AdminOrReadOnly
 from archive.frames.filters import FrameFilter
@@ -72,6 +74,12 @@ class FrameViewSet(viewsets.ModelViewSet):
     def related(self, request, pk=None):
         frame = self.get_object()
         serializer = self.get_serializer(frame.related_frames.exclude(version=None), many=True)
+        return Response(serializer.data)
+
+    @detail_route()
+    def headers(self, request, pk=None):
+        frame = self.get_object()
+        serializer = HeadersSerializer(frame.headers)
         return Response(serializer.data)
 
     @xframe_options_exempt

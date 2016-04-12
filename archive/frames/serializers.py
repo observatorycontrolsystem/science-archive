@@ -16,6 +16,12 @@ class VersionSerializer(serializers.ModelSerializer):
         fields = ('id', 'created', 'key', 'md5', 'extension', 'url')
 
 
+class HeadersSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Headers
+        fields = ('data',)
+
+
 class FrameSerializer(serializers.ModelSerializer):
     basename = serializers.CharField(required=True)
     version_set = VersionSerializer(many=True)

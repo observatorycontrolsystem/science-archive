@@ -70,6 +70,11 @@ class TestFrameGet(TestCase):
         response = self.client.get(reverse('frame-related', args=(frame.id,)))
         self.assertContains(response, related_frame.basename)
 
+    def test_get_headers(self):
+        frame = FrameFactory.create()
+        response = self.client.get(reverse('frame-headers', args=(frame.id,)))
+        self.assertContains(response, frame.headers.data['TRACKNUM'])
+
 
 class TestFramePost(TestCase):
     def setUp(self):
