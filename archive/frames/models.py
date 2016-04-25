@@ -154,7 +154,11 @@ class Version(models.Model):
     @cached_property
     def url(self):
         client = get_s3_client()
-        return client.generate_presigned_url('get_object', Params=self.data_params)
+        return client.generate_presigned_url(
+            'get_object',
+            ExpiresIn=3600 * 48,
+            Params=self.data_params
+        )
 
     def delete_data(self):
         client = get_s3_client()
