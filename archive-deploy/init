@@ -15,5 +15,4 @@ die() {
 [[ -n "$AWS_DEFAULT_REGION" ]] || die "AWS_DEFAULT_REGION is empty"
 [[ -n "$AWS_BUCKET" ]] || die "AWS_BUCKET is empty"
 
-# run under supervisord
-exec /usr/bin/supervisord -n
+exec  /usr/local/bin/uwsgi --ini /etc/uwsgi.ini

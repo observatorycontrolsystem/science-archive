@@ -8,13 +8,12 @@ ENV PYTHONBUFFERED 1
 ENV PYTHONPATH /var/www/archive/
 ENV DJANGO_SETTINGS_MODULE archive.settings
 
-RUN apt-get update && apt-get install -y supervisor gdal-bin
+RUN apt-get update && apt-get install -y gdal-bin
 
 COPY requirements.txt /var/www/archive/
 RUN pip install -r /var/www/archive/requirements.txt --trusted-host buildsba.lco.gtn
 
 COPY archive-deploy/init /init
-COPY archive-deploy/supervisor-app.conf /etc/supervisor/conf.d/
 COPY archive-deploy/uwsgi.ini /etc/
 COPY archive-deploy/local_settings.py /var/www/archive/archive/
 
