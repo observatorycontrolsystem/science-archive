@@ -130,7 +130,6 @@ class TestFramePost(TestCase):
             reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
         )
         self.assertEqual(response.status_code, 201)
-        print(response.content)
 
         response = self.client.get(reverse('frame-detail', args=(response.json()['id'],)))
         self.assertIsNone(response.json()['REQNUM'])
