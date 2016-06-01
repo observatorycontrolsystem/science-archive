@@ -124,6 +124,7 @@ class FrameFactory(factory.django.DjangoModelFactory):
     )
     OBSTYPE = factory.fuzzy.FuzzyChoice(OBSERVATION_TYPES)
     BLKUID = factory.fuzzy.FuzzyInteger(9000000)
+    REQNUM = factory.fuzzy.FuzzyInteger(9000000)
     headers = factory.RelatedFactory(HeaderFactory, 'frame')
 
     @factory.post_generation

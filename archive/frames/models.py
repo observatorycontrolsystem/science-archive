@@ -92,6 +92,12 @@ class Frame(models.Model):
         db_index=True,
         help_text='Block id from the pond. FITS header: BLKUID'
     )
+    REQNUM = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='Request id number, FITS header: REQNUM'
+    )
     modified = models.DateTimeField(auto_now=True)
     created = models.DateTimeField(auto_now_add=True)
 

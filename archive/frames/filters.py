@@ -24,4 +24,5 @@ class FrameFilter(GeoFilterSet):
         model = Frame
         fields = ['basename', 'DATE_OBS', 'PROPID', 'OBSTYPE', 'EXPTIME',
                   'INSTRUME', 'OBJECT', 'start', 'end', 'area', 'public',
-                  'RLEVEL', 'SITEID', 'TELID', 'FILTER', 'L1PUBDAT', 'BLKUID']
+                  'RLEVEL', 'SITEID', 'TELID', 'FILTER', 'L1PUBDAT',
+                  'BLKUID', 'REQNUM']

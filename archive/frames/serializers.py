@@ -23,7 +23,6 @@ class HeadersSerializer(serializers.ModelSerializer):
 
 
 class FrameSerializer(serializers.ModelSerializer):
-    basename = serializers.CharField(required=True)
     version_set = VersionSerializer(many=True)
     url = serializers.CharField(read_only=True)
     filename = serializers.CharField(read_only=True)
@@ -40,7 +39,7 @@ class FrameSerializer(serializers.ModelSerializer):
             'id', 'basename', 'area', 'related_frames', 'version_set',
             'filename', 'url', 'RLEVEL', 'DATE_OBS', 'PROPID', 'INSTRUME',
             'OBJECT', 'SITEID', 'TELID', 'EXPTIME', 'FILTER',
-            'L1PUBDAT', 'OBSTYPE', 'BLKUID',
+            'L1PUBDAT', 'OBSTYPE', 'BLKUID', 'REQNUM',
         )
 
     def create(self, validated_data):
