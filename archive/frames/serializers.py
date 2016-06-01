@@ -23,6 +23,7 @@ class HeadersSerializer(serializers.ModelSerializer):
 
 
 class FrameSerializer(serializers.ModelSerializer):
+    basename = serializers.CharField(required=True)
     version_set = VersionSerializer(many=True)
     url = serializers.CharField(read_only=True)
     filename = serializers.CharField(read_only=True)
