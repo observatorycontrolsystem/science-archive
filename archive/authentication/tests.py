@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from unittest.mock import patch
 from archive.authentication.models import Profile
+from archive.frames.tests.factories import FrameFactory
 import responses
 from django.test import TestCase
 import json
@@ -14,6 +15,7 @@ class TestAuthentication(TestCase):
         self.admin_user = User.objects.create_superuser('admin', 'admin@lcgot.net', 'password')
         self.normal_user = User.objects.create(username='frodo')
         Profile.objects.create(user=self.normal_user)
+        Profile.objects.create(user=self.admin_user)
 
     @patch('requests.get')
     @patch('requests.post')
@@ -73,3 +75,12 @@ class TestAuthentication(TestCase):
             content_type='application/json'
         )
         self.assertFalse(self.normal_user.profile.proposals)
+
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_superuser_all_proposals(self, post_mock, get_mock):
+        self.client.force_login(self.admin_user)
+        FrameFactory.create(PROPID='prop1')
+        FrameFactory.create(PROPID='prop2')
+        self.assertEqual(['prop1', 'prop2'], self.admin_user.profile.proposals)
+        self.assertFalse(get_mock.called)

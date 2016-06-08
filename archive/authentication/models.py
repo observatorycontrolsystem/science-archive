@@ -8,6 +8,8 @@ from rest_framework.authtoken.models import Token
 import requests
 import logging
 
+from archive.frames.models import Frame
+
 logger = logging.getLogger()
 
 
@@ -21,20 +23,27 @@ class Profile(models.Model):
         cache_key = '{0}_proposals'.format(self.user.id)
         cached_proposals = cache.get(cache_key)
         if not cached_proposals:
-            proposals = []
-            response = requests.get(
-                settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
-                headers={'Authorization': 'Bearer {}'.format(self.access_token)}
-            )
-            if response.status_code == 200:
-                proposals = [proposal['code'] for proposal in response.json()]
+            if self.user.is_superuser:
+                proposals = [
+                    i[0] for i in Frame.objects.all()
+                                               .order_by().values_list('PROPID')
+                                               .distinct() if i[0]
+                ]
             else:
-                # TODO implement getting new token via refresh token
-                # As of this writing tokens never expire in Odin
-                logger.warn(
-                    'User auth token was invalid!',
-                    extra={'tags': {'username': self.user.username}}
+                proposals = []
+                response = requests.get(
+                    settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
+                    headers={'Authorization': 'Bearer {}'.format(self.access_token)}
                 )
+                if response.status_code == 200:
+                    proposals = [proposal['code'] for proposal in response.json()]
+                else:
+                    # TODO implement getting new token via refresh token
+                    # As of this writing tokens never expire in Odin
+                    logger.warn(
+                        'User auth token was invalid!',
+                        extra={'tags': {'username': self.user.username}}
+                    )
             cache.set(cache_key, proposals, 3600)
             return proposals
         return cached_proposals
