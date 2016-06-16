@@ -205,7 +205,7 @@ except ImportError:
     pass
 
 try:
-    INSTALLED_APPS += LOCAL_INSTALLED_APPS
-    ALLOWED_HOSTS += LOCAL_ALLOWED_HOSTS
+    INSTALLED_APPS += LOCAL_INSTALLED_APPS  # noqa
+    ALLOWED_HOSTS += LOCAL_ALLOWED_HOSTS  # noqa
 except:
     pass
