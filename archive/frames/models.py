@@ -23,6 +23,7 @@ class Frame(models.Model):
         ('ARC', 'ARC'),
         ('LAMPFLAT', 'LAMPFLAT'),
         ('CATALOG', 'CATALOG'),
+        ('BPM', 'BPM'),
     )
     basename = models.CharField(max_length=1000, db_index=True, unique=True)
     area = models.PolygonField(geography=True, spatial_index=True, null=True, blank=True)
