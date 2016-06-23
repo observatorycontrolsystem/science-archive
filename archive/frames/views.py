@@ -61,13 +61,17 @@ class FrameViewSet(viewsets.ModelViewSet):
             extension = request.data.get('version_set')[0].get('extension')
         else:
             extension = ''
-        logger_tags = {'tags': {'filename': '{}{}'.format(basename, extension)}}
+        logger_tags = {'tags': {
+            'filename': '{}{}'.format(basename, extension),
+            'request_num': request.data.get('REQNUM')
+        }}
         logger.info('Got request to process frame', extra=logger_tags)
 
         data = remove_dashes_from_keys(request.data)
         frame_serializer = FrameSerializer(data=data)
         if frame_serializer.is_valid():
-            frame_serializer.save(header=fits_keywords_only(data))
+            frame = frame_serializer.save(header=fits_keywords_only(data))
+            logger_tags['tags']['id'] = frame.id
             logger.info('Request to process frame succeeded', extra=logger_tags)
             return Response(frame_serializer.data, status=status.HTTP_201_CREATED)
         else:
