@@ -57,8 +57,13 @@ class FrameViewSet(viewsets.ModelViewSet):
 
     def create(self, request):
         basename = request.data.get('basename')
-        logger_tags = {'tags': {'filename': basename}}
+        if len(request.data.get('version_set')) > 0:
+            extension = request.data.get('version_set')[0].get('extension')
+        else:
+            extension = ''
+        logger_tags = {'tags': {'filename': '{}{}'.format(basename, extension)}}
         logger.info('Got request to process frame', extra=logger_tags)
+
         data = remove_dashes_from_keys(request.data)
         frame_serializer = FrameSerializer(data=data)
         if frame_serializer.is_valid():
