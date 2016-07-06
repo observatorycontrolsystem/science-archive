@@ -184,6 +184,14 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_METADATA_CLASS': 'archive.frames.metadata.MinimalMetadata',
     'DEFAULT_PAGINATION_CLASS': 'archive.frames.pagination.LimitedLimitOffsetPagination',
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'archive.authentication.throttling.AllowStaffUserRateThrottle',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '1000/day',
+        'user': '5000/day',
+    }
 }
 
 ODIN_OAUTH_CLIENT = {
