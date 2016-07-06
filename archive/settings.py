@@ -189,7 +189,7 @@ REST_FRAMEWORK = {
         'archive.authentication.throttling.AllowStaffUserRateThrottle',
     ),
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '1000/day',
+        'anon': '3500/day',
         'user': '5000/day',
     }
 }
