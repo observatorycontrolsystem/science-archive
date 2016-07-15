@@ -182,7 +182,6 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
         'archive.authentication.backends.BearerAuthentication',  # Allows auth using oauth bearer
     ),
-    'DEFAULT_METADATA_CLASS': 'archive.frames.metadata.MinimalMetadata',
     'DEFAULT_PAGINATION_CLASS': 'archive.frames.pagination.LimitedLimitOffsetPagination',
     'DEFAULT_THROTTLE_CLASSES': (
         'rest_framework.throttling.AnonRateThrottle',
