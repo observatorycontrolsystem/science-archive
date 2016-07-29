@@ -1,12 +1,11 @@
 --extra-index-url=http://buildsba.lco.gtn/python
 django
 psycopg2
-djangorestframework
+djangorestframework==3.4.0
 django-extensions
 ipython
 django-filter
 lcogt-logging
-botocore==1.4.40
 boto3
 django-crispy-forms
 pytz
