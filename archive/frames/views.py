@@ -45,7 +45,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             .prefetch_related('version_set')
             .prefetch_related(Prefetch('related_frames', queryset=Frame.objects.all().only('id')))
         )
-        if self.request.user.is_staff:
+        if self.request.user.is_superuser:
             return queryset
         elif self.request.user.is_authenticated():
             return queryset.filter(

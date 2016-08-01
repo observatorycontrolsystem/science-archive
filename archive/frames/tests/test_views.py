@@ -16,7 +16,7 @@ import random
 
 class TestFrameGet(TestCase):
     def setUp(self):
-        user = User.objects.create(username='admin', password='admin', is_staff=True)
+        user = User.objects.create(username='admin', password='admin', is_superuser=True)
         user.backend = settings.AUTHENTICATION_BACKENDS[0]
         self.client.force_login(user)
         boto3.client = MagicMock()
@@ -79,7 +79,7 @@ class TestFrameGet(TestCase):
 
 class TestFramePost(TestCase):
     def setUp(self):
-        user = User.objects.create(username='admin', password='admin', is_staff=True)
+        user = User.objects.create(username='admin', password='admin', is_superuser=True)
         user.backend = settings.AUTHENTICATION_BACKENDS[0]
         self.client.force_login(user)
         boto3.client = MagicMock()
