@@ -79,6 +79,7 @@ class TestAuthentication(TestCase):
     @patch('requests.get')
     @patch('requests.post')
     def test_superuser_all_proposals(self, post_mock, get_mock):
+        self.admin_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         self.client.force_login(self.admin_user)
         FrameFactory.create(PROPID='prop1')
         FrameFactory.create(PROPID='prop2')

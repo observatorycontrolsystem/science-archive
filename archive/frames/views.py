@@ -14,7 +14,7 @@ from django.http import HttpResponse
 from django.db.models import Q, Prefetch
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.shortcuts import get_object_or_404
-from rest_framework_extensions.cache.decorators import cache_response
+from django.core.cache import cache
 import logging
 import datetime
 
@@ -117,26 +117,28 @@ class FrameViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @list_route()
-    @cache_response(60 * 60)
     def aggregate(self, request):
-        sites = [i[0] for i in Frame.objects.order_by().values_list('SITEID').distinct() if i[0]]
-        telescopes = [i[0] for i in Frame.objects.order_by().values_list('TELID').distinct() if i[0]]
-        filters = [i[0] for i in Frame.objects.order_by().values_list('FILTER').distinct()if i[0]]
-        instruments = [i[0] for i in Frame.objects.order_by().values_list('INSTRUME').distinct() if i[0]]
-        obstypes = [i[0] for i in Frame.objects.order_by().values_list('OBSTYPE').distinct() if i[0]]
-        proposals = [
-            i[0] for i in Frame.objects.filter(L1PUBDAT__lte=datetime.datetime.utcnow())
-                                       .order_by().values_list('PROPID')
-                                       .distinct() if i[0]
-        ]
-        response_dict = {
-            'sites': sites,
-            'telescopes': telescopes,
-            'filters': filters,
-            'instruments': instruments,
-            'obstypes': obstypes,
-            'proposals': proposals
-        }
+        response_dict = cache.get('aggregate')
+        if not response_dict:
+            sites = [i[0] for i in Frame.objects.order_by().values_list('SITEID').distinct() if i[0]]
+            telescopes = [i[0] for i in Frame.objects.order_by().values_list('TELID').distinct() if i[0]]
+            filters = [i[0] for i in Frame.objects.order_by().values_list('FILTER').distinct()if i[0]]
+            instruments = [i[0] for i in Frame.objects.order_by().values_list('INSTRUME').distinct() if i[0]]
+            obstypes = [i[0] for i in Frame.objects.order_by().values_list('OBSTYPE').distinct() if i[0]]
+            proposals = [
+                i[0] for i in Frame.objects.filter(L1PUBDAT__lte=datetime.datetime.utcnow())
+                                           .order_by().values_list('PROPID')
+                                           .distinct() if i[0]
+            ]
+            response_dict = {
+                'sites': sites,
+                'telescopes': telescopes,
+                'filters': filters,
+                'instruments': instruments,
+                'obstypes': obstypes,
+                'proposals': proposals
+            }
+            cache.set('aggregate', response_dict, 60 * 60)
         return Response(response_dict)
 
 

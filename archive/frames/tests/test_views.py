@@ -17,6 +17,7 @@ import random
 class TestFrameGet(TestCase):
     def setUp(self):
         user = User.objects.create(username='admin', password='admin', is_staff=True)
+        user.backend = settings.AUTHENTICATION_BACKENDS[0]
         self.client.force_login(user)
         boto3.client = MagicMock()
         self.frames = FrameFactory.create_batch(5)
@@ -79,6 +80,7 @@ class TestFrameGet(TestCase):
 class TestFramePost(TestCase):
     def setUp(self):
         user = User.objects.create(username='admin', password='admin', is_staff=True)
+        user.backend = settings.AUTHENTICATION_BACKENDS[0]
         self.client.force_login(user)
         boto3.client = MagicMock()
         self.header_json = json.load(open(os.path.join(os.path.dirname(__file__), 'frames.json')))
@@ -144,7 +146,7 @@ class TestFramePost(TestCase):
         response = self.client.post(
             reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
         )
-        self.assertEqual(response.json()['version_set'], [{'md5': ['Version with this md5 already exists.']}])
+        self.assertEqual(response.json()['version_set'], [{'md5': ['version with this md5 already exists.']}])
         self.assertEqual(response.status_code, 400)
 
 
@@ -152,7 +154,9 @@ class TestFrameFiltering(TestCase):
     def setUp(self):
         boto3.client = MagicMock()
         self.admin_user = User.objects.create_superuser(username='admin', email='a@a.com', password='password')
+        self.admin_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         self.normal_user = User.objects.create(username='frodo', password='theone')
+        self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
         self.public_frame = FrameFactory(PROPID='public', L1PUBDAT=datetime.datetime(2000, 1, 1))
         self.proposal_frame = FrameFactory(PROPID='prop1', L1PUBDAT=datetime.datetime(2099, 1, 1))
@@ -191,6 +195,7 @@ class TestZipDownload(TestCase):
     def setUp(self):
         boto3.client = MagicMock()
         self.normal_user = User.objects.create(username='frodo', password='theone')
+        self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
         self.public_frame = FrameFactory(PROPID='public', L1PUBDAT=datetime.datetime(2000, 1, 1))
         self.proposal_frame = FrameFactory(PROPID='prop1', L1PUBDAT=datetime.datetime(2099, 1, 1))
