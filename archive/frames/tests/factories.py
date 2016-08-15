@@ -145,3 +145,7 @@ class FrameFactory(factory.django.DjangoModelFactory):
         else:
             version = VersionFactory(frame=self)
             self.version_set.add(version)
+
+
+class PublicFrameFactory(FrameFactory):
+    L1PUBDAT = datetime.datetime(2000, 1, 1, tzinfo=UTC)

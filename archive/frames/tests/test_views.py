@@ -1,4 +1,4 @@
-from archive.frames.tests.factories import FrameFactory, VersionFactory
+from archive.frames.tests.factories import FrameFactory, VersionFactory, PublicFrameFactory
 from archive.frames.models import Frame
 from archive.authentication.models import Profile
 from django.contrib.auth.models import User
@@ -38,32 +38,6 @@ class TestFrameGet(TestCase):
         )
         self.assertEqual(response.json()['count'], 1)
         self.assertContains(response, self.frame.basename)
-
-    def test_filter_area(self):
-        frame = FrameFactory.create(
-            area='POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))'
-        )
-        response = self.client.get(
-            '{0}?covers=POINT(5 5)'.format(reverse('frame-list'))
-        )
-        self.assertContains(response, frame.basename)
-        response = self.client.get(
-            '{0}?covers=POINT(20 20)'.format(reverse('frame-list'))
-        )
-        self.assertNotContains(response, frame.basename)
-
-    def test_filer_area_wrap_0RA(self):
-        frame = FrameFactory.create(
-            area='POLYGON((350 -10, 350 10, 10 10, 10 -10, 350 -10))'
-        )
-        response = self.client.get(
-            '{0}?covers=POINT(0 0)'.format(reverse('frame-list'))
-        )
-        self.assertContains(response, frame.basename)
-        response = self.client.get(
-            '{0}?covers=POINT(340 0)'.format(reverse('frame-list'))
-        )
-        self.assertNotContains(response, frame.basename)
 
     def test_get_related(self):
         frame = FrameFactory.create()
@@ -189,6 +163,96 @@ class TestFrameFiltering(TestCase):
         self.assertContains(response, self.public_frame.basename)
         self.assertNotContains(response, self.proposal_frame.basename)
         self.assertNotContains(response, self.not_owned.basename)
+
+
+class TestQueryFiltering(TestCase):
+    def setUp(self):
+        boto3.client = MagicMock()
+
+    def test_start_end(self):
+        frame = PublicFrameFactory(DATE_OBS=datetime.datetime(2011, 2, 1))
+        response = self.client.get(reverse('frame-list') + '?start=2011-01-01&end=2011-03-01')
+        self.assertContains(response, frame.basename)
+        response = self.client.get(reverse('frame-list') + '?start=2012-01-01&end=2012-03-01')
+        self.assertNotContains(response, frame.basename)
+
+    def test_basename(self):
+        frame = PublicFrameFactory(basename='allyourbase')
+        response = self.client.get(reverse('frame-list') + '?basename=allyour')
+        self.assertContains(response, frame.basename)
+        response = self.client.get(reverse('frame-list') + '?basename=allyourbase')
+        self.assertContains(response, frame.basename)
+        response = self.client.get(reverse('frame-list') + '?basename=cats')
+        self.assertNotContains(response, frame.basename)
+
+    def test_object(self):
+        frame = PublicFrameFactory(OBJECT='planet9')
+        response = self.client.get(reverse('frame-list') + '?OBJECT=planet')
+        self.assertContains(response, frame.basename)
+        response = self.client.get(reverse('frame-list') + '?OBJECT=planet9')
+        self.assertContains(response, frame.basename)
+        response = self.client.get(reverse('frame-list') + '?OBJECT=mars')
+        self.assertNotContains(response, frame.basename)
+
+    def test_exptime(self):
+        frame = PublicFrameFactory(EXPTIME=300)
+        response = self.client.get(reverse('frame-list') + '?EXPTIME=300')
+        self.assertContains(response, frame.basename)
+        response = self.client.get(reverse('frame-list') + '?EXPTIME=200')
+        self.assertContains(response, frame.basename)
+        response = self.client.get(reverse('frame-list') + '?EXPTIME=900')
+        self.assertNotContains(response, frame.basename)
+
+    def test_public(self):
+        frame = PublicFrameFactory()
+        response = self.client.get(reverse('frame-list'))
+        self.assertContains(response, frame.basename)
+        frame = FrameFactory(L1PUBDAT=datetime.datetime(2999, 1, 1))
+        response = self.client.get(reverse('frame-list'))
+        self.assertNotContains(response, frame.basename)
+
+    def test_area_covers(self):
+        frame = PublicFrameFactory.create(
+            area='POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))'
+        )
+        response = self.client.get(
+            '{0}?covers=POINT(5 5)'.format(reverse('frame-list'))
+        )
+        self.assertContains(response, frame.basename)
+        response = self.client.get(
+            '{0}?covers=POINT(20 20)'.format(reverse('frame-list'))
+        )
+        self.assertNotContains(response, frame.basename)
+
+    def test_area_covers_wrap_0ra(self):
+        frame = PublicFrameFactory.create(
+            area='POLYGON((350 -10, 350 10, 10 10, 10 -10, 350 -10))'
+        )
+        response = self.client.get(
+            '{0}?covers=POINT(0 0)'.format(reverse('frame-list'))
+        )
+        self.assertContains(response, frame.basename)
+        response = self.client.get(
+            '{0}?covers=POINT(340 0)'.format(reverse('frame-list'))
+        )
+        self.assertNotContains(response, frame.basename)
+
+    def test_area_intersects(self):
+        frame = PublicFrameFactory.create(
+            area='POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))'
+        )
+        response = self.client.get(
+            reverse('frame-list') + '?intersects=POLYGON((-10 -10, -10 20, 20 20, 20 0, -10 -10))'
+        )
+        self.assertContains(response, frame.basename)
+
+    def test_rlevel(self):
+        frame = PublicFrameFactory(RLEVEL=10)
+        response = self.client.get(reverse('frame-list') + '?RLEVEL=10')
+        self.assertContains(response, frame.basename)
+
+        response = self.client.get(reverse('frame-list') + '?RLEVEL=11')
+        self.assertNotContains(response, frame.basename)
 
 
 class TestZipDownload(TestCase):
