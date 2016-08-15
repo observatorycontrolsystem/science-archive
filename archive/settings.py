@@ -183,6 +183,7 @@ REST_FRAMEWORK = {
         'archive.authentication.backends.BearerAuthentication',  # Allows auth using oauth bearer
     ),
     'DEFAULT_PAGINATION_CLASS': 'archive.frames.pagination.LimitedLimitOffsetPagination',
+    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning',
     'DEFAULT_THROTTLE_CLASSES': (
         'rest_framework.throttling.AnonRateThrottle',
         'archive.authentication.throttling.AllowStaffUserRateThrottle',
