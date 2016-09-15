@@ -7,9 +7,26 @@ to provide endpoints for adding and querying the metadata for frames.
 Requirements
 ------------
 
-Postgresql with PostGIS installed.
+### Postgresql with PostGIS installed.
 
-Credentials for an Amazon S3 bucket.
+For development, docker is reccommended. Check out the [pg-postgis](http://git.lco.gtn/projects/DOC/repos/pg-postgis/browse/Dockerfile) docker project. Building this image will provide you with a postgresql databse with everything you need to run the archive.
+
+To build the image:
+`$ docker build -t docker.lcogt.net/pg-postgis .`
+
+To run the database:
+`$ docker run -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d docker.lcogt.net/pg-postgis`
+
+Now we need to create the archive database and install the postgis extension to it:
+
+`$ createdb -Upostgres archive`
+`$ psql -Upostgres archive -c "CREATE EXTENSION postgis"`
+
+The database should be setup now. The defaults contained in `settings.py` are described in the next section, and should be sufficient for most development work.
+
+
+### Credentials for an Amazon S3 bucket.
+The archive makes heavy use of the [boto3](https://boto3.readthedocs.io/en/latest/) library for interfacing with Amazon S3. Boto3 automatically reads specific environmental values, described in the next section.
 
 
 Setup
