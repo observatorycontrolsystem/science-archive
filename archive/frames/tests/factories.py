@@ -107,9 +107,9 @@ class FrameFactory(factory.django.DjangoModelFactory):
 
     basename = factory.fuzzy.FuzzyText(length=30)
     area = FuzzyArea()
-    DATE_OBS = factory.fuzzy.FuzzyDate(
-        datetime.date(2015, 1, 1),
-        datetime.date(2025, 1, 1)
+    DATE_OBS = factory.fuzzy.FuzzyDateTime(
+        datetime.datetime(2015, 1, 1, tzinfo=UTC),
+        datetime.datetime(2025, 1, 1, tzinfo=UTC)
     )
     PROPID = factory.fuzzy.FuzzyText(length=10)
     INSTRUME = factory.fuzzy.FuzzyChoice(INSTRUMENTS)

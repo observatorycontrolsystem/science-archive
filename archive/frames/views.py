@@ -50,10 +50,10 @@ class FrameViewSet(viewsets.ModelViewSet):
         elif self.request.user.is_authenticated():
             return queryset.filter(
                 Q(PROPID__in=self.request.user.profile.proposals) |
-                Q(L1PUBDAT__lt=datetime.datetime.utcnow())
+                Q(L1PUBDAT__lt=datetime.datetime.now(datetime.timezone.utc))
             )
         else:
-            return queryset.filter(L1PUBDAT__lt=datetime.datetime.utcnow())
+            return queryset.filter(L1PUBDAT__lt=datetime.datetime.now(datetime.timezone.utc))
 
     def create(self, request):
         basename = request.data.get('basename')
@@ -126,7 +126,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             instruments = [i[0] for i in Frame.objects.order_by().values_list('INSTRUME').distinct() if i[0]]
             obstypes = [i[0] for i in Frame.objects.order_by().values_list('OBSTYPE').distinct() if i[0]]
             proposals = [
-                i[0] for i in Frame.objects.filter(L1PUBDAT__lte=datetime.datetime.utcnow())
+                i[0] for i in Frame.objects.filter(L1PUBDAT__lte=datetime.datetime.now(datetime.timezone.utc))
                                            .order_by().values_list('PROPID')
                                            .distinct() if i[0]
             ]

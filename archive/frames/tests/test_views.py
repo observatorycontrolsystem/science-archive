@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 from django.core.urlresolvers import reverse
 from django.test import TestCase
 from django.conf import settings
+from pytz import UTC
 import boto3
 import responses
 import datetime
@@ -132,9 +133,9 @@ class TestFrameFiltering(TestCase):
         self.normal_user = User.objects.create(username='frodo', password='theone')
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
-        self.public_frame = FrameFactory(PROPID='public', L1PUBDAT=datetime.datetime(2000, 1, 1))
-        self.proposal_frame = FrameFactory(PROPID='prop1', L1PUBDAT=datetime.datetime(2099, 1, 1))
-        self.not_owned = FrameFactory(PROPID='notyours', L1PUBDAT=datetime.datetime(2099, 1, 1))
+        self.public_frame = FrameFactory(PROPID='public', L1PUBDAT=datetime.datetime(2000, 1, 1, tzinfo=UTC))
+        self.proposal_frame = FrameFactory(PROPID='prop1', L1PUBDAT=datetime.datetime(2099, 1, 1, tzinfo=UTC))
+        self.not_owned = FrameFactory(PROPID='notyours', L1PUBDAT=datetime.datetime(2099, 1, 1, tzinfo=UTC))
 
     def test_admin_view_all(self):
         self.client.login(username='admin', password='password')
@@ -170,7 +171,7 @@ class TestQueryFiltering(TestCase):
         boto3.client = MagicMock()
 
     def test_start_end(self):
-        frame = PublicFrameFactory(DATE_OBS=datetime.datetime(2011, 2, 1))
+        frame = PublicFrameFactory(DATE_OBS=datetime.datetime(2011, 2, 1, tzinfo=UTC))
         response = self.client.get(reverse('frame-list') + '?start=2011-01-01&end=2011-03-01')
         self.assertContains(response, frame.basename)
         response = self.client.get(reverse('frame-list') + '?start=2012-01-01&end=2012-03-01')
@@ -207,7 +208,7 @@ class TestQueryFiltering(TestCase):
         frame = PublicFrameFactory()
         response = self.client.get(reverse('frame-list'))
         self.assertContains(response, frame.basename)
-        frame = FrameFactory(L1PUBDAT=datetime.datetime(2999, 1, 1))
+        frame = FrameFactory(L1PUBDAT=datetime.datetime(2999, 1, 1, tzinfo=UTC))
         response = self.client.get(reverse('frame-list'))
         self.assertNotContains(response, frame.basename)
 
@@ -261,9 +262,9 @@ class TestZipDownload(TestCase):
         self.normal_user = User.objects.create(username='frodo', password='theone')
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
-        self.public_frame = FrameFactory(PROPID='public', L1PUBDAT=datetime.datetime(2000, 1, 1))
-        self.proposal_frame = FrameFactory(PROPID='prop1', L1PUBDAT=datetime.datetime(2099, 1, 1))
-        self.not_owned = FrameFactory(PROPID='notyours', L1PUBDAT=datetime.datetime(2099, 1, 1))
+        self.public_frame = FrameFactory(PROPID='public', L1PUBDAT=datetime.datetime(2000, 1, 1, tzinfo=UTC))
+        self.proposal_frame = FrameFactory(PROPID='prop1', L1PUBDAT=datetime.datetime(2099, 1, 1, tzinfo=UTC))
+        self.not_owned = FrameFactory(PROPID='notyours', L1PUBDAT=datetime.datetime(2099, 1, 1, tzinfo=UTC))
 
     def test_public_download(self):
         response = self.client.post(

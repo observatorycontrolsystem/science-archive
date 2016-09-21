@@ -17,7 +17,7 @@ class FrameFilter(GeoFilterSet):
 
     def public_filter(self, queryset, value):
         if value == 'false':
-            return queryset.exclude(L1PUBDAT__lt=datetime.utcnow())
+            return queryset.exclude(L1PUBDAT__lt=datetime.now(datetime.timezone.utc))
         return queryset
 
     class Meta:
