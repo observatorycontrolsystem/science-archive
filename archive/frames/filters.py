@@ -1,8 +1,8 @@
 from archive.frames.models import Frame
 from rest_framework_gis.filterset import GeoFilterSet
 from rest_framework_gis import filters as geofilters
+from django.utils import timezone
 import django_filters
-from datetime import datetime
 
 
 class FrameFilter(GeoFilterSet):
@@ -17,7 +17,7 @@ class FrameFilter(GeoFilterSet):
 
     def public_filter(self, queryset, value):
         if value == 'false':
-            return queryset.exclude(L1PUBDAT__lt=datetime.now(datetime.timezone.utc))
+            return queryset.exclude(L1PUBDAT__lt=timezone.now())
         return queryset
 
     class Meta:
