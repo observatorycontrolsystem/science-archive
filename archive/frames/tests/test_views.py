@@ -212,6 +212,27 @@ class TestQueryFiltering(TestCase):
         response = self.client.get(reverse('frame-list'))
         self.assertNotContains(response, frame.basename)
 
+    @responses.activate
+    def test_not_public(self):
+        user = User.objects.create(username='frodo', password='theone')
+        Profile.objects.create(user=user)
+        user.backend = settings.AUTHENTICATION_BACKENDS[0]
+        responses.add(
+            responses.GET,
+            settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
+            body=json.dumps([{'code': 'prop1'}]),
+            status=200,
+            content_type='application/json'
+        )
+        self.client.force_login(user)
+        frame = FrameFactory(L1PUBDAT=datetime.datetime(2999, 1, 1, tzinfo=UTC), PROPID='prop1')
+        response = self.client.get(reverse('frame-list') + '?public=false')
+        self.assertContains(response, frame.basename)
+
+        self.client.logout()
+        response = self.client.get(reverse('frame-list') + '?public=false')
+        self.assertNotContains(response, frame.basename)
+
     def test_area_covers(self):
         frame = PublicFrameFactory.create(
             area='POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))'
