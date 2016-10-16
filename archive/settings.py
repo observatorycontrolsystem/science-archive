@@ -200,9 +200,9 @@ ODIN_OAUTH_CLIENT = {
                       'y1x8j1H5wyqgfIyGpuXEJMcLfeDo2T0FciD'
                       'w1yaGgeyNQDk7dIoGosh4xGKawBr9sXidS5'
                       '27lf3NhSOg2scYx8OJKBJ5m'),
-    'TOKEN_URL': 'http://lcogt.net/observe/o/token/',
-    'PROPOSALS_URL': 'http://lcogt.net/observe/api/proposals/',
-    'PROFILE_URL': 'http://lcogt.net/observe/api/profile/',
+    'TOKEN_URL': 'https://lco.global/observe/o/token/',
+    'PROPOSALS_URL': 'https://lco.global/observe/api/proposals/',
+    'PROFILE_URL': 'https://lco.global/observe/api/profile/',
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
