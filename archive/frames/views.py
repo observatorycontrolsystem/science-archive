@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework import status, filters, viewsets
 from rest_framework.authtoken.models import Token
+from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
 from django.db.models import Q, Prefetch
 from django.views.decorators.clickjacking import xframe_options_exempt
@@ -25,7 +26,7 @@ class FrameViewSet(viewsets.ModelViewSet):
     permission_classes = (AdminOrReadOnly,)
     serializer_class = FrameSerializer
     filter_backends = (
-        filters.DjangoFilterBackend,
+        DjangoFilterBackend,
         filters.OrderingFilter,
     )
     filter_class = FrameFilter
@@ -146,5 +147,5 @@ class VersionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (IsAdminUser,)
     serializer_class = VersionSerializer
     queryset = Version.objects.all()
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filter_fields = ('md5',)
