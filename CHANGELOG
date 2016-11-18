@@ -1,3 +1,7 @@
+1.6
+2016-11-18
+Upgrade django-filter to 1.0
+
 1.5
 2016-11-07
 Upgrade django-cors-headers to 1.3
