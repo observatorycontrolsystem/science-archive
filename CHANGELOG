@@ -1,3 +1,7 @@
+1.10
+2017-03-10
+Upgrade DRF to 3.6
+
 1.9
 2017-03-02
 Upgrade psycopg2 to 2.7
