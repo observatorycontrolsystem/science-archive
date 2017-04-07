@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 from django.core.urlresolvers import reverse
 from django.test import TestCase
 from django.conf import settings
+from django.contrib.gis.geos import Point
 from pytz import UTC
 import boto3
 import responses
@@ -61,7 +62,7 @@ class TestFramePost(TestCase):
         self.header_json = json.load(open(os.path.join(os.path.dirname(__file__), 'frames.json')))
         f = self.header_json[random.choice(list(self.header_json.keys()))]
         f['basename'] = FrameFactory.basename.fuzz()
-        f['area'] = FrameFactory.area.fuzz()
+        f['area'] = FrameFactory.area.fuzz(as_dict=True)
         f['version_set'] = [
             {
                 'md5': VersionFactory.md5.fuzz(),
@@ -76,7 +77,7 @@ class TestFramePost(TestCase):
         for extension in self.header_json:
             frame_payload = self.header_json[extension]
             frame_payload['basename'] = FrameFactory.basename.fuzz()
-            frame_payload['area'] = FrameFactory.area.fuzz()
+            frame_payload['area'] = FrameFactory.area.fuzz(as_dict=True)
             frame_payload['version_set'] = [
                 {
                     'md5': VersionFactory.md5.fuzz(),
@@ -90,6 +91,31 @@ class TestFramePost(TestCase):
             self.assertContains(response, frame_payload['basename'], status_code=201)
         response = self.client.get(reverse('frame-list'))
         self.assertEqual(response.json()['count'], total_frames)
+
+    def test_bad_area(self):
+        frame_payload = self.single_frame_payload
+        frame_payload['area']['coordinates'][0] = ['asd', 23]
+        response = self.client.post(
+            reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_post_frame_polygon_serialization(self):
+        frame_payload = self.single_frame_payload
+        frame_payload['area']['coordinates'] = [[[0, 0], [0, 10], [10, 10], [10, 0], [0, 0]]]
+        response = self.client.post(
+            reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(Frame.objects.filter(area__covers=Point(5, 5)))
+        self.assertFalse(Frame.objects.filter(area__covers=Point(50, 50)))
+
+    def test_post_frame_deserialization(self):
+        frame_payload = self.single_frame_payload
+        response = self.client.post(
+            reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
+        )
+        self.assertEqual(frame_payload['area'], response.json()['area'])
 
     def test_post_missing_data(self):
         frame_payload = self.single_frame_payload

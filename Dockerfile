@@ -1,4 +1,4 @@
-FROM python:3.5
+FROM python:3.6
 MAINTAINER Austin Riba <ariba@lcogt.net>
 
 EXPOSE 9000

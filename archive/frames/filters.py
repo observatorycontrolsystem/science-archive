@@ -1,19 +1,26 @@
 from archive.frames.models import Frame
-from rest_framework_gis.filterset import GeoFilterSet
-from rest_framework_gis import filters as geofilters
+from django.contrib.gis.geos import GEOSGeometry
 from django.utils import timezone
 import django_filters
 
 
-class FrameFilter(GeoFilterSet):
+class FrameFilter(django_filters.FilterSet):
     start = django_filters.DateTimeFilter(name='DATE_OBS', lookup_expr='gte')
     end = django_filters.DateTimeFilter(name='DATE_OBS', lookup_expr='lte')
-    covers = geofilters.GeometryFilter(name='area', lookup_expr='covers')
-    intersects = geofilters.GeometryFilter(name='area', lookup_expr='intersects')
     basename = django_filters.CharFilter(name='basename', lookup_expr='icontains')
     OBJECT = django_filters.CharFilter(name='OBJECT', lookup_expr='icontains')
     public = django_filters.CharFilter(method='public_filter')
     EXPTIME = django_filters.NumberFilter(name='EXPTIME', lookup_expr='gte')
+    covers = django_filters.CharFilter(method='covers_filter')
+    intersects = django_filters.CharFilter(method='intersects_filter')
+
+    def covers_filter(self, queryset, name, value):
+        geo = GEOSGeometry(value)
+        return queryset.filter(area__covers=geo)
+
+    def intersects_filter(self, queryset, name, value):
+        geo = GEOSGeometry(value)
+        return queryset.filter(area__intersects=geo)
 
     def public_filter(self, queryset, name, value):
         if value == 'false':

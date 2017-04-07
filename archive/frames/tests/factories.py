@@ -60,7 +60,7 @@ def get_header_list():
 
 
 class FuzzyArea(factory.fuzzy.BaseFuzzyAttribute):
-    def fuzz(self):
+    def fuzz(self, as_dict=False):
         ra = factory.fuzzy._random.choice(RA_RANGE)
         dec = factory.fuzzy._random.choice(DEC_RANGE)
         # most of our frames will have a FOV less than 5deg
@@ -70,6 +70,18 @@ class FuzzyArea(factory.fuzzy.BaseFuzzyAttribute):
         ne = (ra, dec + y)
         nw = (ra + x, dec + y)
         sw = (ra + x, dec)
+        if as_dict:
+            return {
+                'type': 'Polygon',
+                'coordinates': [[
+                    [se[0], se[1]],
+                    [ne[0], ne[1]],
+                    [nw[0], nw[1]],
+                    [sw[0], sw[1]],
+                    [se[0], se[1]]
+                ]]
+            }
+
         return 'POLYGON(({0}, {1}, {2}, {3}, {4}))'.format(
             '{} {}'.format(se[0], se[1]),
             '{} {}'.format(ne[0], ne[1]),

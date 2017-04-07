@@ -1,5 +1,7 @@
+import json
 from rest_framework import serializers
 from archive.frames.models import Frame, Version, Headers
+from django.contrib.gis.geos import GEOSGeometry
 
 
 class ZipSerializer(serializers.Serializer):
@@ -22,11 +24,23 @@ class HeadersSerializer(serializers.ModelSerializer):
         fields = ('data',)
 
 
+class PolygonField(serializers.Field):
+    def to_representation(self, obj):
+        return json.loads(obj.geojson)
+
+    def to_internal_value(self, data):
+        try:
+            return GEOSGeometry(json.dumps(data))
+        except:
+            raise serializers.ValidationError('Invalid polygon: {0}'.format(data))
+
+
 class FrameSerializer(serializers.ModelSerializer):
     basename = serializers.CharField(required=True)
     version_set = VersionSerializer(many=True)
     url = serializers.CharField(read_only=True)
     filename = serializers.CharField(read_only=True)
+    area = PolygonField()
     related_frames = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Frame.objects.exclude(DATE_OBS=None),
