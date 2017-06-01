@@ -174,8 +174,8 @@ class TestFrameFiltering(TestCase):
     def test_proposal_user(self):
         responses.add(
             responses.GET,
-            settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
-            body=json.dumps([{'code': 'prop1'}]),
+            settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
+            body=json.dumps({'proposals': [{'id': 'prop1'}]}),
             status=200,
             content_type='application/json'
         )
@@ -245,8 +245,8 @@ class TestQueryFiltering(TestCase):
         user.backend = settings.AUTHENTICATION_BACKENDS[0]
         responses.add(
             responses.GET,
-            settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
-            body=json.dumps([{'code': 'prop1'}]),
+            settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
+            body=json.dumps({'proposals': [{'id': 'prop1'}]}),
             status=200,
             content_type='application/json'
         )
@@ -327,8 +327,8 @@ class TestZipDownload(TestCase):
     def test_proposal_download(self):
         responses.add(
             responses.GET,
-            settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
-            body=json.dumps([{'code': 'prop1'}]),
+            settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
+            body=json.dumps({'proposals': [{'id': 'prop1'}]}),
             status=200,
             content_type='application/json'
         )

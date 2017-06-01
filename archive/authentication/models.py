@@ -32,11 +32,11 @@ class Profile(models.Model):
             else:
                 proposals = []
                 response = requests.get(
-                    settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
+                    settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
                     headers={'Authorization': 'Bearer {}'.format(self.access_token)}
                 )
                 if response.status_code == 200:
-                    proposals = [proposal['code'] for proposal in response.json()]
+                    proposals = [proposal['id'] for proposal in response.json()['proposals']]
                 else:
                     # TODO implement getting new token via refresh token
                     # As of this writing tokens never expire in Odin

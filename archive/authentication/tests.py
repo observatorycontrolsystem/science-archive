@@ -58,8 +58,8 @@ class TestAuthentication(TestCase):
     def test_proposals(self):
         responses.add(
             responses.GET,
-            settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
-            body=json.dumps([{'code': 'TestProposal'}]),
+            settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
+            body=json.dumps({'proposals': [{'id': 'TestProposal'}]}),
             status=200,
             content_type='application/json'
         )
@@ -69,7 +69,7 @@ class TestAuthentication(TestCase):
     def test_proposals_bad_token(self):
         responses.add(
             responses.GET,
-            settings.ODIN_OAUTH_CLIENT['PROPOSALS_URL'],
+            settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
             body=json.dumps({'error': 'Bad credentials'}),
             status=401,
             content_type='application/json'
