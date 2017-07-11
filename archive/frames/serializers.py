@@ -40,7 +40,7 @@ class FrameSerializer(serializers.ModelSerializer):
     version_set = VersionSerializer(many=True)
     url = serializers.CharField(read_only=True)
     filename = serializers.CharField(read_only=True)
-    area = PolygonField()
+    area = PolygonField(allow_null=True)
     related_frames = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Frame.objects.exclude(DATE_OBS=None),
