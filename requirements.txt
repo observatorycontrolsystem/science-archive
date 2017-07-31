@@ -10,7 +10,7 @@ uWSGI>=2.0,<2.1
 django-cors-headers>=2.1,<2.2
 python3-memcached>=1.51,<2.0
 responses
-factory-boy
+https://github.com/Fingel/factory_boy/archive/master.zip
 flake8
 django-nose
 pytz

@@ -1,5 +1,6 @@
 import factory
 import factory.fuzzy
+import random
 import datetime
 import json
 import os
@@ -61,11 +62,11 @@ def get_header_list():
 
 class FuzzyArea(factory.fuzzy.BaseFuzzyAttribute):
     def fuzz(self, as_dict=False):
-        ra = factory.fuzzy._random.choice(RA_RANGE)
-        dec = factory.fuzzy._random.choice(DEC_RANGE)
+        ra = random.choice(RA_RANGE)
+        dec = random.choice(DEC_RANGE)
         # most of our frames will have a FOV less than 5deg
-        x = factory.fuzzy._random.choice(range(-5, 5))
-        y = factory.fuzzy._random.choice(range(-5, 5))
+        x = random.choice(range(-5, 5))
+        y = random.choice(range(-5, 5))
         se = (ra, dec)
         ne = (ra, dec + y)
         nw = (ra + x, dec + y)
