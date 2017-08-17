@@ -1,3 +1,11 @@
+1.15
+2017-08-17
+Add some new fields for nres data products
+
+1.14
+2017-08-17
+Allow null area fields
+
 1.13
 2017-06-27
 Add TARGET to list of allowed OBSTYPEs
