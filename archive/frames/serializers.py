@@ -82,7 +82,6 @@ class FrameSerializer(serializers.ModelSerializer):
             'L1IDBIAS', 'L1IDDARK', 'L1IDFLAT', 'L1IDSHUT',
             'L1IDMASK', 'L1IDFRNG', 'L1IDCAT', 'TARFILE',
             'ORIGNAME', 'L1IDARC', 'L1IDTMPL', 'L1IDTRAC',
-            'L1IDWAVE'
         ]
         for key in related_frame_keys:
             related_frame = data.get(key)

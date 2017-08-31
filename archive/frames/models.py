@@ -25,7 +25,10 @@ class Frame(models.Model):
         ('CATALOG', 'CATALOG'),
         ('BPM', 'BPM'),
         ('TARGET', 'TARGET'),
-        ('TEMPLATE', 'TEMPLATE')
+        ('TEMPLATE', 'TEMPLATE'),
+        ('OBJECT', 'OBJECT'),
+        ('TRACE', 'TRACE'),
+        ('DOUBLE', 'DOUBLE')
     )
     basename = models.CharField(max_length=1000, db_index=True, unique=True)
     area = models.PolygonField(geography=True, spatial_index=True, null=True, blank=True)
