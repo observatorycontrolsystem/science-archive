@@ -3,7 +3,7 @@ from archive.frames.models import Frame
 from archive.authentication.models import Profile
 from django.contrib.auth.models import User
 from unittest.mock import MagicMock
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import TestCase
 from django.conf import settings
 from django.contrib.gis.geos import Point

@@ -48,7 +48,7 @@ class FrameViewSet(viewsets.ModelViewSet):
         )
         if self.request.user.is_superuser:
             return queryset
-        elif self.request.user.is_authenticated():
+        elif self.request.user.is_authenticated:
             return queryset.filter(
                 Q(PROPID__in=self.request.user.profile.proposals) |
                 Q(L1PUBDAT__lt=datetime.datetime.now(datetime.timezone.utc))

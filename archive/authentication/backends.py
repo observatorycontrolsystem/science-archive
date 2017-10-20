@@ -11,7 +11,7 @@ class OAuth2Backend(object):
     grant_type: password
     """
 
-    def authenticate(self, username=None, password=None):
+    def authenticate(self, request, username=None, password=None):
         if username == 'eng':
             return None  # disable eng account
         response = requests.post(

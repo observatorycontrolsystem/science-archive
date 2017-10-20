@@ -163,11 +163,11 @@ class Frame(models.Model):
 
 class Headers(models.Model):
     data = JSONField(default=dict)
-    frame = models.OneToOneField(Frame)
+    frame = models.OneToOneField(Frame, on_delete=models.CASCADE)
 
 
 class Version(models.Model):
-    frame = models.ForeignKey(Frame)
+    frame = models.ForeignKey(Frame, on_delete=models.CASCADE)
     key = models.CharField(max_length=32, unique=True)
     md5 = models.CharField(max_length=32, unique=True)
     extension = models.CharField(max_length=20)

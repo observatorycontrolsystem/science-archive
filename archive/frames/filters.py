@@ -5,12 +5,12 @@ import django_filters
 
 
 class FrameFilter(django_filters.FilterSet):
-    start = django_filters.DateTimeFilter(name='DATE_OBS', lookup_expr='gte')
-    end = django_filters.DateTimeFilter(name='DATE_OBS', lookup_expr='lte')
-    basename = django_filters.CharFilter(name='basename', lookup_expr='icontains')
-    OBJECT = django_filters.CharFilter(name='OBJECT', lookup_expr='icontains')
+    start = django_filters.DateTimeFilter(field_name='DATE_OBS', lookup_expr='gte')
+    end = django_filters.DateTimeFilter(field_name='DATE_OBS', lookup_expr='lte')
+    basename = django_filters.CharFilter(field_name='basename', lookup_expr='icontains')
+    OBJECT = django_filters.CharFilter(field_name='OBJECT', lookup_expr='icontains')
     public = django_filters.CharFilter(method='public_filter')
-    EXPTIME = django_filters.NumberFilter(name='EXPTIME', lookup_expr='gte')
+    EXPTIME = django_filters.NumberFilter(field_name='EXPTIME', lookup_expr='gte')
     covers = django_filters.CharFilter(method='covers_filter')
     intersects = django_filters.CharFilter(method='intersects_filter')
 

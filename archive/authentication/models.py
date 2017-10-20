@@ -40,7 +40,7 @@ class Profile(models.Model):
                 else:
                     # TODO implement getting new token via refresh token
                     # As of this writing tokens never expire in Odin
-                    logger.warn(
+                    logger.warning(
                         'User auth token was invalid!',
                         extra={'tags': {'username': self.user.username}}
                     )

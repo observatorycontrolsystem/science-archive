@@ -9,7 +9,7 @@ class UserView(RetrieveAPIView):
     serializer_class = UserSerializer
 
     def get_object(self):
-        if self.request.user.is_authenticated():
+        if self.request.user.is_authenticated:
             return self.request.user
         else:
             return None
@@ -17,7 +17,7 @@ class UserView(RetrieveAPIView):
 
 class ObtainAuthTokenWithHeaders(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
-        if request.user.is_authenticated():
+        if request.user.is_authenticated:
             token, created = Token.objects.get_or_create(user=request.user)
             return Response({'token': token.key})
         else:

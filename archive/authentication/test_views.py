@@ -3,7 +3,7 @@ from unittest.mock import patch
 from archive.authentication.models import Profile
 from django.contrib.auth.models import User
 from django.conf import settings
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 import json
 import responses
 
