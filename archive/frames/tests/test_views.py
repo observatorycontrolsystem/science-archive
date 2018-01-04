@@ -115,7 +115,10 @@ class TestFramePost(TestCase):
         response = self.client.post(
             reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
         )
-        self.assertEqual(frame_payload['area'], response.json()['area'])
+        for idx, coords in enumerate(frame_payload['area']['coordinates']):
+            for idy, sub_coord in enumerate(coords):
+                for idz, real_coord in enumerate(sub_coord):
+                    self.assertAlmostEqual(real_coord, response.json()['area']['coordinates'][idx][idy][idz])
 
     def test_post_missing_data(self):
         frame_payload = self.single_frame_payload
