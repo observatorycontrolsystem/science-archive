@@ -1,5 +1,5 @@
 --extra-index-url=http://buildsba.lco.gtn/python
-django>=1.11,<1.12
+django>=2.0,<2.1
 psycopg2>=2.7,<2.8
 djangorestframework>=3.7,<3.8
 django-filter>=1.1,<1.2
