@@ -1,3 +1,7 @@
+1.20
+2018-03-05
+Upgrade Boto3 to 1.6.3
+
 1.19
 2018-01-04
 Upgrade to django 2.0
