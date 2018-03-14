@@ -1,3 +1,7 @@
+1.21
+2018-03-14
+Upgrade django-cors-headers to 2.3
+
 1.20
 2018-03-05
 Upgrade Boto3 to 1.6.3
