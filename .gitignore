@@ -14,9 +14,6 @@ tags
 # scratch directory
 scratch/
 
-# ignore local_settings.py
-local_settings.py
-
 # sqlite3 database
 *.sqlite3
 
