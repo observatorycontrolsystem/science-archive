@@ -23,7 +23,7 @@ uwsgi:
         DB_HOST: postgres
         BROKER_URL: redis://localhost
         BOSUN_HOSTNAME: alerts.lco.gtn
-        OPENTSDB_HOSTNANE: opentsdb.lco.gtn
+        OPENTSDB_HOSTNAME: opentsdb.lco.gtn
     volumes:
         - "/var/www/static/"
         - "/var/www/media/"
