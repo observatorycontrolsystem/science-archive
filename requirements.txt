@@ -2,12 +2,12 @@
 django>=2.0,<2.1
 psycopg2>=2.7,<2.8
 djangorestframework>=3.8,<3.9
-django-filter>=1.1,<1.2
+django-filter>=2.0,<2.1
 boto3>=1.7,<1.8
 django-crispy-forms>=1.7,<1.8
 markdown>=2.6,<2.7
 uWSGI>=2.0,<2.1
-django-cors-headers>=2.2,<2.3
+django-cors-headers>=2.4,<2.5
 python3-memcached>=1.51,<2.0
 responses
 factory_boy
