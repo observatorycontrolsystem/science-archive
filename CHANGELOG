@@ -1,3 +1,8 @@
+1.24
+2019-03-14
+Add heath check endpoint
+Up authorized rate limit to 10k/day
+
 1.23
 2018-04-10
 Upgrade drf to 3.8
