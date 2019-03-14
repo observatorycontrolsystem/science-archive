@@ -2,6 +2,9 @@ from rest_framework.generics import RetrieveAPIView
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import throttling
+
 from archive.authentication.serializers import UserSerializer
 
 
@@ -22,3 +25,15 @@ class ObtainAuthTokenWithHeaders(ObtainAuthToken):
             return Response({'token': token.key})
         else:
             return super().post(request, *args, **kwargs)
+
+
+class NoThrottle(throttling.BaseThrottle):
+    def allow_request(self, request, view):
+        return True
+
+
+class HealthCheckView(APIView):
+    throttle_classes = (NoThrottle,)
+
+    def get(self, request, format=None):
+        return Response('ok')
