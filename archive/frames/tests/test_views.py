@@ -100,6 +100,22 @@ class TestFramePost(TestCase):
         )
         self.assertEqual(response.status_code, 400)
 
+    def test_long_exptime(self):
+        frame_payload = self.single_frame_payload
+        frame_payload['EXPTIME'] = 10.032415
+        response = self.client.post(
+            reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
+        )
+        self.assertContains(response, frame_payload['basename'], status_code=201)
+
+    def test_exptime_way_too_long(self):
+        frame_payload = self.single_frame_payload
+        frame_payload['EXPTIME'] = 10.03241524124232134
+        response = self.client.post(
+            reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 400)
+
     def test_post_frame_polygon_serialization(self):
         frame_payload = self.single_frame_payload
         frame_payload['area']['coordinates'] = [[[0, 0], [0, 10], [10, 10], [10, 0], [0, 0]]]

@@ -73,8 +73,8 @@ class Frame(models.Model):
     )
     EXPTIME = models.DecimalField(
         null=True,
-        max_digits=10,
-        decimal_places=3,
+        max_digits=13,
+        decimal_places=6,
         help_text="Exposure time, in seconds. FITS header: EXPTIME"
     )
     FILTER = models.CharField(
