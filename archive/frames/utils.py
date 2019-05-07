@@ -1,10 +1,12 @@
 import boto3
 from functools import lru_cache
+from django.conf import settings
 
 
 @lru_cache(maxsize=1)
 def get_s3_client():
-    return boto3.client('s3')
+    config = boto3.session.Config(region_name='us-west-2', signature_version='s3v4')
+    return boto3.client('s3', config=config)
 
 
 def remove_dashes_from_keys(dictionary):
@@ -23,11 +25,34 @@ def fits_keywords_only(dictionary):
     return new_dictionary
 
 
-def build_nginx_zip_text(frames, filename):
-    nginx_line = '- {0} /s3/{1} {2}/{3}{4}\n'
-    return_line = ''
+def build_nginx_zip_text(frames, directory):
+    client = get_s3_client()
+    ret = []
+
     for frame in frames:
-        return_line += nginx_line.format(
-            frame.size, frame.s3_key, filename, frame.basename, frame.version_set.first().extension
+        # Parameters for AWS S3 URL signing request
+        params = {
+            'Key': frame.s3_key,
+            'Bucket': settings.BUCKET,
+        }
+        # Generate a presigned AWS S3 V4 URL which expires in 86400 seconds (1 day)
+        url = client.generate_presigned_url('get_object', Params=params, ExpiresIn=86400)
+        # The NGINX mod_zip module requires that the files which are used to build the
+        # ZIP file must be loaded from an internal NGINX location. Replace the leading
+        # portion of the generated URL with an internal NGINX location which proxies all
+        # traffic to AWS S3.
+        location = url.replace('https://s3.us-west-2.amazonaws.com', '/s3')
+        # The NGINX mod_zip module builds ZIP files using a manifest. Build the manifest
+        # line for this frame.
+        line = '- {size} {location} {directory}/{basename}{extension}\n'.format(
+            size=frame.size,
+            location=location,
+            directory=directory,
+            basename=frame.basename,
+            extension=frame.version_set.first().extension,
         )
-    return return_line
+        # Add to returned lines
+        ret.append(line)
+
+    # Concatenate all lines together into a single string
+    return ''.join(ret)
