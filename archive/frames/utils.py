@@ -4,7 +4,8 @@ from functools import lru_cache
 
 @lru_cache(maxsize=1)
 def get_s3_client():
-    return boto3.client('s3')
+    config = boto3.session.Config(region_name='us-west-2', signature_version='s3v4')
+    return boto3.client('s3', config=config)
 
 
 def remove_dashes_from_keys(dictionary):
