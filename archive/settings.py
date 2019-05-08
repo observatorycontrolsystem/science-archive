@@ -10,24 +10,24 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.9/ref/settings/
 """
 
-import os
 from lcogt_logging import LCOGTFormatter
+
+import ast
+import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'e7#jz9=op7b14zqsxhj^svei4*r0t+^se^xhb-()&s_dlgvc!k'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'e7#jz9=op7b14zqsxhj^svei4*r0t+^se^xhb-()&s_dlgvc!k')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = ast.literal_eval(os.environ.get('DEBUG', 'False'))
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -169,7 +169,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.9/howto/static-files/
 
+STATIC_ROOT = '/static/'
 STATIC_URL = '/static/'
+
+MEDIA_ROOT = '/media/'
+MEDIA_URL= '/media/'
 
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
@@ -204,6 +208,14 @@ ODIN_OAUTH_CLIENT = {
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
+
+if os.environ.get('CACHE_LOC', None) is not None:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+            'LOCATION': os.getenv('CACHE_LOC', 'memcached.archiveapi:11211'),
+        }
+    }
 
 try:
     from .local_settings import *
