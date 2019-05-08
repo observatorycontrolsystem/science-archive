@@ -1,75 +1,91 @@
-LCOGT Science Archive
-=====================
+# Las Cumbres Observatory Science Archive
 
-This is the database api for the lcogt science archive. It uses django rest framework
-to provide endpoints for adding and querying the metadata for frames.
+This is the LCO Science Data Archive API. It uses the
+[Django Rest Framework](https://www.django-rest-framework.org/api-guide/requests/)
+to provide web accessible endpoints for adding and querying the metadata for frames.
 
-Requirements
-------------
+## Requirements
 
-### Postgresql with PostGIS installed.
+### PostgreSQL with the PostGIS extension installed
 
-For development, docker is reccommended. Check out the [pg-postgis](http://git.lco.gtn/projects/DOC/repos/pg-postgis/browse/Dockerfile) docker project. Building this image will provide you with a postgresql databse with everything you need to run the archive.
+Amazon Web Services (AWS) Relational Database Service (RDS) provides PostgreSQL
+with the PostGIS extension installed. Please refer to the AWS documentation for
+instructions on how to enable this extension.
 
-To build the image:
-`$ docker build -t docker.lcogt.net/pg-postgis .`
+For local development, you can use the following Docker image:
 
-To run the database:
-`$ docker run -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d docker.lcogt.net/pg-postgis`
+- <https://hub.docker.com/r/mdillon/postgis/>
 
-Now we need to create the archive database and install the postgis extension to it:
+### Amazon Web Services Simple Storage Service Bucket
 
-`$ createdb -Upostgres archive`
-`$ psql -Upostgres archive -c "CREATE EXTENSION postgis"`
+This project depends upon an Amazon Web Services (AWS) Simple Storage Service
+(S3) bucket to store data.
 
-The database should be setup now. The defaults contained in `settings.py` are described in the next section, and should be sufficient for most development work.
+## Configuration
 
+This project is configured by environment variables.
 
-### Credentials for an Amazon S3 bucket.
-The archive makes heavy use of the [boto3](https://boto3.readthedocs.io/en/latest/) library for interfacing with Amazon S3. Boto3 automatically reads specific environmental values, described in the next section.
+Environment Variable | Description | Default Value
+--- | --- | ---
+`SECRET_KEY` | Django Secret Key | `See settings.py`
+`DEBUG` | Enable Django Debugging Mode | `False`
+`DB_HOST` | PostgreSQL Database Hostname | `127.0.0.1`
+`DB_NAME` | PostgreSQL Database Name | `archive`
+`DB_USER` | PostgreSQL Database Username | `postgres`
+`DB_PASS` | PostgreSQL Database Password | `postgres`
+`AWS_ACCESS_KEY_ID` | AWS Access Key Id | ``
+`AWS_SECRET_ACCESS_KEY` | AWS Secret Access Key | ``
+`AWS_DEFAULT_REGION` | AWS Default Region | `us-west-2`
+`AWS_BUCKET` | AWS S3 Bucket Name | `lcogtarchivetest`
+`CACHE_LOC` | Memcached Cache Location | `memcached.archiveapi:11211`
 
+## Build
 
-Setup
------
+This project is built automatically by the [LCO Jenkins Server](http://jenkins.lco.gtn/).
+Please see the [Jenkinsfile](Jenkinsfile) for further details.
 
-First make sure you have a postgresql database with the postgis extension installed
-on the database you would like to use. `settings.py` uses these defaults, but they
-can be overwritten using environmental variables:
+## Production Deployment
 
-        'NAME': os.getenv('DB_NAME', 'archive'),
-        'USER': os.getenv('DB_USER', 'postgres'),
-        'PASSWORD': os.getenv('DB_PASS', 'postgres'),
-        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+This project is deployed onto the LCO Kubernetes Cluster. Please see the
+[LCO Helm Charts Repository](https://github.com/LCOGT/helm-charts) for details.
 
-You will also need these environmental variables set for Amazon credentials:
+## Development Environment
 
-    AWS_ACCESS_KEY_ID
-    AWS_SECRET_ACCESS_KEY
-    AWS_DEFAULT_REGION
+This is a standard Django project. You should be familiar with running Django
+in a local development environment before continuing.
 
-The rest is standard Django. Run `pip install -r requirements.txt --trusted-host buildsba`
-to install the requirements. `./manage.py migrate` to set up the database. `./manage.py runserver`
-to start the development server.
+* Configure a PostgreSQL database with the PostGIS extension
+* Configure a Memcached database (optional)
+* Configure your environment variables appropriately (see above chart)
+* Install Python dependencies: `pip install -r requirements.txt`
+* Apply database migrations: `python manage.py migrate`
+* Run the development server: `python manage.py runserver`
 
+## Superuser Access
 
-Superuser
----------
+This project will only allow POST requests from a superuser account. A
+superuser account can be created by using the following command:
 
-The archive will only allow POSTS from a superuser account. Create one using:
+```
+python manage.py createsuperuser
+```
 
-`./manage.py createsuperuser`
+The resulting user with have an authentcation token. This token can be
+obtained:
 
-The resulting user with have an authentcation token. This token can be obtained:
+```
+python manage.py shell_plus
+In [1]: User.objects.first().auth_token
+Out[1]: <Token: 48d03ec62ce69fef68bd545a751ccb1efef689a5>
+```
 
-    ./manage.py shell_plus
-    In [1]: User.objects.first().auth_token
-    Out[1]: <Token: 48d03ec62ce69fef68bd545a751ccb1efef689a5>
+This is the authentication token that should be used in software that can write
+to the archive, such as the Ingester.
 
-This is the auth token that should be used in software that can write to the archive, like
-the ingester. See [Django Rest Framework section on Token Auth](http://www.django-rest-framework.org/api-guide/authentication/#tokenauthentication) for how to use it.
+For instructions on how to use Token Authentication, please see the Django Rest Framework's
+documentation section on [Token Authentication](http://www.django-rest-framework.org/api-guide/authentication/#tokenauthentication).
 
+## OAuth
 
-OAuth
------
-
-Users can authenticate using oauth. See the authentcation backends in the authentication/ app.
+Users can authenticate using OAuth. See the authentcation backends in the
+`authentication/` app.
