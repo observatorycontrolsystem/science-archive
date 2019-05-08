@@ -1,3 +1,7 @@
+1.27
+2019-05-07
+Migrate to Gunicorn application server.
+
 1.26
 2019-05-07
 Migrate from AWS S3 V2 signatures to AWS S3 V4 signatures.
