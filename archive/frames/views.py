@@ -16,6 +16,9 @@ from django.db.models import Q, Prefetch
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
+from dateutil.parser import parse
+from django.utils import timezone
+from pytz import UTC
 import logging
 import datetime
 
@@ -119,17 +122,27 @@ class FrameViewSet(viewsets.ModelViewSet):
 
     @list_route()
     def aggregate(self, request):
-        response_dict = cache.get('aggregate')
+        filters = {}
+        for k in ('SITEID', 'TELID', 'FILTER', 'INSTRUME', 'OBSTYPE', 'PROPID'):
+            if request.GET.get(k):
+                filters[k] = request.GET[k]
+        if 'start' in request.GET:
+            filters['DATE_OBS__gte'] = parse(request.GET['start']).replace(tzinfo=UTC)
+        if 'end' in request.GET:
+            filters['DATE_OBS__lte'] = parse(request.GET['end']).replace(tzinfo=UTC)
+        filter_hash = hash(frozenset(filters.items()))
+        response_dict = cache.get(filter_hash)
         if not response_dict:
-            sites = [i[0] for i in Frame.objects.order_by().values_list('SITEID').distinct() if i[0]]
-            telescopes = [i[0] for i in Frame.objects.order_by().values_list('TELID').distinct() if i[0]]
-            filters = [i[0] for i in Frame.objects.order_by().values_list('FILTER').distinct()if i[0]]
-            instruments = [i[0] for i in Frame.objects.order_by().values_list('INSTRUME').distinct() if i[0]]
-            obstypes = [i[0] for i in Frame.objects.order_by().values_list('OBSTYPE').distinct() if i[0]]
+            qs = Frame.objects.order_by().filter(**filters)
+            sites = [i[0] for i in qs.values_list('SITEID').distinct() if i[0]]
+            telescopes = [i[0] for i in qs.values_list('TELID').distinct() if i[0]]
+            filters = [i[0] for i in qs.values_list('FILTER').distinct()if i[0]]
+            instruments = [i[0] for i in qs.values_list('INSTRUME').distinct() if i[0]]
+            obstypes = [i[0] for i in qs.values_list('OBSTYPE').distinct() if i[0]]
             proposals = [
-                i[0] for i in Frame.objects.filter(L1PUBDAT__lte=datetime.datetime.now(datetime.timezone.utc))
-                                           .order_by().values_list('PROPID')
-                                           .distinct() if i[0]
+                i[0] for i in qs.filter(L1PUBDAT__lte=timezone.now())
+                                .values_list('PROPID')
+                                .distinct() if i[0]
             ]
             response_dict = {
                 'sites': sites,
@@ -139,7 +152,7 @@ class FrameViewSet(viewsets.ModelViewSet):
                 'obstypes': obstypes,
                 'proposals': proposals
             }
-            cache.set('aggregate', response_dict, 60 * 60)
+            cache.set(filter_hash, response_dict, 60 * 60)
         return Response(response_dict)
 
 
