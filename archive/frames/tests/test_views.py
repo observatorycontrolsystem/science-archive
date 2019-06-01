@@ -275,8 +275,36 @@ class TestQueryFiltering(TestCase):
         self.assertContains(response, frame.basename)
 
         self.client.logout()
-        response = self.client.get(reverse('frame-list') + '?public=false')
+        response = self.client.get(reverse('frame-list'))
         self.assertNotContains(response, frame.basename)
+
+    @responses.activate
+    def test_filters_public(self):
+        user = User.objects.create(username='frodo', password='theone')
+        Profile.objects.create(user=user)
+        user.backend = settings.AUTHENTICATION_BACKENDS[0]
+        responses.add(
+            responses.GET,
+            settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
+            body=json.dumps({'proposals': [{'id': 'prop1'}]}),
+            status=200,
+            content_type='application/json'
+        )
+        self.client.force_login(user)
+        proposal_frame = FrameFactory(L1PUBDAT=datetime.datetime(2999, 1, 1, tzinfo=UTC), PROPID='prop1')
+        public_frame = PublicFrameFactory()
+
+        for false_string in ['false', 'False', '0']:
+            response = self.client.get(reverse('frame-list') + '?public={}'.format(false_string))
+            self.assertContains(response, proposal_frame.basename)
+            self.assertNotContains(response, public_frame.basename)
+
+        self.client.logout()
+
+        for false_string in ['false', 'False', '0']:
+            response = self.client.get(reverse('frame-list') + '?public={}'.format(false_string))
+            self.assertNotContains(response, proposal_frame.basename)
+            self.assertNotContains(response, public_frame.basename)
 
     def test_area_covers(self):
         frame = PublicFrameFactory.create(
