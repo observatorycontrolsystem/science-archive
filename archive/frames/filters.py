@@ -24,7 +24,11 @@ class FrameFilter(django_filters.FilterSet):
         return queryset.filter(area__intersects=geo)
 
     def public_filter(self, queryset, name, value):
-        if not bool(strtobool(value)):
+        try:
+            exclude_public = not bool(strtobool(value))
+        except ValueError:
+            exclude_public = False
+        if exclude_public:
             return queryset.exclude(L1PUBDAT__lt=timezone.now())
         return queryset
 
