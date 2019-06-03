@@ -1,8 +1,7 @@
 from archive.frames.models import Frame
 from django.contrib.gis.geos import GEOSGeometry
 from django.utils import timezone
-import django_filters
-from distutils.util import strtobool
+from django_filters import rest_framework as django_filters
 
 
 class FrameFilter(django_filters.FilterSet):
@@ -10,7 +9,7 @@ class FrameFilter(django_filters.FilterSet):
     end = django_filters.DateTimeFilter(field_name='DATE_OBS', lookup_expr='lte')
     basename = django_filters.CharFilter(field_name='basename', lookup_expr='icontains')
     OBJECT = django_filters.CharFilter(field_name='OBJECT', lookup_expr='icontains')
-    public = django_filters.CharFilter(field_name='public', method='public_filter')
+    public = django_filters.BooleanFilter(field_name='public', method='public_filter')
     EXPTIME = django_filters.NumberFilter(field_name='EXPTIME', lookup_expr='gte')
     covers = django_filters.CharFilter(method='covers_filter')
     intersects = django_filters.CharFilter(method='intersects_filter')
@@ -24,11 +23,7 @@ class FrameFilter(django_filters.FilterSet):
         return queryset.filter(area__intersects=geo)
 
     def public_filter(self, queryset, name, value):
-        try:
-            exclude_public = not bool(strtobool(value))
-        except ValueError:
-            exclude_public = False
-        if exclude_public:
+        if not value:
             return queryset.exclude(L1PUBDAT__lt=timezone.now())
         return queryset
 

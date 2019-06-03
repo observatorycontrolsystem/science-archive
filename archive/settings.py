@@ -173,7 +173,7 @@ STATIC_ROOT = '/static/'
 STATIC_URL = '/static/'
 
 MEDIA_ROOT = '/media/'
-MEDIA_URL= '/media/'
+MEDIA_URL = '/media/'
 
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
@@ -194,7 +194,10 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '3500/day',
         'user': '10000/day',
-    }
+    },
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+    )
 }
 
 ODIN_OAUTH_CLIENT = {
