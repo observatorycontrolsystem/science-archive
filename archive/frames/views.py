@@ -128,9 +128,9 @@ class FrameViewSet(viewsets.ModelViewSet):
             if request.GET.get(k):
                 filters[k] = request.GET[k]
         if 'start' in request.GET:
-            filters['DATE_OBS__gte'] = parse(request.GET['start']).replace(tzinfo=UTC)
+            filters['DATE_OBS__gte'] = parse(request.GET['start']).replace(tzinfo=UTC, second=0, microsecond=0)
         if 'end' in request.GET:
-            filters['DATE_OBS__lte'] = parse(request.GET['end']).replace(tzinfo=UTC)
+            filters['DATE_OBS__lte'] = parse(request.GET['end']).replace(tzinfo=UTC, second=0, microsecond=0)
         filter_hash = blake2s(repr(frozenset(filters.items())).encode()).hexdigest()
         response_dict = cache.get(filter_hash)
         if not response_dict:
