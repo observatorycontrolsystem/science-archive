@@ -18,6 +18,7 @@ from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from dateutil.parser import parse
 from django.utils import timezone
+from hashlib import blake2s
 from pytz import UTC
 import logging
 import datetime
@@ -130,7 +131,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             filters['DATE_OBS__gte'] = parse(request.GET['start']).replace(tzinfo=UTC)
         if 'end' in request.GET:
             filters['DATE_OBS__lte'] = parse(request.GET['end']).replace(tzinfo=UTC)
-        filter_hash = hash(frozenset(filters.items()))
+        filter_hash = blake2s(repr(frozenset(filters.items())).encode()).hexdigest()
         response_dict = cache.get(filter_hash)
         if not response_dict:
             qs = Frame.objects.order_by().filter(**filters)
