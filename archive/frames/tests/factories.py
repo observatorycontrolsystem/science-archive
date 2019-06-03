@@ -5,6 +5,7 @@ import datetime
 import json
 import os
 from archive.frames.models import Frame, Version, Headers
+from django.utils import timezone
 from pytz import UTC
 
 INSTRUMENTS = (
@@ -42,6 +43,11 @@ EXTENSIONS = (
 OBSERVATION_TYPES = (
     'BIAS', 'DARK', 'EXPERIMENTAL', 'EXPOSE', 'SKYFLAT',
     'STANDARD', 'TRAILED', 'GUIDE', 'CATALOG',
+)
+
+PROPOSALS = (
+    'calibrate', 'KEY2019AB-001', 'KEY2019AB-002', 'KEY2019AB-003',
+    'DDT2019A-001', 'DDT2019B-003', 'LCOEPO2019A-004'
 )
 
 
@@ -122,13 +128,13 @@ class FrameFactory(factory.django.DjangoModelFactory):
     area = FuzzyArea()
     DATE_OBS = factory.fuzzy.FuzzyDateTime(
         datetime.datetime(2015, 1, 1, tzinfo=UTC),
-        datetime.datetime(2025, 1, 1, tzinfo=UTC)
+        timezone.now()
     )
-    PROPID = factory.fuzzy.FuzzyText(length=10)
+    PROPID = factory.fuzzy.FuzzyChoice(PROPOSALS)
     INSTRUME = factory.fuzzy.FuzzyChoice(INSTRUMENTS)
     OBJECT = factory.fuzzy.FuzzyText(length=10)
     SITEID = factory.fuzzy.FuzzyChoice(SITES)
-    TELID = factory.fuzzy.FuzzyText(length=4)
+    TELID = factory.fuzzy.FuzzyChoice(TELESCOPES)
     EXPTIME = factory.fuzzy.FuzzyFloat(0.0, 10000.0)
     FILTER = factory.fuzzy.FuzzyChoice(FILTERS)
     L1PUBDAT = factory.fuzzy.FuzzyDateTime(

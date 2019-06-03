@@ -382,3 +382,10 @@ class TestFrameAggregate(TestCase):
         self.assertEqual(set(response.json()['telescopes']), set(['1m0a', '0m4a', '2m0b']))
         self.assertEqual(set(response.json()['sites']), set(['bpl', 'coj', 'ogg']))
         self.assertEqual(set(response.json()['instruments']), set(['kb46', 'en05', 'fl10']))
+
+    def test_frame_aggregate_filtered(self):
+        response = self.client.get(reverse('frame-aggregate') + '?SITEID=ogg')
+        self.assertEqual(set(response.json()['obstypes']), set(['SKYFLAT']))
+        self.assertEqual(set(response.json()['telescopes']), set(['2m0b']))
+        self.assertEqual(set(response.json()['sites']), set(['ogg']))
+        self.assertEqual(set(response.json()['instruments']), set(['fl10']))

@@ -1,3 +1,5 @@
+# local settings
+local_settings.py
 # Ctags
 tags
 
