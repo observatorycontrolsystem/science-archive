@@ -1,3 +1,7 @@
+1.30
+2019-06-05
+Update rest framework to fix security vulernability.
+
 1.29
 2019-06-03
 Update tox to test under python 3.6
