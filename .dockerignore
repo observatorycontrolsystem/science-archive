@@ -1,4 +1,5 @@
 scratch/
 .git/
 .tox/
-
+deploy
+venv
