@@ -19,4 +19,4 @@ FROM app AS tests
 
 RUN pip --no-cache-dir install tox
 ENV DB_HOST=buildpostgres.lco.gtn
-RUN python -c "import tox; tox.cmdline();" -c tox.ini --recreate
+CMD [ "python", "-c", "import tox; tox.cmdline();", "-c", "tox.ini", "--recreate" ]
