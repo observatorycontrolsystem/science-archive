@@ -1,3 +1,7 @@
+1.31
+2019-06-06
+Updated to have Jenkins deploy to the Kubernetes prod namespace.
+
 1.30
 2019-06-05
 Update rest framework to fix security vulernability.
