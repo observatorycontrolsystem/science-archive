@@ -34,10 +34,10 @@ backend:
       memory: 1024Mi
 
 # PostgreSQL database credentials
-db:
-  host: "archive-db.cple9sjsskrf.us-west-2.rds.amazonaws.com"
-  name: "archive"
-  user: "archive"
+postgresql:
+  hostname: "archive-db.cple9sjsskrf.us-west-2.rds.amazonaws.com"
+  postgresqlDatabase: "archive"
+  postgresqlUsername: "archive"
 
 # Bosun configuration parameters
 bosunHostname: "alerts.lco.gtn"
