@@ -206,8 +206,8 @@ ODIN_OAUTH_CLIENT = {
                       'y1x8j1H5wyqgfIyGpuXEJMcLfeDo2T0FciD'
                       'w1yaGgeyNQDk7dIoGosh4xGKawBr9sXidS5'
                       '27lf3NhSOg2scYx8OJKBJ5m'),
-    'TOKEN_URL': 'http://valhalla.lco.gtn/o/token/',
-    'PROFILE_URL': 'http://valhalla.lco.gtn/api/profile/',
+    'TOKEN_URL': 'http://internal-observation-portal.lco.gtn/o/token/',
+    'PROFILE_URL': 'http://internal-observation-portal.lco.gtn/api/profile/',
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
