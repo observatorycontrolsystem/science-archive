@@ -46,7 +46,7 @@ class Frame(models.Model):
         help_text="Textual proposal id. FITS header: PROPID"
     )
     INSTRUME = models.CharField(
-        max_length=10,
+        max_length=64,
         default='',
         help_text="Instrument used. FITS header: INSTRUME"
     )
