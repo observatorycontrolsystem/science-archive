@@ -37,9 +37,10 @@ backend:
 
 # PostgreSQL database credentials
 postgresql:
-  hostname: "archive-db.cple9sjsskrf.us-west-2.rds.amazonaws.com"
+  hostname: "postgres1-cluster.cluster-cple9sjsskrf.us-west-2.rds.amazonaws.com"
   postgresqlDatabase: "archive"
   postgresqlUsername: "archive"
+  postgresqlPassword: "WVLnBTaPNPyVa5LPQvt"
 
 # Bosun configuration parameters
 bosunHostname: "alerts.lco.gtn"
