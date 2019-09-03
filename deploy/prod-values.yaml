@@ -6,6 +6,8 @@ replicaCount: 3
 gunicornTimeout: 30
 gunicornWorkers: 4
 
+applyDatabaseMigrations: true
+
 aws:
   defaultRegion: "us-west-2"
   s3Bucket: "archive.lcogt.net"
