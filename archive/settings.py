@@ -127,7 +127,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # logging
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': True,
+    'disable_existing_loggers': False,
     'formatters': {
         'default': {
             '()': LCOGTFormatter
@@ -145,9 +145,9 @@ LOGGING = {
             'level': 'INFO'
         },
         'django.request': {
-            'handLers': ['console'],
+            'handlers': ['console'],
             'level': 'INFO',
-            'propogate': True,
+            'propagate': True,
         }
     }
 }
