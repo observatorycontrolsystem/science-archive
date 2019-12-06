@@ -31,9 +31,11 @@ def build_nginx_zip_text(frames, directory):
 
     for frame in frames:
         # Parameters for AWS S3 URL signing request
+        version = frame.version_set.first()
+        bucket, s3_key = version.get_bucket_and_s3_key()
         params = {
-            'Key': frame.s3_key,
-            'Bucket': settings.BUCKET,
+            'Key': s3_key,
+            'Bucket': bucket,
         }
         # Generate a presigned AWS S3 V4 URL which expires in 86400 seconds (1 day)
         url = client.generate_presigned_url('get_object', Params=params, ExpiresIn=86400)
@@ -45,11 +47,11 @@ def build_nginx_zip_text(frames, directory):
         # The NGINX mod_zip module builds ZIP files using a manifest. Build the manifest
         # line for this frame.
         line = '- {size} {location} {directory}/{basename}{extension}\n'.format(
-            size=frame.size,
+            size=version.size,
             location=location,
             directory=directory,
             basename=frame.basename,
-            extension=frame.version_set.first().extension,
+            extension=version.extension,
         )
         # Add to returned lines
         ret.append(line)

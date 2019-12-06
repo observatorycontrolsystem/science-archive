@@ -120,6 +120,17 @@ class Frame(models.Model):
             self.basename
         ))
 
+    @cached_property
+    def s3_daydir_key(self):
+        if self.SITEID.lower() == 'sor':
+            # SOR files don't have the day_obs in their filename, so use the DATE_OBS field:
+            day_obs = self.DATE_OBS.split('T')[0].replace('-', '')
+        else:
+            day_obs = self.basename.split('-')[2]
+        return '/'.join(
+            self.SITEID, self.INSTRUME, day_obs, self.basename
+        )
+
     @property
     def url(self):
         """
@@ -133,11 +144,6 @@ class Frame(models.Model):
         Returns the full filename for the latest version
         """
         return '{0}{1}'.format(self.basename, self.version_set.first().extension)
-
-    @cached_property
-    def size(self):
-        client = get_s3_client()
-        return client.head_object(Bucket=settings.BUCKET, Key=self.s3_key)['ContentLength']
 
     def copy_to_ia(self):
         latest_version = self.version_set.first()
@@ -172,17 +178,31 @@ class Version(models.Model):
     md5 = models.CharField(max_length=32, unique=True)
     extension = models.CharField(max_length=20)
     created = models.DateTimeField(auto_now_add=True)
+    migrated = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-created']
 
     @cached_property
     def data_params(self):
+        bucket, s3_key = self.get_bucket_and_s3_key()
         return {
-            'Bucket': settings.BUCKET,
-            'Key': self.frame.s3_key,
+            'Bucket': bucket,
+            'Key': s3_key,
             'VersionId': self.key
         }
+
+    @cached_property
+    def size(self):
+        client = get_s3_client()
+        bucket, s3_key = self.get_bucket_and_s3_key()
+        return client.head_object(Bucket=bucket, Key=s3_key)['ContentLength']
+
+    def get_bucket_and_s3_key(self):
+        if self.migrated:
+            return settings.NEW_BUCKET, self.frame.s3_daydir_key
+        else:
+            return settings.BUCKET, self.frame.s3_key
 
     @cached_property
     def url(self):
