@@ -9,7 +9,7 @@ import os
 FRAME_LIMIT = 1
 NEW_AWS_ACCESS_KEY_ID = os.getenv('NEW_AWS_ACCESS_KEY_ID', '')
 NEW_AWS_SECRET_ACCESS_KEY = os.getenv('NEW_AWS_SECRET_ACCESS_KEY', '')
-NEW_BUCKET = os.getenv('NEW_AWS_BUCKET', '')
+NEW_AWS_BUCKET = os.getenv('NEW_AWS_BUCKET', '')
 
 
 class Command(BaseCommand):
@@ -31,7 +31,7 @@ class Command(BaseCommand):
             for version in versions:
                 logging.info(f"  Processing Version {version.key} - {version.created}")
                 try:
-                    response = client.copy_object(CopySource=version.data_params, Bucket=NEW_BUCKET,
+                    response = client.copy_object(CopySource=version.data_params, Bucket=NEW_AWS_BUCKET,
                                                   Key=frame.s3_daydir_key)
                     if 'VersionId' in response and 'CopyObjectResult' in response and 'ETAG' in response['CopyObjectResult']:
                         # The md5 looks like it doesn't change, but it would be bad if it did and we didn't update that
