@@ -23,6 +23,8 @@ class Command(BaseCommand):
             aws_secret_access_key=NEW_AWS_SECRET_ACCESS_KEY,
         )
         frames = Frame.objects.filter(version_set__migrated=False).distinct()[:FRAME_LIMIT]
+        num_frames = frames.count()
+        num_files_processed = 0
         for frame in frames:
             logging.info(f"Processing frame {frame.id}")
             versions = frame.version_set.all().order_by('created')
@@ -32,11 +34,14 @@ class Command(BaseCommand):
                     response = client.copy_object(CopySource=version.data_params, Bucket=NEW_BUCKET,
                                                   Key=frame.s3_daydir_key)
                     if 'VersionId' in response and 'CopyObjectResult' in response and 'ETAG' in response['CopyObjectResult']:
+                        # The md5 looks like it doesn't change, but it would be bad if it did and we didn't update that
                         version.update(
                             key=response['VersionId'],
                             migrated=True,
                             md5=response['CopyObjectResult']['ETag'].strip('"'))
+                        num_files_processed += 1
                     else:
                         logging.error(f"S3 Copy of frame {frame.id} version {version.key} failed to receive updated metadata")
                 except ClientError as e:
                     logging.error(f"S3 Copy of frame {frame.id} version {version.key} Failed to copy: {repr(e)}")
+        logging.info(f"Finished processing {num_files_processed} files from {num_frames} frames")
