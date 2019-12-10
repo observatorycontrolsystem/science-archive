@@ -25,7 +25,6 @@ class Command(BaseCommand):
         frames = Frame.objects.filter(version_set__migrated=False).distinct()[:FRAME_LIMIT]
         for frame in frames:
             logging.info(f"Processing frame {frame.id}")
-            s3_path = frame.s3_key
             versions = frame.version_set.all().order_by('created')
             for version in versions:
                 logging.info(f"  Processing Version {version.key} - {version.created}")
