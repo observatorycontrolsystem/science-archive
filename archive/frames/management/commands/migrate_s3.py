@@ -15,7 +15,7 @@ class Command(BaseCommand):
         for frame in frames:
             logging.info(f"Processing frame {frame.id}")
             s3_path = frame.s3_key
-            versions = Version.objects.filter(frame=frame).order_by('created')
+            versions = frame.version_set.all().order_by('created')
             for version in versions:
                 logging.info(f"  Processing Version {version.key} - {version.created}")
                 try:

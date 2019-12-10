@@ -127,9 +127,9 @@ class Frame(models.Model):
             day_obs = self.DATE_OBS.split('T')[0].replace('-', '')
         else:
             day_obs = self.basename.split('-')[2]
-        return '/'.join(
+        return '/'.join((
             self.SITEID, self.INSTRUME, day_obs, self.basename
-        )
+        ))
 
     @property
     def url(self):
