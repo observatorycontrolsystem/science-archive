@@ -1,16 +1,27 @@
 from django.core.management.base import BaseCommand
 from archive.frames.models import Frame, Version
-from archive.frames.utils import get_s3_client
 from botocore.exceptions import ClientError
-from django.conf import settings
 
+import boto3
 import logging
+import os
 
 FRAME_LIMIT = 1
+NEW_AWS_ACCESS_KEY_ID = os.getenv('NEW_AWS_ACCESS_KEY_ID', '')
+NEW_AWS_SECRET_ACCESS_KEY = os.getenv('NEW_AWS_SECRET_ACCESS_KEY', '')
+NEW_BUCKET = os.getenv('NEW_AWS_BUCKET', '')
+
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
-        client = get_s3_client()
+        config = boto3.session.Config(region_name='us-west-2', signature_version='s3v4')
+        # Overrite the environment variable AWS credentials with one specially made for this copy operation
+        client = boto3.client(
+            's3',
+            config=config,
+            aws_access_key_id=NEW_AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=NEW_AWS_SECRET_ACCESS_KEY,
+        )
         frames = Frame.objects.filter(version_set__migrated=False).distinct()[:FRAME_LIMIT]
         for frame in frames:
             logging.info(f"Processing frame {frame.id}")
@@ -19,7 +30,7 @@ class Command(BaseCommand):
             for version in versions:
                 logging.info(f"  Processing Version {version.key} - {version.created}")
                 try:
-                    response = client.copy_object(CopySource=version.data_params, Bucket=settings.NEW_BUCKET,
+                    response = client.copy_object(CopySource=version.data_params, Bucket=NEW_BUCKET,
                                                   Key=frame.s3_daydir_key)
                     if 'VersionId' in response and 'CopyObjectResult' in response and 'ETAG' in response['CopyObjectResult']:
                         version.update(
