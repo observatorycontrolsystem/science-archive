@@ -145,6 +145,27 @@ class Frame(models.Model):
         """
         return '{0}{1}'.format(self.basename, self.version_set.first().extension)
 
+    def copy_to_ia(self):
+        latest_version = self.version_set.first()
+        bucket, s3_key = latest_version.get_bucket_and_s3_key()
+        client = get_s3_client()
+        logger.info('Copying {} to IA storage'.format(self))
+        response = client.copy_object(
+            CopySource=latest_version.data_params,
+            Bucket=bucket,
+            Key=s3_key,
+            StorageClass='STANDARD_IA',
+            MetadataDirective='COPY'
+        )
+        new_version = Version(
+            frame=self,
+            key=response['VersionId'],
+            md5=response['CopyObjectResult']['ETag'].strip('"'),
+            extension=latest_version.extension
+        )
+        latest_version.delete()
+        new_version.save()
+        logger.info('Saved new version: {}'.format(new_version.id))
 
 class Headers(models.Model):
     data = JSONField(default=dict)
