@@ -5,6 +5,7 @@ from botocore.exceptions import ClientError
 import boto3
 import logging
 import os
+from datetime import datetime, timedelta
 
 FRAME_LIMIT = 1
 NEW_AWS_ACCESS_KEY_ID = os.getenv('NEW_AWS_ACCESS_KEY_ID', '')
@@ -27,12 +28,17 @@ class Command(BaseCommand):
         num_files_processed = 0
         for frame in frames:
             logging.info(f"Processing frame {frame.id}")
+            if frame.DATE_OBS.replace(tzinfo=None) > (datetime.utcnow() - timedelta(days=60)):
+                storage = 'STANDARD'
+            else:
+                storage = 'STANDARD_IA'
+
             versions = frame.version_set.all().order_by('created')
             for version in versions:
                 logging.info(f"  Processing Version {version.key} - {version.created}")
                 try:
                     response = client.copy_object(CopySource=version.data_params, Bucket=NEW_AWS_BUCKET,
-                                                  Key=frame.s3_daydir_key)
+                                                  Key=frame.s3_daydir_key, StorageClass=storage)
                     if 'VersionId' in response and 'CopyObjectResult' in response and 'ETAG' in response['CopyObjectResult']:
                         # The md5 looks like it doesn't change, but it would be bad if it did and we didn't update that
                         version.update(
