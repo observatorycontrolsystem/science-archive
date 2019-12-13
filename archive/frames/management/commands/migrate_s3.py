@@ -23,7 +23,7 @@ class Command(BaseCommand):
             aws_access_key_id=NEW_AWS_ACCESS_KEY_ID,
             aws_secret_access_key=NEW_AWS_SECRET_ACCESS_KEY,
         )
-        frames = Frame.objects.filter(version_set__migrated=False).distinct()[:FRAME_LIMIT]
+        frames = Frame.objects.filter(version__migrated=False).distinct()[:FRAME_LIMIT]
         num_frames = frames.count()
         num_files_processed = 0
         for frame in frames:
