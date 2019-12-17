@@ -60,10 +60,10 @@ class Command(BaseCommand):
                                                   Key=frame.s3_daydir_key, StorageClass=storage)
                     if 'VersionId' in response and 'CopyObjectResult' in response and 'ETag' in response['CopyObjectResult']:
                         # The md5 looks like it doesn't change, but it would be bad if it did and we didn't update that
-                        version.update(
-                            key=response['VersionId'],
-                            migrated=True,
-                            md5=response['CopyObjectResult']['ETag'].strip('"'))
+                        version.key = response['VersionId']
+                        version.migrated = True
+                        version.md5 = response['CopyObjectResult']['ETag'].strip('"')
+                        version.save()
                         if options['delete']:
                             client.delete_object(**data_params)
                         num_files_processed += 1
