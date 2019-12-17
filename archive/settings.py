@@ -180,6 +180,9 @@ TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 BUCKET = os.getenv('AWS_BUCKET', 'lcogtarchivetest')
 NEW_BUCKET = os.getenv('NEW_AWS_BUCKET', 'newlcogtarchivetest')
 
+NEW_AWS_ACCESS_KEY_ID = os.getenv('NEW_AWS_ACCESS_KEY_ID', '')
+NEW_AWS_SECRET_ACCESS_KEY = os.getenv('NEW_AWS_SECRET_ACCESS_KEY', '')
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',

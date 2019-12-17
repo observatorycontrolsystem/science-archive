@@ -1,16 +1,13 @@
 from django.core.management.base import BaseCommand
+from django.conf import settings
 from archive.frames.models import Frame, Version
+from archive.frames.utils import get_s3_client
 from botocore.exceptions import ClientError
 
-import boto3
 import logging
 import os
 import time
 from datetime import datetime, timedelta
-
-NEW_AWS_ACCESS_KEY_ID = os.getenv('NEW_AWS_ACCESS_KEY_ID', '')
-NEW_AWS_SECRET_ACCESS_KEY = os.getenv('NEW_AWS_SECRET_ACCESS_KEY', '')
-NEW_AWS_BUCKET = os.getenv('NEW_AWS_BUCKET', '')
 
 
 class Command(BaseCommand):
@@ -28,14 +25,9 @@ class Command(BaseCommand):
         logging.info(f"Beggining Migration of {options['num_frames']} frames for site: {options['site']}")
         if options['delete']:
             logging.info(f"Files will be deleted after they are migrated")
-        config = boto3.session.Config(region_name='us-west-2', signature_version='s3v4')
         # Overrite the environment variable AWS credentials with one specially made for this copy operation
-        client = boto3.client(
-            's3',
-            config=config,
-            aws_access_key_id=NEW_AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=NEW_AWS_SECRET_ACCESS_KEY,
-        )
+        client = get_s3_client(access_key_override=settings.NEW_AWS_ACCESS_KEY_ID,
+                               secret_key_override=settings.NEW_AWS_SECRET_ACCESS_KEY)
         frames = Frame.objects.filter(version__migrated=False)
         if options['site'].lower() != 'all':
             frames = frames.filter(SITEID=options['site'].lower())
@@ -56,7 +48,7 @@ class Command(BaseCommand):
                 logging.info(f"  Processing Version {version.key} - {version.created}")
                 data_params = version.data_params
                 try:
-                    response = client.copy_object(CopySource=data_params, Bucket=NEW_AWS_BUCKET,
+                    response = client.copy_object(CopySource=data_params, Bucket=settings.NEW_BUCKET,
                                                   Key=frame.s3_daydir_key, StorageClass=storage)
                     if 'VersionId' in response and 'CopyObjectResult' in response and 'ETag' in response['CopyObjectResult']:
                         # The md5 looks like it doesn't change, but it would be bad if it did and we didn't update that
