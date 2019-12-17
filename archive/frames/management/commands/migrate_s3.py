@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.conf import settings
+from django.utils import timezone
 from archive.frames.models import Frame, Version
 from archive.frames.utils import get_s3_client
 from botocore.exceptions import ClientError
@@ -7,7 +8,7 @@ from botocore.exceptions import ClientError
 import logging
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 
 class Command(BaseCommand):
@@ -39,7 +40,7 @@ class Command(BaseCommand):
         for frame in frames:
             num_frames += 1
             logging.info(f"Processing frame {frame.id}")
-            if frame.DATE_OBS.replace(tzinfo=None) > (datetime.utcnow() - timedelta(days=60)):
+            if frame.DATE_OBS > (timezone.now() - timedelta(days=60)):
                 storage = 'STANDARD'
             else:
                 storage = 'STANDARD_IA'
