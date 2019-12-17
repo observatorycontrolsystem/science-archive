@@ -148,8 +148,7 @@ class Frame(models.Model):
     def copy_to_ia(self):
         latest_version = self.version_set.first()
         bucket, s3_key = latest_version.get_bucket_and_s3_key()
-        new_aws_access_key, new_aws_secret_key = latest_version.get_new_credentials()
-        client = get_s3_client(new_aws_access_key, new_aws_secret_key)
+        client = get_s3_client()
         logger.info('Copying {} to IA storage'.format(self))
         response = client.copy_object(
             CopySource=latest_version.data_params,
@@ -195,8 +194,7 @@ class Version(models.Model):
 
     @cached_property
     def size(self):
-        new_aws_access_key, new_aws_secret_key = self.get_new_credentials()
-        client = get_s3_client(new_aws_access_key, new_aws_secret_key)
+        client = get_s3_client()
         bucket, s3_key = self.get_bucket_and_s3_key()
         return client.head_object(Bucket=bucket, Key=s3_key)['ContentLength']
 
@@ -208,8 +206,7 @@ class Version(models.Model):
 
     @cached_property
     def url(self, expiration=172800):
-        new_aws_access_key, new_aws_secret_key = self.get_new_credentials()
-        client = get_s3_client(new_aws_access_key, new_aws_secret_key)
+        client = get_s3_client()
         return client.generate_presigned_url(
             'get_object',
             ExpiresIn=expiration,
@@ -217,16 +214,9 @@ class Version(models.Model):
         )
 
     def delete_data(self):
-        new_aws_access_key, new_aws_secret_key = self.get_new_credentials()
-        client = get_s3_client(new_aws_access_key, new_aws_secret_key)
+        client = get_s3_client()
         logger.info('Deleting version', extra={'tags': {'key': self.key, 'frame': self.frame.id}})
         client.delete_object(**self.data_params)
-
-    def get_new_credentials(self):
-        if self.migrated:
-            return settings.NEW_AWS_ACCESS_KEY_ID, settings.NEW_AWS_SECRET_ACCESS_KEY
-        else:
-            return None, None
 
     def __str__(self):
         return '{0}:{1}'.format(self.created, self.key)

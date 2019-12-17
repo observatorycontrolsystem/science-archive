@@ -4,13 +4,9 @@ from django.conf import settings
 
 
 @lru_cache(maxsize=1)
-def get_s3_client(access_key_override=None, secret_key_override=None):
+def get_s3_client():
     config = boto3.session.Config(region_name='us-west-2', signature_version='s3v4')
-    if access_key_override and secret_key_override:
-        return boto3.client('s3', config=config, aws_access_key_id=access_key_override,
-                            aws_secret_access_key=secret_key_override)
-    else:
-        return boto3.client('s3', config=config)
+    return boto3.client('s3', config=config)
 
 
 def remove_dashes_from_keys(dictionary):
