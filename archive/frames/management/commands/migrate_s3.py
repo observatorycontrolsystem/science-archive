@@ -28,6 +28,7 @@ class Command(BaseCommand):
         # Overrite the environment variable AWS credentials with one specially made for this copy operation
         client = get_s3_client(access_key_override=settings.NEW_AWS_ACCESS_KEY_ID,
                                secret_key_override=settings.NEW_AWS_SECRET_ACCESS_KEY)
+        old_client = get_s3_client()
         frames = Frame.objects.filter(version__migrated=False)
         if options['site'].lower() != 'all':
             frames = frames.filter(SITEID=options['site'].lower())
@@ -57,7 +58,7 @@ class Command(BaseCommand):
                         version.md5 = response['CopyObjectResult']['ETag'].strip('"')
                         version.save()
                         if options['delete']:
-                            client.delete_object(**data_params)
+                            old_client.delete_object(**data_params)
                         num_files_processed += 1
                     else:
                         logging.error(f"S3 Copy of frame {frame.id} version {version.key} failed to receive updated metadata")
