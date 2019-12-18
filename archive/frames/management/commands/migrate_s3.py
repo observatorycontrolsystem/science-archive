@@ -48,7 +48,7 @@ class Command(BaseCommand):
                 data_params = version.data_params
                 try:
                     response = client.copy_object(CopySource=data_params, Bucket=settings.NEW_BUCKET,
-                                                  Key=frame.s3_daydir_key, StorageClass=storage)
+                                                  Key=version.s3_daydir_key, StorageClass=storage)
                     if 'VersionId' in response and 'CopyObjectResult' in response and 'ETag' in response['CopyObjectResult']:
                         # The md5 looks like it doesn't change, but it would be bad if it did and we didn't update that
                         version.key = response['VersionId']

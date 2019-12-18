@@ -120,17 +120,6 @@ class Frame(models.Model):
             self.basename
         ))
 
-    @cached_property
-    def s3_daydir_key(self):
-        if self.SITEID.lower() == 'sor':
-            # SOR files don't have the day_obs in their filename, so use the DATE_OBS field:
-            day_obs = self.DATE_OBS.isoformat().split('T')[0].replace('-', '')
-        else:
-            day_obs = self.basename.split('-')[2]
-        return '/'.join((
-            self.SITEID, self.INSTRUME, day_obs, self.basename
-        ))
-
     @property
     def url(self):
         """
@@ -198,9 +187,20 @@ class Version(models.Model):
         bucket, s3_key = self.get_bucket_and_s3_key()
         return client.head_object(Bucket=bucket, Key=s3_key)['ContentLength']
 
+    @cached_property
+    def s3_daydir_key(self):
+        if self.frame.SITEID.lower() == 'sor':
+            # SOR files don't have the day_obs in their filename, so use the DATE_OBS field:
+            day_obs = self.frame.DATE_OBS.isoformat().split('T')[0].replace('-', '')
+        else:
+            day_obs = self.frame.basename.split('-')[2]
+        return '/'.join((
+            self.frame.SITEID, self.frame.INSTRUME, day_obs, self.frame.basename, self.extension
+        ))
+
     def get_bucket_and_s3_key(self):
         if self.migrated:
-            return settings.NEW_BUCKET, self.frame.s3_daydir_key
+            return settings.NEW_BUCKET, self.s3_daydir_key
         else:
             return settings.BUCKET, self.frame.s3_key
 
