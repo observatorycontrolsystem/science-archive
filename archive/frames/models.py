@@ -210,7 +210,7 @@ class Version(models.Model):
         client = get_s3_client()
         return client.generate_presigned_url(
             'get_object',
-            ExpiresIn=expiration.total_seconds(),
+            ExpiresIn=int(expiration.total_seconds()),
             Params=self.data_params
         )
 
