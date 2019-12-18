@@ -23,10 +23,9 @@ class Command(BaseCommand):
                             help='If set, will delete all successfully migrated files as it goes.')
 
     def handle(self, *args, **options):
-        logging.info(f"Beggining Migration of {options['num_frames']} frames for site: {options['site']}")
+        logging.info(f"Beginning Migration of {options['num_frames']} frames for site: {options['site']}")
         if options['delete']:
             logging.info(f"Files will be deleted after they are migrated")
-        # Overrite the environment variable AWS credentials with one specially made for this copy operation
         client = get_s3_client()
         frames = Frame.objects.filter(version__migrated=False)
         if options['site'].lower() != 'all':
