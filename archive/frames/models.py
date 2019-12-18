@@ -3,6 +3,7 @@ from django.utils.functional import cached_property
 from django.contrib.postgres.fields import JSONField
 import hashlib
 import logging
+from datetime import timedelta
 from django.conf import settings
 from django.contrib.gis.db import models
 
@@ -205,11 +206,11 @@ class Version(models.Model):
             return settings.BUCKET, self.frame.s3_key
 
     @cached_property
-    def url(self, expiration=172800):
+    def url(self, expiration=timedelta(hours=48)):
         client = get_s3_client()
         return client.generate_presigned_url(
             'get_object',
-            ExpiresIn=expiration,
+            ExpiresIn=expiration.total_seconds(),
             Params=self.data_params
         )
 

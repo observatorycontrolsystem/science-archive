@@ -1,6 +1,7 @@
 import boto3
 from functools import lru_cache
 from django.conf import settings
+from datetime import timedelta
 
 
 @lru_cache(maxsize=1)
@@ -37,7 +38,7 @@ def build_nginx_zip_text(frames, directory):
             'Bucket': bucket,
         }
         # Generate a presigned AWS S3 V4 URL which expires in 86400 seconds (1 day)
-        url = version.url(expiration=86400)
+        url = version.url(expiration=timedelta(hours=24))
         # The NGINX mod_zip module requires that the files which are used to build the
         # ZIP file must be loaded from an internal NGINX location. Replace the leading
         # portion of the generated URL with an internal NGINX location which proxies all
