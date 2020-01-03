@@ -88,6 +88,7 @@ class Command(BaseCommand):
                         if 'VersionId' in response and 'ETag' in response:
                             version.key = response['VersionId']
                             version.migrated = True
+                            version.extension = '.fits.fz'
                             version.md5 = response['ETag'].strip('"')
                             version.save()
                             if options['delete']:

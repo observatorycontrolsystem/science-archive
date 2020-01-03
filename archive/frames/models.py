@@ -196,8 +196,8 @@ class Version(models.Model):
         else:
             day_obs = self.frame.basename.split('-')[2]
         return '/'.join((
-            self.frame.SITEID, self.frame.INSTRUME, day_obs, self.frame.basename, self.extension
-        ))
+            self.frame.SITEID, self.frame.INSTRUME, day_obs, self.frame.basename
+        )) + self.extension
 
     def get_bucket_and_s3_key(self):
         if self.migrated:
