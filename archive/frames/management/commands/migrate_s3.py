@@ -14,6 +14,75 @@ import time
 from datetime import timedelta
 
 
+def copy_version(version, client, storage_class, frame_id, should_delete=False):
+    data_params = version.data_params
+    try:
+        response = client.copy_object(CopySource=data_params, Bucket=settings.NEW_BUCKET,
+                                      Key=version.s3_daydir_key, StorageClass=storage_class)
+    except ClientError as ce:
+        logging.error(f"S3 Copy of frame {frame_id} version {version.key} Failed to copy: {repr(ce)}")
+        return False
+    if 'VersionId' in response and 'CopyObjectResult' in response and 'ETag' in response['CopyObjectResult']:
+        # The md5 looks like it doesn't change, but it would be bad if it did and we didn't update that
+        version.key = response['VersionId']
+        version.migrated = True
+        version.md5 = response['CopyObjectResult']['ETag'].strip('"')
+        version.save()
+        try:
+            if should_delete:
+                client.delete_object(**data_params)
+        except ClientError as ce:
+            logging.error(f"S3 Delete of old {frame_id} version {version.key} Failed: {repr(ce)}")
+    else:
+        logging.error(f"S3 Copy of frame {frame_id} version {version.key} failed to receive updated metadata")
+        return False
+    return True
+
+def fpack_version(version, client, storage_class, frame_id, should_delete=False):
+    data_params = version.data_params
+    try:
+        file_response = client.get_object(**data_params)
+    except ClientError as ce:
+        logging.error(f"S3 Get of frame {frame_id} version {version.key} Failed: {repr(ce)}")
+        return False
+    base_file = file_response['Body']
+    with closing(base_file):
+        # need to convert StreamingBody to BytesIO for astropy to use as input
+        input_file = io.BytesIO(base_file.read())
+    fits_file = fits.open(input_file)[0]
+    filename = f'{version.frame.basename}.fits.fz'
+    content_disposition = f'attachment; filename={filename}'
+    content_type = '.fits.fz'
+    fpack_file = io.BytesIO()
+    setattr(fpack_file, 'name', filename)
+    # This works with non-fpacked data in LCO's past, but it doesn't work with funpack fpacked data
+    compressed_hdu = fits.CompImageHDU(data=fits_file.data, header=fits_file.header,
+                                       name='COMPRESSED_IMAGE')
+    compressed_hdu.writeto(fpack_file)
+    fpack_file.seek(0)
+    try:
+        response = client.put_object(Body=fpack_file, Bucket=settings.NEW_BUCKET,
+                                     Key=f'{version.s3_daydir_key}.fz', StorageClass=storage_class)
+    except ClientError as ce:
+        logging.error(f"S3 Put of fpacked frame {frame_id} version {version.key} Failed: {repr(ce)}")
+        return False
+    if 'VersionId' in response and 'ETag' in response:
+        version.key = response['VersionId']
+        version.migrated = True
+        version.extension = '.fits.fz'
+        version.md5 = response['ETag'].strip('"')
+        version.save()
+        try:
+            if should_delete:
+                client.delete_object(**data_params)
+        except ClientError as ce:
+            logging.warning(f"S3 Delete of old frame {frame_id} version {version.key} Failed: {repr(ce)}")
+    else:
+        logging.error(f"S3 Put of fpacked frame {frame_id} version {version.key} Failed to receive updated metadata")
+        return False
+    return True
+
+
 class Command(BaseCommand):
     help = 'Migrates a set of frames from one s3 bucket to another'
 
@@ -49,55 +118,14 @@ class Command(BaseCommand):
             for version in versions:
                 logging.info(f"  Processing Version {version.key} - {version.created}")
                 data_params = version.data_params
-                if version.extension != '.fits':
-                    try:
-                        response = client.copy_object(CopySource=data_params, Bucket=settings.NEW_BUCKET,
-                                                      Key=version.s3_daydir_key, StorageClass=storage)
-                        if 'VersionId' in response and 'CopyObjectResult' in response and 'ETag' in response['CopyObjectResult']:
-                            # The md5 looks like it doesn't change, but it would be bad if it did and we didn't update that
-                            version.key = response['VersionId']
-                            version.migrated = True
-                            version.md5 = response['CopyObjectResult']['ETag'].strip('"')
-                            version.save()
-                            if options['delete']:
-                                client.delete_object(**data_params)
-                            num_files_processed += 1
-                        else:
-                            logging.error(f"S3 Copy of frame {frame.id} version {version.key} failed to receive updated metadata")
-                    except ClientError as e:
-                        logging.error(f"S3 Copy of frame {frame.id} version {version.key} Failed to copy: {repr(e)}")
+                if version.extension == '.fits':
+                    # The file is a basic (not fpacked) fits file. We should fpack it first and then send it to S3
+                    if fpack_version(version, client, storage, frame.id, options['delete']):
+                        num_files_processed += 1
                 else:
-                    try:
-                        # The file is a basic (not fpacked) fits file. We should fpack it first and then send it to S3
-                        file_response = client.get_object(**version.data_params)
-                        base_file = file_response['Body']
-                        with closing(base_file):
-                            input_file = io.BytesIO(base_file.read())
-                        fits_file = fits.open(input_file)[0]
-                        filename = f'{version.frame.basename}.fits.fz'
-                        content_disposition = f'attachment; filename={filename}'
-                        content_type = '.fits.fz'
-                        fpack_file = io.BytesIO()
-                        setattr(fpack_file, 'name', filename)
-                        compressed_hdu = fits.CompImageHDU(data=fits_file.data, header=fits_file.header,
-                                                           name='COMPRESSED_IMAGE')
-                        compressed_hdu.writeto(fpack_file)
-                        fpack_file.seek(0)
-                        response = client.put_object(Body=fpack_file, Bucket=settings.NEW_BUCKET,
-                                                     Key=f'{version.s3_daydir_key}.fz', StorageClass=storage)
-                        if 'VersionId' in response and 'ETag' in response:
-                            version.key = response['VersionId']
-                            version.migrated = True
-                            version.extension = '.fits.fz'
-                            version.md5 = response['ETag'].strip('"')
-                            version.save()
-                            if options['delete']:
-                                client.delete_object(**data_params)
-                            num_files_processed += 1
-                        else:
-                            logging.error(f"S3 Put of frame {frame.id} version {version.key} Failed to receive updated metadata")
-                    except ClientError as e:
-                        logging.error(f"S3 Put of frame {frame.id} version {version.key} Failed to fpack and migrate: {repr(e)}")
+                    if copy_version(version, client, storage, frame.id, options['delete']):
+                        num_files_processed += 1
+
         end = time.time()
         logging.info(f"Finished processing {num_files_processed} files from {num_frames} frames")
         time_per_object = (end - start) / num_files_processed if num_files_processed > 0 else 0
