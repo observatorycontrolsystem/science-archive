@@ -4,9 +4,11 @@ from django.utils import timezone
 from archive.frames.models import Frame, Version
 from archive.frames.utils import get_s3_client
 from botocore.exceptions import ClientError
+from astropy.io import fits
 
 import logging
 import os
+import io
 import time
 from datetime import timedelta
 
@@ -46,22 +48,52 @@ class Command(BaseCommand):
             for version in versions:
                 logging.info(f"  Processing Version {version.key} - {version.created}")
                 data_params = version.data_params
-                try:
-                    response = client.copy_object(CopySource=data_params, Bucket=settings.NEW_BUCKET,
-                                                  Key=version.s3_daydir_key, StorageClass=storage)
-                    if 'VersionId' in response and 'CopyObjectResult' in response and 'ETag' in response['CopyObjectResult']:
-                        # The md5 looks like it doesn't change, but it would be bad if it did and we didn't update that
-                        version.key = response['VersionId']
-                        version.migrated = True
-                        version.md5 = response['CopyObjectResult']['ETag'].strip('"')
-                        version.save()
-                        if options['delete']:
-                            client.delete_object(**data_params)
-                        num_files_processed += 1
-                    else:
-                        logging.error(f"S3 Copy of frame {frame.id} version {version.key} failed to receive updated metadata")
-                except ClientError as e:
-                    logging.error(f"S3 Copy of frame {frame.id} version {version.key} Failed to copy: {repr(e)}")
+                if version.extension != '.fits':
+                    try:
+                        response = client.copy_object(CopySource=data_params, Bucket=settings.NEW_BUCKET,
+                                                      Key=version.s3_daydir_key, StorageClass=storage)
+                        if 'VersionId' in response and 'CopyObjectResult' in response and 'ETag' in response['CopyObjectResult']:
+                            # The md5 looks like it doesn't change, but it would be bad if it did and we didn't update that
+                            version.key = response['VersionId']
+                            version.migrated = True
+                            version.md5 = response['CopyObjectResult']['ETag'].strip('"')
+                            version.save()
+                            if options['delete']:
+                                client.delete_object(**data_params)
+                            num_files_processed += 1
+                        else:
+                            logging.error(f"S3 Copy of frame {frame.id} version {version.key} failed to receive updated metadata")
+                    except ClientError as e:
+                        logging.error(f"S3 Copy of frame {frame.id} version {version.key} Failed to copy: {repr(e)}")
+                else:
+                    try:
+                        # The file is a basic (not fpacked) fits file. We should fpack it first and then send it to S3
+                        file_response = client.get_object(**version.data_params)
+                        base_file = file_response['Body']
+                        fits_file = fits.open(base_file)[0]
+                        filename = f'{version.frame.basename}.fits.fz'
+                        content_disposition = f'attachment; filename={filename}'
+                        content_type = '.fits.fz'
+                        fpack_file = io.BytesIO()
+                        setattr(fpack_file, 'name', filename)
+                        compressed_hdu = fits.CompImageHDU(data=fits_file.data, header=fits_file.header,
+                                                           name='COMPRESSED_IMAGE')
+                        compressed_hdu.writeto(fpack_file)
+                        fpack_file.seek(0)
+                        response = client.put_object(Body=fpack_file, Bucket=settings.NEW_BUCKET,
+                                                     Key=f'{version.s3_daydir_key}.fz', StorageClass=storage)
+                        if 'VersionId' in response and 'ETag' in response:
+                            version.key = response['VersionId']
+                            version.migrated = True
+                            version.md5 = response['ETag'].strip('"')
+                            version.save()
+                            if options['delete']:
+                                client.delete_object(**data_params)
+                            num_files_processed += 1
+                        else:
+                            logging.error(f"S3 Put of frame {frame.id} version {version.key} Failed to receive updated metadata")
+                    except ClientError as e:
+                        logging.error(f"S3 Put of frame {frame.id} version {version.key} Failed to fpack and migrate: {repr(e)}")
         end = time.time()
         logging.info(f"Finished processing {num_files_processed} files from {num_frames} frames")
         time_per_object = (end - start) / num_files_processed if num_files_processed > 0 else 0
