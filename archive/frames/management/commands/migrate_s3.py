@@ -9,6 +9,7 @@ from astropy.io import fits
 import logging
 import os
 import io
+from contextlib import closing
 import time
 from datetime import timedelta
 
@@ -70,7 +71,9 @@ class Command(BaseCommand):
                         # The file is a basic (not fpacked) fits file. We should fpack it first and then send it to S3
                         file_response = client.get_object(**version.data_params)
                         base_file = file_response['Body']
-                        fits_file = fits.open(base_file)[0]
+                        with closing(base_file):
+                            input_file = io.BytesIO(base_file.read())
+                        fits_file = fits.open(input_file)[0]
                         filename = f'{version.frame.basename}.fits.fz'
                         content_disposition = f'attachment; filename={filename}'
                         content_type = '.fits.fz'
