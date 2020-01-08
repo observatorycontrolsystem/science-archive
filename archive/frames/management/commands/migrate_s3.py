@@ -14,6 +14,26 @@ import time
 from datetime import timedelta
 
 
+def pack(uncompressed_hdulist: fits.HDUList) -> fits.HDUList:
+    if uncompressed_hdulist[0].data is None:
+        primary_hdu = fits.PrimaryHDU(header=uncompressed_hdulist[0].header)
+        hdulist = [primary_hdu]
+    else:
+        primary_hdu = fits.PrimaryHDU()
+        compressed_hdu = fits.CompImageHDU(data=uncompressed_hdulist[0].data, header=uncompressed_hdulist[0].header,
+                                           quantize_level=64, quantize_method=1)
+        hdulist = [primary_hdu, compressed_hdu]
+
+    for hdu in uncompressed_hdulist[1:]:
+        if isinstance(hdu, fits.ImageHDU):
+            compressed_hdu = fits.CompImageHDU(data=hdu.data, header=hdu.header,
+                                               quantize_level=64, quantize_method=1)
+            hdulist.append(compressed_hdu)
+        else:
+            hdulist.append(hdu)
+    return fits.HDUList(hdulist)
+
+
 def copy_version(version, client, storage_class, frame_id, should_delete=False):
     data_params = version.data_params
     try:
@@ -56,9 +76,8 @@ def fpack_version(version, client, storage_class, frame_id, should_delete=False)
     fpack_file = io.BytesIO()
     setattr(fpack_file, 'name', filename)
     # This works with non-fpacked data in LCO's past, but it doesn't work with funpack fpacked data
-    compressed_hdu = fits.CompImageHDU(data=fits_file.data, header=fits_file.header,
-                                       name='COMPRESSED_IMAGE')
-    compressed_hdu.writeto(fpack_file)
+    compressed_hdulist = pack(fits_file.hdulist)
+    compressed_hdulist.writeto(fpack_file)
     fpack_file.seek(0)
     try:
         response = client.put_object(Body=fpack_file, Bucket=settings.NEW_BUCKET,
@@ -115,13 +134,22 @@ class Command(BaseCommand):
                 storage = 'STANDARD_IA'
 
             versions = frame.version_set.all().order_by('created')
+            successful_fpack = False  # This ensures we only delete fpacked versions if we successfully migrated a non-fpacked one
+            extensions = [version.extension for version in versions]
             for version in versions:
                 logging.info(f"  Processing Version {version.key} - {version.created}")
                 data_params = version.data_params
-                if version.extension == '.fits':
+                # Only fpack .fits versions for files with both .fits and .fz
+                if '.fits' in extensions and '.fits.fz' in extensions:
                     # The file is a basic (not fpacked) fits file. We should fpack it first and then send it to S3
-                    if fpack_version(version, client, storage, frame.id, options['delete']):
-                        num_files_processed += 1
+                    if version.extension == '.fits':
+                        if fpack_version(version, client, storage, frame.id, options['delete']):
+                            num_files_processed += 1
+                            successful_fpack = True
+                    elif options['delete'] and successful_fpack:
+                        logging.info(f"  Deleting old fpacked Version {version.key}")
+                        client.delete_object(**data_params)
+                        version.delete()
                 else:
                     if copy_version(version, client, storage, frame.id, options['delete']):
                         num_files_processed += 1
