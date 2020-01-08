@@ -52,7 +52,7 @@ def copy_version(version, client, storage_class, frame_id, should_delete=False):
             if should_delete:
                 client.delete_object(**data_params)
         except ClientError as ce:
-            logging.error(f"S3 Delete of old {frame_id} version {version.key} Failed: {repr(ce)}")
+            logging.warning(f"S3 Delete of old frame key {data_params['Key']} version {data_params['VersionId']} in bucket {data_params['Bucket']} Failed: {repr(ce)}")
     else:
         logging.error(f"S3 Copy of frame {frame_id} version {version.key} failed to receive updated metadata")
         return False
@@ -95,7 +95,7 @@ def fpack_version(version, client, storage_class, frame_id, should_delete=False)
             if should_delete:
                 client.delete_object(**data_params)
         except ClientError as ce:
-            logging.warning(f"S3 Delete of old frame {frame_id} version {version.key} Failed: {repr(ce)}")
+            logging.warning(f"S3 Delete of old frame key {data_params['Key']} version {data_params['VersionId']} in bucket {data_params['Bucket']} Failed: {repr(ce)}")
     else:
         logging.error(f"S3 Put of fpacked frame {frame_id} version {version.key} Failed to receive updated metadata")
         return False
@@ -133,7 +133,7 @@ class Command(BaseCommand):
             else:
                 storage = 'STANDARD_IA'
 
-            versions = frame.version_set.all().order_by('created')
+            versions = frame.version_set.all().order_by('extension', 'created')
             successful_fpack = False  # This ensures we only delete fpacked versions if we successfully migrated a non-fpacked one
             extensions = [version.extension for version in versions]
             for version in versions:
