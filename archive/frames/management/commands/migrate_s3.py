@@ -76,7 +76,7 @@ def fpack_version(version, client, storage_class, frame_id, should_delete=False)
     fpack_file = io.BytesIO()
     setattr(fpack_file, 'name', filename)
     # This works with non-fpacked data in LCO's past, but it doesn't work with funpack fpacked data
-    compressed_hdulist = pack(fits_file.hdulist)
+    compressed_hdulist = pack(fits_file)
     compressed_hdulist.writeto(fpack_file)
     fpack_file.seek(0)
     try:
