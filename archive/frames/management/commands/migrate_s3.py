@@ -121,7 +121,10 @@ class Command(BaseCommand):
         frames = Frame.objects.filter(version__migrated=False)
         if options['site'].lower() != 'all':
             frames = frames.filter(SITEID=options['site'].lower())
-        frames = frames.distinct()[:options['num_frames']]
+        if options['num_frames'] <= 0:
+            frames = frames.distinct().iterator()
+        else:
+            frames = frames.distinct()[:options['num_frames']]
         num_frames = 0
         num_files_processed = 0
         start = time.time()
