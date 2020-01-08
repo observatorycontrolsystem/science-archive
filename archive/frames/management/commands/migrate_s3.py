@@ -108,8 +108,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('-s', '--site', type=str, default='all',
                             help='SITEID to perform frame migrations for, defaults to all sites')
-        parser.add_argument('-n', '--num_frames', type=int, default=1,
-                            help='The number of frames to migrate. Defaults to 1.')
+        parser.add_argument('-n', '--num_frames', type=int, default=-1,
+                            help='The number of frames to migrate. Default is all frames.')
         parser.add_argument('-d', '--delete', dest='delete', action='store_true', default=False,
                             help='If set, will delete all successfully migrated files as it goes.')
 
