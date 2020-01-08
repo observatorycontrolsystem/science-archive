@@ -69,7 +69,7 @@ def fpack_version(version, client, storage_class, frame_id, should_delete=False)
     with closing(base_file):
         # need to convert StreamingBody to BytesIO for astropy to use as input
         input_file = io.BytesIO(base_file.read())
-    fits_file = fits.open(input_file)[0]
+    fits_file = fits.open(input_file)
     filename = f'{version.frame.basename}.fits.fz'
     content_disposition = f'attachment; filename={filename}'
     content_type = '.fits.fz'
