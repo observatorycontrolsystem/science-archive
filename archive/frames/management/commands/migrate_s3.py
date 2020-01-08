@@ -148,8 +148,11 @@ class Command(BaseCommand):
                             successful_fpack = True
                     elif options['delete'] and successful_fpack:
                         logging.info(f"  Deleting old fpacked Version {version.key}")
-                        client.delete_object(**data_params)
-                        version.delete()
+                        try:
+                            client.delete_object(**data_params)
+                            version.delete()
+                        except ClientError as ce:
+                            logging.warning(f"S3 Delete of old frame key {data_params['Key']} version {data_params['VersionId']} in bucket {data_params['Bucket']} Failed: {repr(ce)}")
                 else:
                     if copy_version(version, client, storage, frame.id, options['delete']):
                         num_files_processed += 1
