@@ -22,16 +22,5 @@ pipeline {
 				sh 'make docker-push'
 			}
 		}
-		stage('Deploy prod') {
-			when { buildingTag() }
-			steps {
-				withKubeConfig([credentialsId: 'prod-kube-config']) {
-					sh '''
-						helm repo update
-						make prod-deploy
-					'''
-				}
-			}
-		}
 	}
 }
