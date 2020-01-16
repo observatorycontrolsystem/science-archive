@@ -1,3 +1,7 @@
+1.40
+2019-01-16
+Added migrate field and migration command, and removed auto-deploy.
+
 1.31
 2019-06-06
 Updated to have Jenkins deploy to the Kubernetes prod namespace.
