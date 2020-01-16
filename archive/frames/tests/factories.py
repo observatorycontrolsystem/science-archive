@@ -56,6 +56,7 @@ def frange(x, y, step):
         yield x
         x += step
 
+
 RA_RANGE = [round(i, 2) for i in frange(0.0, 360.0, 0.01)]
 DEC_RANGE = [round(i, 2) for i in frange(-90.0, 90.0, 0.01)]
 
@@ -64,6 +65,18 @@ def get_header_list():
     directory = os.path.join(os.path.dirname(__file__))
     with open(os.path.join(directory, 'frames.json'), 'r') as frame_file:
         return json.load(frame_file)
+
+
+class FuzzyBasename(factory.fuzzy.BaseFuzzyAttribute):
+    def fuzz(self, *args, **kwargs):
+        return '{site}{telescope_class}-{instrument}-{day_obs}-{frame_num}-{frame_type}'.format(
+            site=random.choice(SITES).lower(),
+            telescope_class=random.choice(['1m010', '1m020', '2m010', '0m410']),
+            instrument=random.choice(INSTRUMENTS),
+            day_obs=random.choice(['20190101', '20200101', '19911013', '19880717', '20200420', '20200124']),
+            frame_num=str(random.choice(range(1, 10000))).zfill(4),
+            frame_type=random.choice(EXTENSIONS)
+        )
 
 
 class FuzzyArea(factory.fuzzy.BaseFuzzyAttribute):
@@ -124,7 +137,7 @@ class FrameFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Frame
 
-    basename = factory.fuzzy.FuzzyText(length=30)
+    basename = FuzzyBasename()
     area = FuzzyArea()
     DATE_OBS = factory.fuzzy.FuzzyDateTime(
         datetime.datetime(2015, 1, 1, tzinfo=UTC),

@@ -3,6 +3,7 @@ from django.utils.functional import cached_property
 from django.contrib.postgres.fields import JSONField
 import hashlib
 import logging
+from datetime import timedelta
 from django.conf import settings
 from django.contrib.gis.db import models
 
@@ -134,19 +135,15 @@ class Frame(models.Model):
         """
         return '{0}{1}'.format(self.basename, self.version_set.first().extension)
 
-    @cached_property
-    def size(self):
-        client = get_s3_client()
-        return client.head_object(Bucket=settings.BUCKET, Key=self.s3_key)['ContentLength']
-
     def copy_to_ia(self):
         latest_version = self.version_set.first()
+        bucket, s3_key = latest_version.get_bucket_and_s3_key()
         client = get_s3_client()
         logger.info('Copying {} to IA storage'.format(self))
         response = client.copy_object(
             CopySource=latest_version.data_params,
-            Bucket=settings.BUCKET,
-            Key=self.s3_key,
+            Bucket=bucket,
+            Key=s3_key,
             StorageClass='STANDARD_IA',
             MetadataDirective='COPY'
         )
@@ -160,7 +157,6 @@ class Frame(models.Model):
         new_version.save()
         logger.info('Saved new version: {}'.format(new_version.id))
 
-
 class Headers(models.Model):
     data = JSONField(default=dict)
     frame = models.OneToOneField(Frame, on_delete=models.CASCADE)
@@ -172,24 +168,49 @@ class Version(models.Model):
     md5 = models.CharField(max_length=32, unique=True)
     extension = models.CharField(max_length=20)
     created = models.DateTimeField(auto_now_add=True)
+    migrated = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-created']
 
     @cached_property
     def data_params(self):
+        bucket, s3_key = self.get_bucket_and_s3_key()
         return {
-            'Bucket': settings.BUCKET,
-            'Key': self.frame.s3_key,
+            'Bucket': bucket,
+            'Key': s3_key,
             'VersionId': self.key
         }
 
     @cached_property
-    def url(self):
+    def size(self):
+        client = get_s3_client()
+        bucket, s3_key = self.get_bucket_and_s3_key()
+        return client.head_object(Bucket=bucket, Key=s3_key)['ContentLength']
+
+    @cached_property
+    def s3_daydir_key(self):
+        if self.frame.SITEID.lower() == 'sor':
+            # SOR files don't have the day_obs in their filename, so use the DATE_OBS field:
+            day_obs = self.frame.DATE_OBS.isoformat().split('T')[0].replace('-', '')
+        else:
+            day_obs = self.frame.basename.split('-')[2]
+        return '/'.join((
+            self.frame.SITEID, self.frame.INSTRUME, day_obs, self.frame.basename
+        )) + self.extension
+
+    def get_bucket_and_s3_key(self):
+        if self.migrated:
+            return settings.NEW_BUCKET, self.s3_daydir_key
+        else:
+            return settings.BUCKET, self.frame.s3_key
+
+    @cached_property
+    def url(self, expiration=timedelta(hours=48)):
         client = get_s3_client()
         return client.generate_presigned_url(
             'get_object',
-            ExpiresIn=3600 * 48,
+            ExpiresIn=int(expiration.total_seconds()),
             Params=self.data_params
         )
 

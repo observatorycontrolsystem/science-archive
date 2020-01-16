@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-@Library('lco-shared-libs@0.0.16') _
+@Library('lco-shared-libs@0.1.1') _
 
 pipeline {
 	agent any
@@ -20,17 +20,6 @@ pipeline {
 		stage('Push image') {
 			steps {
 				sh 'make docker-push'
-			}
-		}
-		stage('Deploy prod') {
-			when { buildingTag() }
-			steps {
-				withKubeConfig([credentialsId: 'prod-kube-config']) {
-					sh '''
-						helm repo update
-						make prod-deploy
-					'''
-				}
 			}
 		}
 	}
