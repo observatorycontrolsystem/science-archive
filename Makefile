@@ -32,7 +32,7 @@ dev-deploy:
 		--namespace dev \
 		--values deploy/dev-values.yaml \
 		--wait \
-		--set image.tag=$(TAG) \
+		--set backend.image.tag=$(TAG) \
 		archiveapi-dev \
 		$(HELM_CHART)
 
@@ -42,6 +42,6 @@ prod-deploy:
 		--namespace prod \
 		--values deploy/prod-values.yaml \
 		--wait \
-		--set image.tag=$(TAG) \
+		--set backend.image.tag=$(TAG) \
 		archiveapi \
 		$(HELM_CHART)
