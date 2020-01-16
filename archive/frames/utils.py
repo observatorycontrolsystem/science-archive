@@ -27,6 +27,7 @@ def fits_keywords_only(dictionary):
 
 
 def build_nginx_zip_text(frames, directory):
+    client = get_s3_client()
     ret = []
 
     for frame in frames:
@@ -38,7 +39,7 @@ def build_nginx_zip_text(frames, directory):
             'Bucket': bucket,
         }
         # Generate a presigned AWS S3 V4 URL which expires in 86400 seconds (1 day)
-        url = version.url(expiration=timedelta(hours=24))
+        url = client.generate_presigned_url('get_object', Params=params, ExpiresIn=86400)
         # The NGINX mod_zip module requires that the files which are used to build the
         # ZIP file must be loaded from an internal NGINX location. Replace the leading
         # portion of the generated URL with an internal NGINX location which proxies all

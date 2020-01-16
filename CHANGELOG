@@ -1,3 +1,7 @@
+1.41
+2019-01-16
+Fix bug in zip file generation.
+
 1.40
 2019-01-16
 Added migrate field and migration command, and removed auto-deploy.
