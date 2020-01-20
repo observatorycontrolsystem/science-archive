@@ -10,13 +10,6 @@ pipeline {
 				sh 'make docker-build'
 			}
 		}
-		stage('Integration tests') {
-			steps {
-				lock('archiveIt') {
-					sh 'make integration-tests'
-				}
-			}
-		}
 		stage('Push image') {
 			steps {
 				sh 'make docker-push'

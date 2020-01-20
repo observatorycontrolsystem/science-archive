@@ -16,10 +16,6 @@ IT_TAG := $(TAG)-integration-tests
 
 all: integration-tests docker-build docker-push
 
-integration-tests:
-	docker build --target tests -t $(DOCKER_IMG):$(IT_TAG) .
-	docker run --tty --rm $(DOCKER_IMG):$(IT_TAG)
-
 docker-build:
 	docker build --target app -t $(DOCKER_IMG):$(TAG) .
 
