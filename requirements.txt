@@ -12,7 +12,6 @@ python3-memcached>=1.51,<2.0
 responses
 factory_boy
 flake8
-django-nose
 pytz
 lcogt-logging
 django-extensions

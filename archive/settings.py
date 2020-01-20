@@ -175,8 +175,6 @@ STATIC_URL = '/static/'
 MEDIA_ROOT = '/media/'
 MEDIA_URL = '/media/'
 
-TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
-
 BUCKET = os.getenv('AWS_BUCKET', 'lcogtarchivetest')
 NEW_BUCKET = os.getenv('NEW_AWS_BUCKET', 'newlcogtarchivetest')
 
