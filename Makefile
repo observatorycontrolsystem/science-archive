@@ -12,9 +12,7 @@ else
 TAG := $(GIT_TAG)-dirty
 endif
 
-IT_TAG := $(TAG)-integration-tests
-
-all: integration-tests docker-build docker-push
+all: docker-build docker-push
 
 docker-build:
 	docker build --target app -t $(DOCKER_IMG):$(TAG) .
