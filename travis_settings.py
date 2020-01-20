@@ -6,8 +6,6 @@ DATABASES = {
         'NAME': 'archive',
         'USER': 'postgres',
         'PASSWORD': '',
-        # 'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-        # 'PORT': '5432',
         'ATOMIC_REQUESTS': True,
     }
 }
