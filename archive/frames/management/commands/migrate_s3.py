@@ -11,7 +11,7 @@ import os
 import io
 from contextlib import closing
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 
 def pack(uncompressed_hdulist: fits.HDUList) -> fits.HDUList:
@@ -57,6 +57,18 @@ def copy_version(version, client, storage_class, frame_id, should_delete=False):
         logging.error(f"S3 Copy of frame {frame_id} version {version.key} failed to receive updated metadata")
         return False
     return True
+
+def fill_in_day_obs(frame):
+    ''' Fill in the Frame model DAY_OBS from its header or DATE_OBS'''
+    if frame.DAY_OBS is None:
+        if 'DAY-OBS' in frame.headers:
+            logging.info(f"Filling in DAY_OBS for frame {frame.id} from DAY-OBS header")
+            frame.DAY_OBS = datetime.strptime(frame.headers['DAY-OBS'], '%Y%m%d').date()
+            frame.save()
+        else:
+            logging.info(f"Filling in DAY_OBS for frame {frame.id} from DATE_OBS")
+            frame.DAY_OBS = frame.DATE_OBS.date()
+            frame.save()
 
 def fpack_version(version, client, storage_class, frame_id, should_delete=False):
     data_params = version.data_params
@@ -131,6 +143,7 @@ class Command(BaseCommand):
         for frame in frames:
             num_frames += 1
             logging.info(f"Processing frame {frame.id}")
+            fill_in_day_obs(frame)
             if frame.DATE_OBS > (timezone.now() - timedelta(days=60)):
                 storage = 'STANDARD'
             else:

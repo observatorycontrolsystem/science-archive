@@ -40,6 +40,11 @@ class Frame(models.Model):
         help_text="Time of observation in UTC. FITS header: DATE-OBS",
         verbose_name="DATE-OBS"
     )
+    DAY_OBS = models.DateField(
+        null=True,
+        help_text="Observing Night in YYYYMMDD. FITS header: DAY-OBS",
+        verbose_name="DAY-OBS"
+    )
     PROPID = models.CharField(
         max_length=200,
         default='',
@@ -190,11 +195,11 @@ class Version(models.Model):
 
     @cached_property
     def s3_daydir_key(self):
-        if self.frame.SITEID.lower() == 'sor':
-            # SOR files don't have the day_obs in their filename, so use the DATE_OBS field:
+        if self.frame.DAY_OBS is None:
+            # SOR files don't have the DAY_OBS, so use the DATE_OBS field:
             day_obs = self.frame.DATE_OBS.isoformat().split('T')[0].replace('-', '')
         else:
-            day_obs = self.frame.basename.split('-')[2]
+            day_obs = self.frame.DAY_OBS.isoformat().replace('-', '')
         return '/'.join((
             self.frame.SITEID, self.frame.INSTRUME, day_obs, self.frame.basename
         )) + self.extension

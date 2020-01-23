@@ -143,6 +143,10 @@ class FrameFactory(factory.django.DjangoModelFactory):
         datetime.datetime(2015, 1, 1, tzinfo=UTC),
         timezone.now()
     )
+    DAY_OBS = factory.fuzzy.FuzzyDate(
+        datetime.date(2015, 1, 1),
+        timezone.now().date()
+    )
     PROPID = factory.fuzzy.FuzzyChoice(PROPOSALS)
     INSTRUME = factory.fuzzy.FuzzyChoice(INSTRUMENTS)
     OBJECT = factory.fuzzy.FuzzyText(length=10)

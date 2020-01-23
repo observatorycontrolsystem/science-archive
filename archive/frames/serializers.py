@@ -52,8 +52,8 @@ class FrameSerializer(serializers.ModelSerializer):
         model = Frame
         fields = (
             'id', 'basename', 'area', 'related_frames', 'version_set',
-            'filename', 'url', 'RLEVEL', 'DATE_OBS', 'PROPID', 'INSTRUME',
-            'OBJECT', 'SITEID', 'TELID', 'EXPTIME', 'FILTER',
+            'filename', 'url', 'RLEVEL', 'DAY_OBS', 'DATE_OBS', 'PROPID',
+            'INSTRUME', 'OBJECT', 'SITEID', 'TELID', 'EXPTIME', 'FILTER',
             'L1PUBDAT', 'OBSTYPE', 'BLKUID', 'REQNUM',
         )
 
