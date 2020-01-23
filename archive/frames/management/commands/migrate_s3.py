@@ -61,9 +61,9 @@ def copy_version(version, client, storage_class, frame_id, should_delete=False):
 def fill_in_day_obs(frame):
     ''' Fill in the Frame model DAY_OBS from its header or DATE_OBS'''
     if frame.DAY_OBS is None:
-        if 'DAY-OBS' in frame.headers:
-            logging.info(f"Filling in DAY_OBS for frame {frame.id} from DAY-OBS header")
-            frame.DAY_OBS = datetime.strptime(frame.headers['DAY-OBS'], '%Y%m%d').date()
+        if 'DAY_OBS' in frame.headers.data:
+            logging.info(f"Filling in DAY_OBS for frame {frame.id} from DAY_OBS header")
+            frame.DAY_OBS = datetime.strptime(frame.headers.data['DAY_OBS'], '%Y%m%d').date()
             frame.save()
         else:
             logging.info(f"Filling in DAY_OBS for frame {frame.id} from DATE_OBS")
