@@ -197,9 +197,9 @@ class Version(models.Model):
     def s3_daydir_key(self):
         if self.frame.DAY_OBS is None:
             # SOR files don't have the DAY_OBS, so use the DATE_OBS field:
-            day_obs = self.frame.DATE_OBS.isoformat().split('T')[0].replace('-', '')
+            day_obs = self.frame.DATE_OBS.strftime('%Y%m%d')
         else:
-            day_obs = self.frame.DAY_OBS.isoformat().replace('-', '')
+            day_obs = self.frame.DAY_OBS.strftime('%Y%m%d')
         return '/'.join((
             self.frame.SITEID, self.frame.INSTRUME, day_obs, self.frame.basename
         )) + self.extension
