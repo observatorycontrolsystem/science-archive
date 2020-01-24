@@ -140,6 +140,14 @@ class Frame(models.Model):
         """
         return '{0}{1}'.format(self.basename, self.version_set.first().extension)
 
+    def is_bpm(self):
+        if self.OBSTYPE == 'BPM':
+            return True
+        filename = self.basename.replace('_', '-')
+        if filename.startswith('bpm-') or '-bpm-' in filename or filename.endswith('-bpm'):
+            return True
+        return False
+
     def copy_to_ia(self):
         latest_version = self.version_set.first()
         bucket, s3_key = latest_version.get_bucket_and_s3_key()
@@ -200,9 +208,16 @@ class Version(models.Model):
             day_obs = self.frame.DATE_OBS.strftime('%Y%m%d')
         else:
             day_obs = self.frame.DAY_OBS.strftime('%Y%m%d')
-        return '/'.join((
-            self.frame.SITEID, self.frame.INSTRUME, day_obs, self.frame.basename
-        )) + self.extension
+
+        if self.frame.is_bpm():
+            return '/'.join((
+                self.frame.SITEID, self.frame.INSTRUME, 'bpm', self.frame.basename
+            )) + self.extension
+        else:
+            data_type = 'raw' if self.frame.RLEVEL == 0 else 'processed'
+            return '/'.join((
+                self.frame.SITEID, self.frame.INSTRUME, day_obs, data_type, self.frame.basename
+            )) + self.extension
 
     def get_bucket_and_s3_key(self):
         if self.migrated:
