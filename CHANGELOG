@@ -1,13 +1,17 @@
+1.50
+2020-01-27
+Add DAY_OBS to the Frame model, update s3 keys to include processed, raw, and bpm in the paths.
+
 1.42
-2019-01-17
+2020-01-17
 Fix bug in zip file url for new S3 bucket.
 
 1.41
-2019-01-16
+2020-01-16
 Fix bug in zip file generation.
 
 1.40
-2019-01-16
+2020-01-16
 Added migrate field and migration command, and removed auto-deploy.
 
 1.31
