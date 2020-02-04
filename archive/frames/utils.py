@@ -26,28 +26,33 @@ def fits_keywords_only(dictionary):
     return new_dictionary
 
 
-def build_nginx_zip_text(frames, directory):
+def build_nginx_zip_text(frames, directory, uncompress=False):
+    '''
+    Build a text document in the format required by the NGINX mod_zip module
+    so that NGINX will automatically build and stream a ZIP file to the client.
+
+    For more information, please refer to:
+    https://www.nginx.com/resources/wiki/modules/zip/
+
+    @frames: a List of Frame objects
+    @directory: the directory within the ZIP file to place the files
+    @uncompress: automatically uncompress the files for the client
+
+    @return: text document in NGINX mod_zip format
+    '''
     client = get_s3_client()
     ret = []
 
     for frame in frames:
-        # Parameters for AWS S3 URL signing request
+        # retrieve the database record for the Version we will fetch
         version = frame.version_set.first()
-        bucket, s3_key = version.get_bucket_and_s3_key()
-        params = {
-            'Key': s3_key,
-            'Bucket': bucket,
-        }
-        # Generate a presigned AWS S3 V4 URL which expires in 86400 seconds (1 day)
-        url = client.generate_presigned_url('get_object', Params=params, ExpiresIn=86400)
-        # The NGINX mod_zip module requires that the files which are used to build the
-        # ZIP file must be loaded from an internal NGINX location. Replace the leading
-        # portion of the generated URL with an internal NGINX location which proxies all
-        # traffic to AWS S3.
-        if version.migrated:
-            location = url.replace('https://archive-lco-global.s3.amazonaws.com', '/news3')
-        else:
-            location = url.replace('https://s3.us-west-2.amazonaws.com', '/s3')
+        # default location (return files as-is from AWS S3 Bucket)
+        location = '/s3-native/{}/'.format(version.id)
+        # if the user requested that we uncompress the files, then redirect through
+        # our transparent funpacker
+        if uncompress:
+            location = '/s3-funpack/{}/'.format(version.id)
+
         # The NGINX mod_zip module builds ZIP files using a manifest. Build the manifest
         # line for this frame.
         line = '- {size} {location} {directory}/{basename}{extension}\n'.format(

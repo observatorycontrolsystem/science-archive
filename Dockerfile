@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Install operating system dependencies
 RUN apt-get -y update \
-        && apt-get -y install gdal-bin \
+        && apt-get -y install gdal-bin libcfitsio-bin \
         && apt-get -y clean
 
 # Install Python dependencies
