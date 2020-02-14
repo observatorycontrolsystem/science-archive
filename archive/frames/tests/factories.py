@@ -5,7 +5,6 @@ import datetime
 import json
 import os
 from archive.frames.models import Frame, Version, Headers
-from django.db.models import signals
 from django.utils import timezone
 from pytz import UTC
 
