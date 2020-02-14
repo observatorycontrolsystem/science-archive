@@ -5,7 +5,6 @@ import datetime
 import json
 import os
 from archive.frames.models import Frame, Version, Headers
-from archive.frames.signals.handlers import version_post_save
 from django.db.models import signals
 from django.utils import timezone
 from pytz import UTC
@@ -171,11 +170,7 @@ class FrameFactory(factory.django.DjangoModelFactory):
                 self.related_frames.add(frame)
 
     @factory.post_generation
-    def version_set(self, create, extracted, disable_signals=True, **kwargs):
-        if disable_signals:
-            signals.post_save.disconnect(version_post_save, Version)
-        else:
-            signals.post_save.connect(version_post_save, Version)
+    def version_set(self, create, extracted, **kwargs):
         if not create:
             return
         if extracted:

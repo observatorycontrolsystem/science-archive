@@ -81,7 +81,10 @@ class FrameViewSet(viewsets.ModelViewSet):
             frame = frame_serializer.save(header=fits_keywords_only(data))
             logger_tags['tags']['id'] = frame.id
             logger.info('Created frame', extra=logger_tags)
-            post_to_archived_queue(archived_queue_payload(dictionary=request.data, frame=frame))
+            try:
+                post_to_archived_queue(archived_queue_payload(dictionary=request.data, frame=frame))
+            except Exception:
+                logger.exception('Failed to post frame to archived queue', extra=logger_tags)
             logger.info('Request to process frame succeeded', extra=logger_tags)
             return Response(frame_serializer.data, status=status.HTTP_201_CREATED)
         else:

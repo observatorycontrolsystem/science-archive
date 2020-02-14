@@ -44,7 +44,7 @@ def post_to_archived_queue(payload):
             'max_retries': 15,
         }
         processed_exchange = Exchange(settings.PROCESSED_EXCHANGE_NAME, type='fanout')
-        with Connection(settings.QUEUE_BROKER_URL) as conn:
+        with Connection(settings.QUEUE_BROKER_URL, transport_options=retry_policy) as conn:
             producer = conn.Producer(exchange=processed_exchange)
             producer.publish(payload, delivery_mode='persistent', retry=True, retry_policy=retry_policy)
 
