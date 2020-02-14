@@ -40,6 +40,11 @@ class Frame(models.Model):
         help_text="Time of observation in UTC. FITS header: DATE-OBS",
         verbose_name="DATE-OBS"
     )
+    DAY_OBS = models.DateField(
+        null=True,
+        help_text="Observing Night in YYYYMMDD. FITS header: DAY-OBS",
+        verbose_name="DAY-OBS"
+    )
     PROPID = models.CharField(
         max_length=200,
         default='',
@@ -135,6 +140,14 @@ class Frame(models.Model):
         """
         return '{0}{1}'.format(self.basename, self.version_set.first().extension)
 
+    def is_bpm(self):
+        if self.OBSTYPE == 'BPM':
+            return True
+        filename = self.basename.replace('_', '-')
+        if filename.startswith('bpm-') or '-bpm-' in filename or filename.endswith('-bpm'):
+            return True
+        return False
+
     def copy_to_ia(self):
         latest_version = self.version_set.first()
         bucket, s3_key = latest_version.get_bucket_and_s3_key()
@@ -190,14 +203,21 @@ class Version(models.Model):
 
     @cached_property
     def s3_daydir_key(self):
-        if self.frame.SITEID.lower() == 'sor':
-            # SOR files don't have the day_obs in their filename, so use the DATE_OBS field:
-            day_obs = self.frame.DATE_OBS.isoformat().split('T')[0].replace('-', '')
+        if self.frame.DAY_OBS is None:
+            # SOR files don't have the DAY_OBS, so use the DATE_OBS field:
+            day_obs = self.frame.DATE_OBS.strftime('%Y%m%d')
         else:
-            day_obs = self.frame.basename.split('-')[2]
-        return '/'.join((
-            self.frame.SITEID, self.frame.INSTRUME, day_obs, self.frame.basename
-        )) + self.extension
+            day_obs = self.frame.DAY_OBS.strftime('%Y%m%d')
+
+        if self.frame.is_bpm():
+            return '/'.join((
+                self.frame.SITEID, self.frame.INSTRUME, 'bpm', self.frame.basename
+            )) + self.extension
+        else:
+            data_type = 'raw' if self.frame.RLEVEL == 0 else 'processed'
+            return '/'.join((
+                self.frame.SITEID, self.frame.INSTRUME, day_obs, data_type, self.frame.basename
+            )) + self.extension
 
     def get_bucket_and_s3_key(self):
         if self.migrated:

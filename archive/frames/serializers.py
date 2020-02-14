@@ -41,6 +41,7 @@ class FrameSerializer(serializers.ModelSerializer):
     url = serializers.CharField(read_only=True)
     filename = serializers.CharField(read_only=True)
     area = PolygonField(allow_null=True)
+    DAY_OBS = serializers.DateField(input_formats=['iso-8601', '%Y%m%d'])
     related_frames = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Frame.objects.exclude(DATE_OBS=None),
@@ -52,8 +53,8 @@ class FrameSerializer(serializers.ModelSerializer):
         model = Frame
         fields = (
             'id', 'basename', 'area', 'related_frames', 'version_set',
-            'filename', 'url', 'RLEVEL', 'DATE_OBS', 'PROPID', 'INSTRUME',
-            'OBJECT', 'SITEID', 'TELID', 'EXPTIME', 'FILTER',
+            'filename', 'url', 'RLEVEL', 'DAY_OBS', 'DATE_OBS', 'PROPID',
+            'INSTRUME', 'OBJECT', 'SITEID', 'TELID', 'EXPTIME', 'FILTER',
             'L1PUBDAT', 'OBSTYPE', 'BLKUID', 'REQNUM',
         )
 
