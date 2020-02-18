@@ -21,7 +21,6 @@ from django.utils import timezone
 from hashlib import blake2s
 from pytz import UTC
 import subprocess
-import tempfile
 import datetime
 import logging
 import io
@@ -201,14 +200,14 @@ def s3_funpack(request, version_id):
     bucket, s3_key = version.get_bucket_and_s3_key()
     client = get_s3_client()
 
-    with tempfile.NamedTemporaryFile(delete=True) as fileobj:
+    with io.BytesIO() as fileobj:
         # download from AWS S3 into an in-memory object
         response = client.download_fileobj(Bucket=bucket, Key=s3_key, Fileobj=fileobj)
         fileobj.seek(0)
 
         # FITS unpack
         cmd = ['/usr/bin/funpack', '-C', '-S', '-', ]
-        proc = subprocess.run(cmd, stdin=fileobj, stdout=subprocess.PIPE)
+        proc = subprocess.run(cmd, input=fileobj.getvalue(), stdout=subprocess.PIPE)
         proc.check_returncode()
 
         # return it to the client
