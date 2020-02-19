@@ -2,7 +2,10 @@ from archive.frames.models import Frame, Version
 from archive.frames.serializers import (
     FrameSerializer, ZipSerializer, VersionSerializer, HeadersSerializer
 )
-from archive.frames.utils import remove_dashes_from_keys, fits_keywords_only, build_nginx_zip_text
+from archive.frames.utils import (
+    remove_dashes_from_keys, fits_keywords_only, build_nginx_zip_text, post_to_archived_queue,
+    archived_queue_payload
+)
 from archive.frames.permissions import AdminOrReadOnly
 from archive.frames.filters import FrameFilter
 from rest_framework.decorators import list_route, detail_route
@@ -77,6 +80,11 @@ class FrameViewSet(viewsets.ModelViewSet):
         if frame_serializer.is_valid():
             frame = frame_serializer.save(header=fits_keywords_only(data))
             logger_tags['tags']['id'] = frame.id
+            logger.info('Created frame', extra=logger_tags)
+            try:
+                post_to_archived_queue(archived_queue_payload(dictionary=request.data, frame=frame))
+            except Exception:
+                logger.exception('Failed to post frame to archived queue', extra=logger_tags)
             logger.info('Request to process frame succeeded', extra=logger_tags)
             return Response(frame_serializer.data, status=status.HTTP_201_CREATED)
         else:
