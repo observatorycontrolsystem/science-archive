@@ -40,8 +40,8 @@ def post_to_archived_queue(payload):
         retry_policy = {
             'interval_start': 0,
             'interval_step': 1,
-            'interval_max': 10,
-            'max_retries': 15,
+            'interval_max': 4,
+            'max_retries': 5,
         }
         processed_exchange = Exchange(settings.PROCESSED_EXCHANGE_NAME, type='fanout')
         with Connection(settings.QUEUE_BROKER_URL, transport_options=retry_policy) as conn:
