@@ -1,3 +1,7 @@
+1.60
+2020-02-19
+Post to archived fits exchange after creating a frame
+
 1.50
 2020-01-27
 Add DAY_OBS to the Frame model, update s3 keys to include processed, raw, and bpm in the paths.
