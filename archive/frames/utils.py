@@ -56,11 +56,9 @@ def build_nginx_zip_text(frames, directory):
     for frame in frames:
         # Parameters for AWS S3 URL signing request
         version = frame.version_set.first()
-        bucket = settings.BUCKET
-        s3_key = version.s3_daydir_key
         params = {
-            'Key': s3_key,
-            'Bucket': bucket,
+            'Key': version.s3_daydir_key,
+            'Bucket': settings.BUCKET,
         }
         # Generate a presigned AWS S3 V4 URL which expires in 86400 seconds (1 day)
         url = client.generate_presigned_url('get_object', Params=params, ExpiresIn=86400)
