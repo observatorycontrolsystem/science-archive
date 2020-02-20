@@ -56,7 +56,8 @@ def build_nginx_zip_text(frames, directory):
     for frame in frames:
         # Parameters for AWS S3 URL signing request
         version = frame.version_set.first()
-        bucket, s3_key = version.get_bucket_and_s3_key()
+        bucket = settings.BUCKET
+        s3_key = version.s3_daydir_key
         params = {
             'Key': s3_key,
             'Bucket': bucket,
