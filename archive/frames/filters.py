@@ -14,6 +14,12 @@ class FrameFilter(django_filters.FilterSet):
     EXPTIME = django_filters.NumberFilter(field_name='EXPTIME', lookup_expr='gte')
     covers = django_filters.CharFilter(method='covers_filter')
     OBSTYPE = django_filters.MultipleChoiceFilter(field_name='OBSTYPE', choices=Frame.OBSERVATION_TYPES)
+    exclude_OBSTYPE = django_filters.MultipleChoiceFilter(
+        field_name='OBSTYPE',
+        choices=Frame.OBSERVATION_TYPES,
+        label='Exclude Obstypes',
+        exclude=True
+    )
     intersects = django_filters.CharFilter(method='intersects_filter')
 
     def covers_filter(self, queryset, name, value):
