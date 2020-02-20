@@ -173,7 +173,6 @@ class Version(models.Model):
     md5 = models.CharField(max_length=32, unique=True)
     extension = models.CharField(max_length=20)
     created = models.DateTimeField(auto_now_add=True)
-    migrated = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-created']

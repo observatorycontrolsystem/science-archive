@@ -185,18 +185,7 @@ class TestFramePost(TestCase):
         response = self.client.get(reverse('frame-detail', args=(response.json()['id'],)))
         self.assertIsNone(response.json()['REQNUM'])
 
-    def test_post_version_with_migrated(self):
-        frame_payload = self.single_frame_payload
-        frame_payload['version_set'][0]['migrated'] = True
-        response = self.client.post(
-            reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
-        )
-        self.assertEqual(response.status_code, 201)
-        frame = Frame.objects.get(pk=response.json()['id'])
-        self.assertTrue(frame.version_set.first().migrated)
 
-        response = self.client.get(reverse('frame-detail', args=(response.json()['id'],)))
-        self.assertTrue(response.json()['version_set'][0]['migrated'])
 
     def test_post_duplicate_data(self):
         frame = FrameFactory()
