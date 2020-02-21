@@ -2,7 +2,7 @@ from archive.frames.tests.factories import FrameFactory, VersionFactory, PublicF
 from archive.frames.models import Frame
 from archive.authentication.models import Profile
 from django.contrib.auth.models import User
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from django.urls import reverse
 from django.test import TestCase
 from django.conf import settings
@@ -59,6 +59,10 @@ class TestFramePost(TestCase):
         user.backend = settings.AUTHENTICATION_BACKENDS[0]
         self.client.force_login(user)
         boto3.client = MagicMock()
+        settings.QUEUE_BROKER_URL = 'memory://localhost'
+        archive_fits_patcher = patch('kombu.Producer.publish')
+        self.addCleanup(archive_fits_patcher.stop)
+        self.mock_archive_fits_publish = archive_fits_patcher.start()
         self.header_json = json.load(open(os.path.join(os.path.dirname(__file__), 'frames.json')))
         f = self.header_json[random.choice(list(self.header_json.keys()))]
         f['basename'] = FrameFactory.basename.fuzz()
@@ -91,6 +95,31 @@ class TestFramePost(TestCase):
             self.assertContains(response, frame_payload['basename'], status_code=201)
         response = self.client.get(reverse('frame-list'))
         self.assertEqual(response.json()['count'], total_frames)
+
+    def test_post_to_archive_fits_on_successful_frame_creation(self):
+        frame_payload = self.single_frame_payload
+        response = self.client.post(
+            reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 201)
+        self.mock_archive_fits_publish.assert_called_once()
+
+    def test_bad_frame_does_not_post_to_archive_fits(self):
+        frame_payload = self.single_frame_payload
+        frame_payload['DATE-OBS'] = 'iamnotadate'
+        response = self.client.post(
+            reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 400)
+        self.mock_archive_fits_publish.assert_not_called()
+
+    def test_frame_created_but_post_to_archive_fits_fails(self):
+        self.mock_archive_fits_publish.side_effect = Exception
+        frame_payload = self.single_frame_payload
+        response = self.client.post(
+            reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 201)
 
     def test_bad_area(self):
         frame_payload = self.single_frame_payload
