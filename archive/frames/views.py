@@ -138,7 +138,6 @@ class FrameViewSet(viewsets.ModelViewSet):
     def aggregate(self, request):
         fields = ('SITEID', 'TELID', 'FILTER', 'INSTRUME', 'OBSTYPE', 'PROPID')
         aggregate_field = request.GET.get('aggregate_field') if request.GET.get('aggregate_field') in fields else 'ALL'
-
         query_filters = {}
         for k in fields:
             if request.GET.get(k):
@@ -147,7 +146,6 @@ class FrameViewSet(viewsets.ModelViewSet):
             query_filters['DATE_OBS__gte'] = parse(request.GET['start']).replace(tzinfo=UTC, second=0, microsecond=0)
         if 'end' in request.GET:
             query_filters['DATE_OBS__lte'] = parse(request.GET['end']).replace(tzinfo=UTC, second=0, microsecond=0)
-
         cache_hash = blake2s(repr(frozenset(list(query_filters.items()) + [aggregate_field])).encode()).hexdigest()
         response_dict = cache.get(cache_hash)
         if not response_dict:
