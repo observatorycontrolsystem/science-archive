@@ -459,3 +459,8 @@ class TestFrameAggregate(TestCase):
         self.assertEqual(set(response.json()['instruments']), set([]))
         self.assertEqual(set(response.json()['filters']), set(['V']))
         self.assertEqual(set(response.json()['proposals']), set([]))
+
+    def test_frame_invalid_aggregate_field(self):
+        response = self.client.get(reverse('frame-aggregate') + '?INSTRUME=en05&aggregate_field=iaminvalid')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Invalid aggregate_field', str(response.content))

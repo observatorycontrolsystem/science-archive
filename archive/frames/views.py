@@ -137,7 +137,12 @@ class FrameViewSet(viewsets.ModelViewSet):
     @list_route()
     def aggregate(self, request):
         fields = ('SITEID', 'TELID', 'FILTER', 'INSTRUME', 'OBSTYPE', 'PROPID')
-        aggregate_field = request.GET.get('aggregate_field') if request.GET.get('aggregate_field') in fields else 'ALL'
+        aggregate_field = request.GET.get('aggregate_field', 'ALL')
+        if aggregate_field != 'ALL' and aggregate_field not in fields:
+            return Response(
+                'Invalid aggregate_field. Valid fields are {}'.format(', '.join(fields)),
+                status=status.HTTP_400_BAD_REQUEST
+            )
         query_filters = {}
         for k in fields:
             if request.GET.get(k):
