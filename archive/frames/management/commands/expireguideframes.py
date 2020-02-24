@@ -37,6 +37,5 @@ class Command(BaseCommand):
         while guide_frames.count() > 0:
             pks_to_delete = guide_frames.values_list('pk', flat=True)[:DELETE_BATCH]
             delete_results = Frame.objects.filter(pk__in=pks_to_delete).delete()
-
-        for key, val in delete_results[1].items():
-            logger.info(f"Deleted {val} instances of {key}")
+            for key, val in delete_results[1].items():
+                logger.info(f"Deleted {val} instances of {key}")
