@@ -11,7 +11,10 @@ logger = logging.getLogger()
 def get_tuple_from_environment(variable_name, default):
     return tuple(os.getenv(variable_name, default).strip(',').replace(' ', '').split(','))
 
-
+# We want to persist guide frames from our spectrograph instruments (Floyds and NRES) indefinitely.
+# akXX cameras correspond to NRES autoguiders, and kbXX cameras listed here are floyds guiders
+# This list and the corresponding environment variable (if used) MUST be updated when a new
+# spectrograph autoguider is added to our network!!!
 GUIDE_CAMERAS_TO_PERSIST = get_tuple_from_environment(
     'GUIDE_CAMERAS_TO_PERSIST',
     'kb42,kb38,ak01,ak02,ak03,ak04,ak05,ak06,ak07,ak08,ak09,ak10,ak11,ak12'
