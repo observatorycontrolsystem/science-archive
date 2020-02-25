@@ -1,3 +1,7 @@
+1.63
+2020-02-25
+Add aggregate_field parameter to aggregate endpoint
+
 1.62
 2020-02-20
 Add exclude obstype filter
