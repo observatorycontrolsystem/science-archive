@@ -129,30 +129,40 @@ class FrameViewSet(viewsets.ModelViewSet):
             return response
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @staticmethod
+    def _get_aggregate_values(query_set, field, aggregate_field):
+        if aggregate_field in ('ALL', field):
+            return [i[0] for i in query_set.values_list(field).distinct() if i[0]]
+        else:
+            return []
+
     @list_route()
     def aggregate(self, request):
-        filters = {}
-        for k in ('SITEID', 'TELID', 'FILTER', 'INSTRUME', 'OBSTYPE', 'PROPID'):
+        fields = ('SITEID', 'TELID', 'FILTER', 'INSTRUME', 'OBSTYPE', 'PROPID')
+        aggregate_field = request.GET.get('aggregate_field', 'ALL')
+        if aggregate_field != 'ALL' and aggregate_field not in fields:
+            return Response(
+                'Invalid aggregate_field. Valid fields are {}'.format(', '.join(fields)),
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        query_filters = {}
+        for k in fields:
             if request.GET.get(k):
-                filters[k] = request.GET[k]
+                query_filters[k] = request.GET[k]
         if 'start' in request.GET:
-            filters['DATE_OBS__gte'] = parse(request.GET['start']).replace(tzinfo=UTC, second=0, microsecond=0)
+            query_filters['DATE_OBS__gte'] = parse(request.GET['start']).replace(tzinfo=UTC, second=0, microsecond=0)
         if 'end' in request.GET:
-            filters['DATE_OBS__lte'] = parse(request.GET['end']).replace(tzinfo=UTC, second=0, microsecond=0)
-        filter_hash = blake2s(repr(frozenset(filters.items())).encode()).hexdigest()
-        response_dict = cache.get(filter_hash)
+            query_filters['DATE_OBS__lte'] = parse(request.GET['end']).replace(tzinfo=UTC, second=0, microsecond=0)
+        cache_hash = blake2s(repr(frozenset(list(query_filters.items()) + [aggregate_field])).encode()).hexdigest()
+        response_dict = cache.get(cache_hash)
         if not response_dict:
-            qs = Frame.objects.order_by().filter(**filters)
-            sites = [i[0] for i in qs.values_list('SITEID').distinct() if i[0]]
-            telescopes = [i[0] for i in qs.values_list('TELID').distinct() if i[0]]
-            filters = [i[0] for i in qs.values_list('FILTER').distinct()if i[0]]
-            instruments = [i[0] for i in qs.values_list('INSTRUME').distinct() if i[0]]
-            obstypes = [i[0] for i in qs.values_list('OBSTYPE').distinct() if i[0]]
-            proposals = [
-                i[0] for i in qs.filter(L1PUBDAT__lte=timezone.now())
-                                .values_list('PROPID')
-                                .distinct() if i[0]
-            ]
+            qs = Frame.objects.order_by().filter(**query_filters)
+            sites = self._get_aggregate_values(qs, 'SITEID', aggregate_field)
+            telescopes = self._get_aggregate_values(qs, 'TELID', aggregate_field)
+            filters = self._get_aggregate_values(qs, 'FILTER', aggregate_field)
+            instruments = self._get_aggregate_values(qs, 'INSTRUME', aggregate_field)
+            obstypes = self._get_aggregate_values(qs, 'OBSTYPE', aggregate_field)
+            proposals = self._get_aggregate_values(qs.filter(L1PUBDAT__lte=timezone.now()), 'PROPID', aggregate_field)
             response_dict = {
                 'sites': sites,
                 'telescopes': telescopes,
@@ -161,7 +171,7 @@ class FrameViewSet(viewsets.ModelViewSet):
                 'obstypes': obstypes,
                 'proposals': proposals
             }
-            cache.set(filter_hash, response_dict, 60 * 60)
+            cache.set(cache_hash, response_dict, 60 * 60)
         return Response(response_dict)
 
 

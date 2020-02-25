@@ -3,6 +3,7 @@ from archive.frames.models import Frame
 from archive.authentication.models import Profile
 from django.contrib.auth.models import User
 from unittest.mock import MagicMock, patch
+from django.utils import timezone
 from django.urls import reverse
 from django.test import TestCase
 from django.conf import settings
@@ -414,9 +415,14 @@ class TestZipDownload(TestCase):
 class TestFrameAggregate(TestCase):
     def setUp(self):
         boto3.client = MagicMock()
-        FrameFactory.create(OBSTYPE='EXPOSE', TELID='1m0a', SITEID='bpl', INSTRUME='kb46')
-        FrameFactory.create(OBSTYPE='BIAS', TELID='0m4a', SITEID='coj', INSTRUME='en05')
-        FrameFactory.create(OBSTYPE='SKYFLAT', TELID='2m0b', SITEID='ogg', INSTRUME='fl10')
+        is_public_date = timezone.now() - datetime.timedelta(days=7)
+        is_not_public_date = timezone.now() + datetime.timedelta(days=7)
+        FrameFactory.create(OBSTYPE='EXPOSE', TELID='1m0a', SITEID='bpl', INSTRUME='kb46', PROPID='prop1', FILTER='rp',
+                            L1PUBDAT=is_public_date)
+        FrameFactory.create(OBSTYPE='BIAS', TELID='0m4a', SITEID='coj', INSTRUME='en05', PROPID='prop2', FILTER='V',
+                            L1PUBDAT=is_not_public_date)
+        FrameFactory.create(OBSTYPE='SKYFLAT', TELID='2m0b', SITEID='ogg', INSTRUME='fl10', PROPID='prop3', FILTER='B',
+                            L1PUBDAT=is_public_date)
 
     def test_frame_aggregate(self):
         response = self.client.get(reverse('frame-aggregate'))
@@ -424,6 +430,8 @@ class TestFrameAggregate(TestCase):
         self.assertEqual(set(response.json()['telescopes']), set(['1m0a', '0m4a', '2m0b']))
         self.assertEqual(set(response.json()['sites']), set(['bpl', 'coj', 'ogg']))
         self.assertEqual(set(response.json()['instruments']), set(['kb46', 'en05', 'fl10']))
+        self.assertEqual(set(response.json()['filters']), set(['rp', 'V', 'B']))
+        self.assertEqual(set(response.json()['proposals']), set(['prop1', 'prop3']))
 
     def test_frame_aggregate_filtered(self):
         response = self.client.get(reverse('frame-aggregate') + '?SITEID=ogg')
@@ -431,3 +439,28 @@ class TestFrameAggregate(TestCase):
         self.assertEqual(set(response.json()['telescopes']), set(['2m0b']))
         self.assertEqual(set(response.json()['sites']), set(['ogg']))
         self.assertEqual(set(response.json()['instruments']), set(['fl10']))
+        self.assertEqual(set(response.json()['filters']), set(['B']))
+        self.assertEqual(set(response.json()['proposals']), set(['prop3']))
+
+    def test_frame_aggregate_single_field(self):
+        response = self.client.get(reverse('frame-aggregate') + '?aggregate_field=SITEID')
+        self.assertEqual(set(response.json()['obstypes']), set([]))
+        self.assertEqual(set(response.json()['telescopes']), set([]))
+        self.assertEqual(set(response.json()['sites']), set(['bpl', 'coj', 'ogg']))
+        self.assertEqual(set(response.json()['instruments']), set([]))
+        self.assertEqual(set(response.json()['filters']), set([]))
+        self.assertEqual(set(response.json()['proposals']), set([]))
+
+    def test_frame_aggregate_single_field_filtered(self):
+        response = self.client.get(reverse('frame-aggregate') + '?INSTRUME=en05&aggregate_field=FILTER')
+        self.assertEqual(set(response.json()['obstypes']), set([]))
+        self.assertEqual(set(response.json()['telescopes']), set([]))
+        self.assertEqual(set(response.json()['sites']), set([]))
+        self.assertEqual(set(response.json()['instruments']), set([]))
+        self.assertEqual(set(response.json()['filters']), set(['V']))
+        self.assertEqual(set(response.json()['proposals']), set([]))
+
+    def test_frame_invalid_aggregate_field(self):
+        response = self.client.get(reverse('frame-aggregate') + '?INSTRUME=en05&aggregate_field=iaminvalid')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Invalid aggregate_field', str(response.content))
