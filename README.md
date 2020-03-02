@@ -38,6 +38,9 @@ Environment Variable | Description | Default Value
 `AWS_DEFAULT_REGION` | AWS Default Region | `us-west-2`
 `AWS_BUCKET` | AWS S3 Bucket Name | `lcogtarchivetest`
 `CACHE_LOC` | Memcached Cache Location | `memcached.archiveapi:11211`
+`QUEUE_BROKER_URL` | RabbitMQ Broker | `memory://localhost`
+`PROCESSED_EXCHANGE_NAME` | Archived FITS exchange name  | `archived_fits`
+
 
 ## Build
 

@@ -1,7 +1,9 @@
 import boto3
 from functools import lru_cache
 from django.conf import settings
-from datetime import timedelta
+
+from kombu.connection import Connection
+from kombu import Exchange
 
 
 @lru_cache(maxsize=1)
@@ -26,6 +28,27 @@ def fits_keywords_only(dictionary):
     return new_dictionary
 
 
+def archived_queue_payload(dictionary, frame):
+    new_dictionary = dictionary.copy()
+    new_dictionary['filename'] = frame.filename
+    new_dictionary['frameid'] = frame.id
+    return new_dictionary
+
+
+def post_to_archived_queue(payload):
+    if settings.PROCESSED_EXCHANGE_ENABLED:
+        retry_policy = {
+            'interval_start': 0,
+            'interval_step': 1,
+            'interval_max': 4,
+            'max_retries': 5,
+        }
+        processed_exchange = Exchange(settings.PROCESSED_EXCHANGE_NAME, type='fanout')
+        with Connection(settings.QUEUE_BROKER_URL, transport_options=retry_policy) as conn:
+            producer = conn.Producer(exchange=processed_exchange)
+            producer.publish(payload, delivery_mode='persistent', retry=True, retry_policy=retry_policy)
+
+
 def build_nginx_zip_text(frames, directory, uncompress=False):
     '''
     Build a text document in the format required by the NGINX mod_zip module
@@ -40,6 +63,7 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
 
     @return: text document in NGINX mod_zip format
     '''
+
     client = get_s3_client()
     ret = []
 
