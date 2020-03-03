@@ -8,6 +8,7 @@ from archive.frames.models import Frame, Version, Headers
 from django.utils import timezone
 from pytz import UTC
 
+
 INSTRUMENTS = (
     'ef01', 'ef02', 'ef03', 'ef04', 'ef06', 'ef07',
     'ef08', 'ef09', 'ef10', 'ef12',
