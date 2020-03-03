@@ -115,7 +115,7 @@ class FrameViewSet(viewsets.ModelViewSet):
                 datetime.date.strftime(datetime.date.today(), '%Y%m%d'),
                 frames.count()
             )
-            body = build_nginx_zip_text(frames, filename)
+            body = build_nginx_zip_text(frames, filename, uncompress=serializer.data.get('uncompress'))
             response = HttpResponse(body, content_type='text/plain')
             response['X-Archive-Files'] = 'zip'
             response['Content-Disposition'] = 'attachment; filename={0}.zip'.format(filename)
