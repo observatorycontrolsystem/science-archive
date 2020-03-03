@@ -377,7 +377,7 @@ class TestZipDownload(TestCase):
     def test_public_download(self):
         response = self.client.post(
             reverse('frame-zip'),
-            data=json.dumps({'frame_ids': [frame.id for frame in Frame.objects.all()]}),
+            data=json.dumps({'frame_ids': [frame.id for frame in Frame.objects.all()], 'uncompress': 'false'}),
             content_type='application/json'
         )
         self.assertContains(response, self.public_frame.basename)
@@ -396,7 +396,7 @@ class TestZipDownload(TestCase):
         self.client.force_login(self.normal_user)
         response = self.client.post(
             reverse('frame-zip'),
-            data=json.dumps({'frame_ids': [frame.id for frame in Frame.objects.all()]}),
+            data=json.dumps({'frame_ids': [frame.id for frame in Frame.objects.all()], 'uncompress': 'false'}),
             content_type='application/json'
         )
         self.assertContains(response, self.public_frame.basename)
@@ -406,7 +406,7 @@ class TestZipDownload(TestCase):
     def test_empty_download(self):
         response = self.client.post(
             reverse('frame-zip'),
-            data=json.dumps({'frame_ids': [self.not_owned.id]}),
+            data=json.dumps({'frame_ids': [self.not_owned.id], 'uncompress': 'false'}),
             content_type='application/json'
         )
         self.assertEqual(response.status_code, 404)
