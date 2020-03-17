@@ -22,7 +22,8 @@ GUIDE_CAMERAS_TO_PERSIST = get_tuple_from_environment(
 DELETE_BATCH = 1000
 
 class Command(BaseCommand):
-    help = 'Deletes guide frames older than 1 year for imagers'
+    help = """Deletes guide frames older than 1 year for imagers. This script does not check if the version has been replicated
+              in s3 before deleting it, however this is unlikely to be a problem given that the versions being deleted are old."""
 
     def add_arguments(self, parser):
         parser.add_argument('-s', '--site', type=str, default='all',
