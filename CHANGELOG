@@ -1,3 +1,7 @@
+1.64
+2020-03-17
+Add management command to expire old imager guide frames
+
 1.63
 2020-02-25
 Add aggregate_field parameter to aggregate endpoint
