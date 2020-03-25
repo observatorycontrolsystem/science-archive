@@ -71,12 +71,12 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
         # retrieve the database record for the Version we will fetch
         version = frame.version_set.first()
         # default location (return files as-is from AWS S3 Bucket)
-        location = '/s3-native/{}/'.format(version.id)
+        location = '/s3-download/{}/'.format(version.id)
         extension = version.extension
         # if the user requested that we uncompress the files, then redirect fits.fz
         # files through our transparent funpacker
         if uncompress and extension == '.fits.fz':
-            location = '/s3-funpack/{}/'.format(version.id)
+            # location = '/s3-download/{}/'.format(version.id)
             extension = '.fits'
 
         # The NGINX mod_zip module builds ZIP files using a manifest. Build the manifest
