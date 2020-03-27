@@ -184,49 +184,55 @@ class VersionViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('md5',)
 
-def s3_native(request, version_id):
-    '''
-    Download the given Version (one part of a Frame), and return the file
-    exactly as it is stored in AWS S3 to the client.
 
-    This is designed to be used by the Archive Client ZIP file support to
-    automatically send FITS files to the client without needing a special
-    NGINX proxy configuration for interacting with AWS S3.
-    '''
-    version = get_object_or_404(Version, pk=version_id)
-    bucket, s3_key = version.get_bucket_and_s3_key()
-    client = get_s3_client()
+class S3ViewSet(viewsets.ViewSet):
 
-    with io.BytesIO() as fileobj:
-        # download from AWS S3 into an in-memory object
-        response = client.download_fileobj(Bucket=bucket, Key=s3_key, Fileobj=fileobj)
-        fileobj.seek(0)
+    def get_s3_information(version_id):
+        version = get_object_or_404(Version, pk=version_id)
+        bucket, s3_key = version.get_bucket_and_s3_key()
+        client = get_s3_client()
 
-        # return it to the client
-        return HttpResponse(fileobj.getvalue(), content_type='application/octet-stream')
+        return bucket, s3_key, client
 
-def s3_funpack(request, version_id):
-    '''
-    Download the given Version (one part of a Frame), run funpack on it, and
-    return the uncompressed FITS file to the client.
+    @detail_route
+    def native(self, request, version_id):
+        '''
+        Download the given Version (one part of a Frame), and return the file
+        exactly as it is stored in AWS S3 to the client.
+        This is designed to be used by the Archive Client ZIP file support to
+        automatically send FITS files to the client without needing a special
+        NGINX proxy configuration for interacting with AWS S3.
+        '''
+        bucket, s3_key, client = get_s3_information(version_id)
 
-    This is designed to be used by the Archive Client ZIP file support to
-    automatically uncompress FITS files for clients that cannot do it
-    themselves.
-    '''
-    version = get_object_or_404(Version, pk=version_id)
-    bucket, s3_key = version.get_bucket_and_s3_key()
-    client = get_s3_client()
+        with io.BytesIO() as fileobj:
+            # download from AWS S3 into an in-memory object
+            response = client.download_fileobj(Bucket=bucket, Key=s3_key, Fileobj=fileobj)
+            fileobj.seek(0)
 
-    with io.BytesIO() as fileobj:
-        # download from AWS S3 into an in-memory object
-        response = client.download_fileobj(Bucket=bucket, Key=s3_key, Fileobj=fileobj)
-        fileobj.seek(0)
+            # return it to the client
+            return HttpResponse(fileobj.getvalue(), content_type='application/octet-stream')
 
-        # FITS unpack
-        cmd = ['/usr/bin/funpack', '-C', '-S', '-', ]
-        proc = subprocess.run(cmd, input=fileobj.getvalue(), stdout=subprocess.PIPE)
-        proc.check_returncode()
+    @detail_route
+    def funpack(self, request, version_id):
+        '''
+        Download the given Version (one part of a Frame), run funpack on it, and
+        return the uncompressed FITS file to the client.
+        This is designed to be used by the Archive Client ZIP file support to
+        automatically uncompress FITS files for clients that cannot do it
+        themselves.
+        '''
+        bucket, s3_key, client = get_s3_information(version_id)
 
-        # return it to the client
-        return HttpResponse(bytes(proc.stdout), content_type='application/octet-stream')
+        with tempfile.NamedTemporaryFile(delete=True) as fileobj:
+            # download from AWS S3 into an in-memory object
+            response = client.download_fileobj(Bucket=bucket, Key=s3_key, Fileobj=fileobj)
+            fileobj.seek(0)
+
+            # FITS unpack
+            cmd = ['/usr/bin/funpack', '-C', '-S', '-', ]
+            proc = subprocess.run(cmd, stdin=fileobj, stdout=subprocess.PIPE)
+            proc.check_returncode()
+
+            # return it to the client
+            return HttpResponse(bytes(proc.stdout), content_type='application/octet-stream')
