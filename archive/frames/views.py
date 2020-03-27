@@ -111,7 +111,6 @@ class FrameViewSet(viewsets.ModelViewSet):
     @xframe_options_exempt
     @list_route(methods=['post'], permission_classes=[AllowAny])
     def zip(self, request):
-        print('zip')
         if request.data.get('auth_token'):  # Needed for hacky ajax file download nonsense
             token = get_object_or_404(Token, key=request.data['auth_token'])
             request.user = token.user
@@ -124,14 +123,11 @@ class FrameViewSet(viewsets.ModelViewSet):
                 datetime.date.strftime(datetime.date.today(), '%Y%m%d'),
                 frames.count()
             )
-            filename = ''
             body = build_nginx_zip_text(frames, filename, uncompress=serializer.data.get('uncompress'))
             response = HttpResponse(body, content_type='text/plain')
             response['X-Archive-Files'] = 'zip'
             response['Content-Disposition'] = 'attachment; filename={0}.zip'.format(filename)
             response['Set-Cookie'] = 'fileDownload=true; path=/'
-            print(response)
-            print(body)
             return response
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -188,25 +184,15 @@ class VersionViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('md5',)
 
-def s3_download(request, version_id):
+def s3_native(request, version_id):
     '''
-    Download the given Version (one part of a Frame), run funpack on it, and 
-    return the FITS file to the client.
+    Download the given Version (one part of a Frame), and return the file
+    exactly as it is stored in AWS S3 to the client.
 
-    If uncompress is False, return the file to the client exactly as it is 
-    stored in AWS S3.
-
-    If uncompress is True, run funpack on the file, and return the uncompressed 
-    FITS file to the client.
-
-    This is designed to be used by the Archive Client ZIP file support to 
-    automatically send FITS files to the client without needing a special 
+    This is designed to be used by the Archive Client ZIP file support to
+    automatically send FITS files to the client without needing a special
     NGINX proxy configuration for interacting with AWS S3.
     '''
-    print('s3 download')
-    uncompress = request.get(request.method, {}).get('uncompress', False)
-    print(uncompress)
-
     version = get_object_or_404(Version, pk=version_id)
     bucket, s3_key = version.get_bucket_and_s3_key()
     client = get_s3_client()
@@ -216,13 +202,31 @@ def s3_download(request, version_id):
         response = client.download_fileobj(Bucket=bucket, Key=s3_key, Fileobj=fileobj)
         fileobj.seek(0)
 
-        if uncompress:
-            cmd = ['/usr/bin/funpack', '-C', '-S', '-', ]
-            proc = subprocess.run(cmd, input=fileobj.getvalue(), stdout=subprocess.PIPE)
-            proc.check_returncode()
-            response_content = bytes(proc.stdout)
-        else:
-            response_content = fileobj.getvalue()
+        # return it to the client
+        return HttpResponse(fileobj.getvalue(), content_type='application/octet-stream')
+
+def s3_funpack(request, version_id):
+    '''
+    Download the given Version (one part of a Frame), run funpack on it, and
+    return the uncompressed FITS file to the client.
+
+    This is designed to be used by the Archive Client ZIP file support to
+    automatically uncompress FITS files for clients that cannot do it
+    themselves.
+    '''
+    version = get_object_or_404(Version, pk=version_id)
+    bucket, s3_key = version.get_bucket_and_s3_key()
+    client = get_s3_client()
+
+    with io.BytesIO() as fileobj:
+        # download from AWS S3 into an in-memory object
+        response = client.download_fileobj(Bucket=bucket, Key=s3_key, Fileobj=fileobj)
+        fileobj.seek(0)
+
+        # FITS unpack
+        cmd = ['/usr/bin/funpack', '-C', '-S', '-', ]
+        proc = subprocess.run(cmd, input=fileobj.getvalue(), stdout=subprocess.PIPE)
+        proc.check_returncode()
 
         # return it to the client
-        return HttpResponse(response_content, content_type='application/octet-stream')
+        return HttpResponse(bytes(proc.stdout), content_type='application/octet-stream')
