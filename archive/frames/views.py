@@ -187,6 +187,7 @@ class VersionViewSet(viewsets.ReadOnlyModelViewSet):
 
 class S3ViewSet(viewsets.ViewSet):
 
+    @staticmethod
     def get_s3_information(version_id):
         version = get_object_or_404(Version, pk=version_id)
         bucket, s3_key = version.get_bucket_and_s3_key()
@@ -194,8 +195,8 @@ class S3ViewSet(viewsets.ViewSet):
 
         return bucket, s3_key, client
 
-    @detail_route
-    def native(self, request, version_id):
+    @detail_route()
+    def native(self, request, pk=None):
         '''
         Download the given Version (one part of a Frame), and return the file
         exactly as it is stored in AWS S3 to the client.
@@ -203,7 +204,7 @@ class S3ViewSet(viewsets.ViewSet):
         automatically send FITS files to the client without needing a special
         NGINX proxy configuration for interacting with AWS S3.
         '''
-        bucket, s3_key, client = get_s3_information(version_id)
+        bucket, s3_key, client = self.get_s3_information(pk)
 
         with io.BytesIO() as fileobj:
             # download from AWS S3 into an in-memory object
@@ -213,8 +214,8 @@ class S3ViewSet(viewsets.ViewSet):
             # return it to the client
             return HttpResponse(fileobj.getvalue(), content_type='application/octet-stream')
 
-    @detail_route
-    def funpack(self, request, version_id):
+    @detail_route()
+    def funpack(self, request, pk=None):
         '''
         Download the given Version (one part of a Frame), run funpack on it, and
         return the uncompressed FITS file to the client.
@@ -222,7 +223,7 @@ class S3ViewSet(viewsets.ViewSet):
         automatically uncompress FITS files for clients that cannot do it
         themselves.
         '''
-        bucket, s3_key, client = get_s3_information(version_id)
+        bucket, s3_key, client = self.get_s3_information(pk)
 
         with tempfile.NamedTemporaryFile(delete=True) as fileobj:
             # download from AWS S3 into an in-memory object
