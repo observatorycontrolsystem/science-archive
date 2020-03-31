@@ -225,14 +225,14 @@ class S3ViewSet(viewsets.ViewSet):
         '''
         bucket, s3_key, client = self.get_s3_information(pk)
 
-        with tempfile.NamedTemporaryFile(delete=True) as fileobj:
+        with io.BytesIO() as fileobj:
             # download from AWS S3 into an in-memory object
             response = client.download_fileobj(Bucket=bucket, Key=s3_key, Fileobj=fileobj)
             fileobj.seek(0)
 
             # FITS unpack
             cmd = ['/usr/bin/funpack', '-C', '-S', '-', ]
-            proc = subprocess.run(cmd, stdin=fileobj, stdout=subprocess.PIPE)
+            proc = subprocess.run(cmd, input=fileobj.getvalue(), stdout=subprocess.PIPE)
             proc.check_returncode()
 
             # return it to the client
