@@ -89,14 +89,30 @@ WSGI_APPLICATION = 'archive.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases
+# https://docs.djangoproject.com/en/2.2/topics/db/multi-db/#automatic-database-routing
+
+DATABASE_ROUTERS = ['archive.dbrouter.DBClusterRouter']
+
+DB_NAME = os.getenv('DB_NAME', 'archive')
+DB_USER = os.getenv('DB_USER', 'postgres')
+DB_PASS = os.getenv('DB_PASS', 'postgres')
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': os.getenv('DB_NAME', 'archive'),
-        'USER': os.getenv('DB_USER', 'postgres'),
-        'PASSWORD': os.getenv('DB_PASS', 'postgres'),
+        'NAME': DB_NAME,
+        'USER': DB_USER,
+        'PASSWORD': DB_PASS,
         'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+        'PORT': '5432',
+        'ATOMIC_REQUESTS': True,
+    },
+    'reader': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': DB_NAME,
+        'USER': DB_USER,
+        'PASSWORD': DB_PASS,
+        'HOST': os.getenv('DB_HOST_READER', '127.0.0.1'),
         'PORT': '5432',
         'ATOMIC_REQUESTS': True,
     }
