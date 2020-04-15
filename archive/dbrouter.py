@@ -5,9 +5,9 @@ class DBClusterRouter:
     """
     def db_for_read(self, model, **hints):
         """
-        Reads go to the reader endpoint.
+        Reads go to the replica endpoint.
         """
-        return 'reader'
+        return 'replica'
 
     def db_for_write(self, model, **hints):
         """
@@ -18,9 +18,9 @@ class DBClusterRouter:
     def allow_relation(self, obj1, obj2, **hints):
         """
         Allow relations between objects for both databases since 
-        they are reader and writer endpoints pointing at the same data.
+        they are replica and writer endpoints pointing at the same data.
         """
-        db_list = ('default', 'reader')
+        db_list = ('default', 'replica')
         if obj1._state.db in db_list and obj2._state.db in db_list:
             return True
         return None

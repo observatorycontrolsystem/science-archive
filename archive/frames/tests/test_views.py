@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from unittest.mock import MagicMock, patch
 from django.utils import timezone
 from django.urls import reverse
-from django.test import TestCase
+from archive.test_helpers import ReplicationTestCase
 from django.conf import settings
 from django.contrib.gis.geos import Point
 from pytz import UTC
@@ -17,7 +17,7 @@ import os
 import random
 
 
-class TestFrameGet(TestCase):
+class TestFrameGet(ReplicationTestCase):
     def setUp(self):
         user = User.objects.create(username='admin', password='admin', is_superuser=True)
         user.backend = settings.AUTHENTICATION_BACKENDS[0]
@@ -54,7 +54,7 @@ class TestFrameGet(TestCase):
         self.assertContains(response, frame.headers.data['TRACKNUM'])
 
 
-class TestFramePost(TestCase):
+class TestFramePost(ReplicationTestCase):
     def setUp(self):
         user = User.objects.create(username='admin', password='admin', is_superuser=True)
         user.backend = settings.AUTHENTICATION_BACKENDS[0]
@@ -213,7 +213,7 @@ class TestFramePost(TestCase):
         self.assertEqual(response.status_code, 400)
 
 
-class TestFrameFiltering(TestCase):
+class TestFrameFiltering(ReplicationTestCase):
     def setUp(self):
         boto3.client = MagicMock()
         self.admin_user = User.objects.create_superuser(username='admin', email='a@a.com', password='password')
@@ -254,7 +254,7 @@ class TestFrameFiltering(TestCase):
         self.assertNotContains(response, self.not_owned.basename)
 
 
-class TestQueryFiltering(TestCase):
+class TestQueryFiltering(ReplicationTestCase):
     def setUp(self):
         boto3.client = MagicMock()
 
@@ -364,7 +364,7 @@ class TestQueryFiltering(TestCase):
         self.assertNotContains(response, frame.basename)
 
 
-class TestZipDownload(TestCase):
+class TestZipDownload(ReplicationTestCase):
     def setUp(self):
         boto3.client = MagicMock()
         self.normal_user = User.objects.create(username='frodo', password='theone')
@@ -412,7 +412,7 @@ class TestZipDownload(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
-class TestFrameAggregate(TestCase):
+class TestFrameAggregate(ReplicationTestCase):
     def setUp(self):
         boto3.client = MagicMock()
         is_public_date = timezone.now() - datetime.timedelta(days=7)

@@ -107,7 +107,7 @@ DATABASES = {
         'PORT': '5432',
         'ATOMIC_REQUESTS': True,
     },
-    'reader': {
+    'replica': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': DB_NAME,
         'USER': DB_USER,
