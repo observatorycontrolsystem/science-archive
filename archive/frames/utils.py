@@ -28,9 +28,9 @@ def fits_keywords_only(dictionary):
     return new_dictionary
 
 
-def archived_queue_payload(dictionary, frame, filename):
+def archived_queue_payload(dictionary, frame):
     new_dictionary = dictionary.copy()
-    new_dictionary['filename'] = filename
+    new_dictionary['filename'] = frame.filename
     new_dictionary['frameid'] = frame.id
     return new_dictionary
 

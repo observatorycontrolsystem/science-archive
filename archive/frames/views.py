@@ -69,9 +69,8 @@ class FrameViewSet(viewsets.ModelViewSet):
             extension = request.data.get('version_set')[0].get('extension')
         else:
             extension = ''
-        filename = '{}{}'.format(basename, extension)
         logger_tags = {'tags': {
-            'filename': filename,
+            'filename': '{}{}'.format(basename, extension),
             'request_num': request.data.get('REQNUM')
         }}
         logger.info('Got request to process frame', extra=logger_tags)
@@ -83,7 +82,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             logger_tags['tags']['id'] = frame.id
             logger.info('Created frame', extra=logger_tags)
             try:
-                post_to_archived_queue(archived_queue_payload(dictionary=request.data, frame=frame, filename=filename))
+                post_to_archived_queue(archived_queue_payload(dictionary=request.data, frame=frame))
             except Exception:
                 logger.exception('Failed to post frame to archived queue', extra=logger_tags)
             logger.info('Request to process frame succeeded', extra=logger_tags)

@@ -105,7 +105,6 @@ DATABASES = {
         'PASSWORD': DB_PASS,
         'HOST': os.getenv('DB_HOST', '127.0.0.1'),
         'PORT': '5432',
-        'ATOMIC_REQUESTS': True,
     },
     'replica': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
@@ -114,7 +113,6 @@ DATABASES = {
         'PASSWORD': DB_PASS,
         'HOST': os.getenv('DB_HOST_READER', '127.0.0.1'),
         'PORT': '5432',
-        'ATOMIC_REQUESTS': True,
     }
 }
 
