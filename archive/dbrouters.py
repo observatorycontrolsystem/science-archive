@@ -7,18 +7,20 @@ from archive.frames.models import Frame, Version
 
 class DBClusterRouter:
     """
-    Database router that sends read operations to one endpoint
-    and write operations to another.
+    Database router that splits queries between reader and writer endpoints.
     """
     def db_for_read(self, model, **hints):
         """
-        Reads go to the reader endpoint.
+        Reads for the archive frames models go to the reader endpoint.
 
-        Reads for certain models are directed to the writer endpoint if the
+        Reads for certain frames models are directed to the writer endpoint if the
         instance was recently created in order to prevent a race condition. This
         could happen if, for example, data that has been committed has not been
         replicated fast enough. This is an issue specifically in the frame
         creation view.
+
+        Reads that query for models other than the those in the frames app (for example,
+        django sessions and user models) are sent to the default db as usual.
         """
         new_instance_delay_minutes = 10
         new_instance_delay_models = (Frame, Version,)
@@ -29,7 +31,10 @@ class DBClusterRouter:
             if created > timezone.now() - timedelta(minutes=new_instance_delay_minutes):
                 return 'default'
 
-        return 'replica'
+        if 'archive.frames.models' in str(model):
+            return 'replica'
+
+        return 'default'
 
     def db_for_write(self, model, **hints):
         """
