@@ -1,17 +1,36 @@
+from datetime import timedelta
+
+from django.utils import timezone
+
+from archive.frames.models import Frame, Version
+
+
 class DBClusterRouter:
     """
-    Database router that sends read operations to one endpoint 
+    Database router that sends read operations to one endpoint
     and write operations to another.
     """
     def db_for_read(self, model, **hints):
         """
-        Reads go to the replica endpoint.
+        Reads go to the reader endpoint.
+
+        Reads for certain models are directed to the writer endpoint if the
+        instance was recently created in order to prevent a race condition.
         """
+        new_instance_delay_minutes = 10
+        new_instance_delay_models = (Frame, Version,)
+        instance = hints.get('instance')
+        created = getattr(instance, 'created', None)
+
+        if isinstance(instance, new_instance_delay_models) and created is not None:
+            if created > timezone.now() - timedelta(minutes=new_instance_delay_minutes):
+                return 'default'
+
         return 'replica'
 
     def db_for_write(self, model, **hints):
         """
-        Writes go the the writer endpoint, which is the default database.
+        Writes go the the writer endpoint.
         """
         return 'default'
 
