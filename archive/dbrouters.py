@@ -15,7 +15,10 @@ class DBClusterRouter:
         Reads go to the reader endpoint.
 
         Reads for certain models are directed to the writer endpoint if the
-        instance was recently created in order to prevent a race condition.
+        instance was recently created in order to prevent a race condition. This
+        could happen if, for example, data that has been committed has not been
+        replicated fast enough. This is an issue specifically in the frame
+        creation view.
         """
         new_instance_delay_minutes = 10
         new_instance_delay_models = (Frame, Version,)

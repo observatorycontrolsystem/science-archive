@@ -91,7 +91,7 @@ WSGI_APPLICATION = 'archive.wsgi.application'
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases
 # https://docs.djangoproject.com/en/2.2/topics/db/multi-db/#automatic-database-routing
 
-DATABASE_ROUTERS = ['archive.dbrouter.DBClusterRouter']
+DATABASE_ROUTERS = ['archive.dbrouters.DBClusterRouter']
 
 DB_NAME = os.getenv('DB_NAME', 'archive')
 DB_USER = os.getenv('DB_USER', 'postgres')
