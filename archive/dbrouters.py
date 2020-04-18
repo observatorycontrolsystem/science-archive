@@ -18,9 +18,6 @@ class DBClusterRouter:
         could happen if, for example, data that has been committed has not been
         replicated fast enough. This is an issue specifically in the frame
         creation view.
-
-        Reads that query for models other than the those in the frames app (for example,
-        django sessions and user models) are sent to the default db as usual.
         """
         new_instance_delay_minutes = 10
         new_instance_delay_models = (Frame, Version,)
