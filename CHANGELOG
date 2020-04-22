@@ -1,3 +1,7 @@
+1.70
+2020-04-22
+Add a database router that routes reads for the frames app to a replica
+
 1.64
 2020-03-17
 Add management command to expire old imager guide frames
