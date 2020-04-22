@@ -29,7 +29,8 @@ Environment Variable | Description | Default Value
 --- | --- | ---
 `SECRET_KEY` | Django Secret Key | `See settings.py`
 `DEBUG` | Enable Django Debugging Mode | `False`
-`DB_HOST` | PostgreSQL Database Hostname | `127.0.0.1`
+`DB_HOST` | PostgreSQL Database Hostname for the writer endpoint | `127.0.0.1`
+`DB_HOST_READER` | PostgreSQL Database Hostname for the reader endpoint | `127.0.0.1`
 `DB_NAME` | PostgreSQL Database Name | `archive`
 `DB_USER` | PostgreSQL Database Username | `postgres`
 `DB_PASS` | PostgreSQL Database Password | `postgres`

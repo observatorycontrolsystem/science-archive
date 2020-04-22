@@ -19,4 +19,5 @@ FROM app AS tests
 
 RUN pip --no-cache-dir install tox
 ENV DB_HOST=buildpostgres.lco.gtn
+ENV DB_HOST_READER=buildpostgres.lco.gtn
 CMD [ "python", "-c", "import tox; tox.cmdline();", "-c", "tox.ini", "--recreate" ]

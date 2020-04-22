@@ -2,6 +2,7 @@ import json
 from rest_framework import serializers
 from archive.frames.models import Frame, Version, Headers
 from django.contrib.gis.geos import GEOSGeometry
+from django.db import transaction
 
 
 class ZipSerializer(serializers.Serializer):
@@ -61,10 +62,11 @@ class FrameSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         version_data = validated_data.pop('version_set')
         header_data = validated_data.pop('header')
-        frame = self.create_or_update_frame(validated_data)
-        self.create_or_update_versions(frame, version_data)
-        self.create_or_update_header(frame, header_data)
-        self.create_related_frames(frame, header_data)
+        with transaction.atomic():
+            frame = self.create_or_update_frame(validated_data)
+            self.create_or_update_versions(frame, version_data)
+            self.create_or_update_header(frame, header_data)
+            self.create_related_frames(frame, header_data)
         return frame
 
     def create_or_update_frame(self, data):

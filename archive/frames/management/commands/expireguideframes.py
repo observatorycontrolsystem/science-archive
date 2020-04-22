@@ -33,7 +33,7 @@ class Command(BaseCommand):
         expiration_date = timezone.now() - timedelta(days=365)
         logger.info(f"Expiring imager guide frames from before {expiration_date.isoformat()} for {options['site']} site(s)")
 
-        guide_frames = Frame.objects.filter(DATE_OBS__lte=expiration_date, OBSTYPE='GUIDE').exclude(
+        guide_frames = Frame.objects.using('default').filter(DATE_OBS__lte=expiration_date, OBSTYPE='GUIDE').exclude(
             INSTRUME__in=GUIDE_CAMERAS_TO_PERSIST)
         if options['site'].lower() != 'all':
             guide_frames = guide_frames.filter(SITEID=options['site'].lower())

@@ -3,12 +3,12 @@ from django.conf import settings
 from unittest.mock import patch
 from archive.authentication.models import Profile
 from archive.frames.tests.factories import FrameFactory
+from archive.test_helpers import ReplicationTestCase
 import responses
-from django.test import TestCase
 import json
 
 
-class TestAuthentication(TestCase):
+class TestAuthentication(ReplicationTestCase):
     @patch('requests.get')
     @patch('requests.post')
     def setUp(self, post_mock, get_mock):
