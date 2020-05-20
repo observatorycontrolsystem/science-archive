@@ -216,13 +216,10 @@ REST_FRAMEWORK = {
 }
 
 ODIN_OAUTH_CLIENT = {
-    'CLIENT_ID': 'YncgdX6nFXhyUZgm9OeRExg2MZb5BgTgeWkKYHNE',
-    'CLIENT_SECRET': ('wQWHBIr2H1XBtRUHaTkPF1jkuyoGyU85J9F'
-                      'y1x8j1H5wyqgfIyGpuXEJMcLfeDo2T0FciD'
-                      'w1yaGgeyNQDk7dIoGosh4xGKawBr9sXidS5'
-                      '27lf3NhSOg2scYx8OJKBJ5m'),
-    'TOKEN_URL': 'http://internal-observation-portal.lco.gtn/o/token/',
-    'PROFILE_URL': 'http://internal-observation-portal.lco.gtn/api/profile/',
+    'CLIENT_ID': os.getenv('OAUTH_CLIENT_ID', ''),
+    'CLIENT_SECRET': os.getenv('OAUTH_CLIENT_SECRET', ''),
+    'TOKEN_URL': os.getenv('OAUTH_TOKEN_URL', 'http://localhost/o/token/'),
+    'PROFILE_URL': os.getenv('OAUTH_PROFILE_URL', 'http://localhost/api/profile/'),
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
