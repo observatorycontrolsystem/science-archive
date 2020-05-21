@@ -1,4 +1,4 @@
-Django>=2.0,<2.1
+Django>=2.2.10,<2.3
 psycopg2>=2.7,<2.8
 djangorestframework>=3.9.4,<3.10
 django-filter>=2.0,<2.1
