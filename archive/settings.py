@@ -215,7 +215,7 @@ REST_FRAMEWORK = {
     )
 }
 
-ODIN_OAUTH_CLIENT = {
+OAUTH_CLIENT = {
     'CLIENT_ID': os.getenv('OAUTH_CLIENT_ID', ''),
     'CLIENT_SECRET': os.getenv('OAUTH_CLIENT_SECRET', ''),
     'TOKEN_URL': os.getenv('OAUTH_TOKEN_URL', 'http://localhost/o/token/'),
@@ -234,7 +234,7 @@ if os.environ.get('CACHE_LOC', None) is not None:
 
 # Settings pertaining to posting messages to the post archived fits exchange
 QUEUE_BROKER_URL = os.getenv('QUEUE_BROKER_URL', 'memory://localhost')
-PROCESSED_EXCHANGE_ENABLED = True
+PROCESSED_EXCHANGE_ENABLED = ast.literal_eval(os.environ.get('PROCESSED_EXCHANGE_ENABLED', 'True'))
 PROCESSED_EXCHANGE_NAME = os.getenv('PROCESSED_EXCHANGE_NAME', 'archived_fits')
 
 

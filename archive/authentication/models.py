@@ -32,7 +32,7 @@ class Profile(models.Model):
             else:
                 proposals = []
                 response = requests.get(
-                    settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
+                    settings.OAUTH_CLIENT['PROFILE_URL'],
                     headers={'Authorization': 'Bearer {}'.format(self.access_token)}
                 )
                 if response.status_code == 200:

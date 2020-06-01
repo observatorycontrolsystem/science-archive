@@ -20,7 +20,7 @@ class TestUserView(ReplicationTestCase):
     def test_user_view(self):
         responses.add(
             responses.GET,
-            settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
+            settings.OAUTH_CLIENT['PROFILE_URL'],
             body=json.dumps({'proposals': [{'id': 'TestProposal'}]}),
             status=200,
             content_type='application/json'
