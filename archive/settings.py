@@ -22,10 +22,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'e7#jz9=op7b14zqsxhj^svei4*r0t+^se^xhb-()&s_dlgvc!k')
+SECRET_KEY = os.getenv('SECRET_KEY', 'e7#jz9=op7b14zqsxhj^svei4*r0t+^se^xhb-()&s_dlgvc!k')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = ast.literal_eval(os.environ.get('DEBUG', 'False'))
+DEBUG = ast.literal_eval(os.getenv('DEBUG', 'False'))
 
 ALLOWED_HOSTS = ['*']
 
@@ -224,7 +224,7 @@ OAUTH_CLIENT = {
 
 CORS_ORIGIN_ALLOW_ALL = True
 
-if os.environ.get('CACHE_LOC', None) is not None:
+if os.getenv('CACHE_LOC', None) is not None:
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
@@ -234,7 +234,7 @@ if os.environ.get('CACHE_LOC', None) is not None:
 
 # Settings pertaining to posting messages to the post archived fits exchange
 QUEUE_BROKER_URL = os.getenv('QUEUE_BROKER_URL', 'memory://localhost')
-PROCESSED_EXCHANGE_ENABLED = ast.literal_eval(os.environ.get('PROCESSED_EXCHANGE_ENABLED', 'True'))
+PROCESSED_EXCHANGE_ENABLED = ast.literal_eval(os.getenv('PROCESSED_EXCHANGE_ENABLED', 'True'))
 PROCESSED_EXCHANGE_NAME = os.getenv('PROCESSED_EXCHANGE_NAME', 'archived_fits')
 
 
