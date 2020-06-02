@@ -22,10 +22,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'e7#jz9=op7b14zqsxhj^svei4*r0t+^se^xhb-()&s_dlgvc!k')
+SECRET_KEY = os.getenv('SECRET_KEY', 'e7#jz9=op7b14zqsxhj^svei4*r0t+^se^xhb-()&s_dlgvc!k')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = ast.literal_eval(os.environ.get('DEBUG', 'False'))
+DEBUG = ast.literal_eval(os.getenv('DEBUG', 'False'))
 
 ALLOWED_HOSTS = ['*']
 
@@ -215,19 +215,16 @@ REST_FRAMEWORK = {
     )
 }
 
-ODIN_OAUTH_CLIENT = {
-    'CLIENT_ID': 'YncgdX6nFXhyUZgm9OeRExg2MZb5BgTgeWkKYHNE',
-    'CLIENT_SECRET': ('wQWHBIr2H1XBtRUHaTkPF1jkuyoGyU85J9F'
-                      'y1x8j1H5wyqgfIyGpuXEJMcLfeDo2T0FciD'
-                      'w1yaGgeyNQDk7dIoGosh4xGKawBr9sXidS5'
-                      '27lf3NhSOg2scYx8OJKBJ5m'),
-    'TOKEN_URL': 'http://internal-observation-portal.lco.gtn/o/token/',
-    'PROFILE_URL': 'http://internal-observation-portal.lco.gtn/api/profile/',
+OAUTH_CLIENT = {
+    'CLIENT_ID': os.getenv('OAUTH_CLIENT_ID', ''),
+    'CLIENT_SECRET': os.getenv('OAUTH_CLIENT_SECRET', ''),
+    'TOKEN_URL': os.getenv('OAUTH_TOKEN_URL', 'http://localhost/o/token/'),
+    'PROFILE_URL': os.getenv('OAUTH_PROFILE_URL', 'http://localhost/api/profile/'),
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
 
-if os.environ.get('CACHE_LOC', None) is not None:
+if os.getenv('CACHE_LOC', None) is not None:
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
@@ -237,7 +234,7 @@ if os.environ.get('CACHE_LOC', None) is not None:
 
 # Settings pertaining to posting messages to the post archived fits exchange
 QUEUE_BROKER_URL = os.getenv('QUEUE_BROKER_URL', 'memory://localhost')
-PROCESSED_EXCHANGE_ENABLED = True
+PROCESSED_EXCHANGE_ENABLED = ast.literal_eval(os.getenv('PROCESSED_EXCHANGE_ENABLED', 'True'))
 PROCESSED_EXCHANGE_NAME = os.getenv('PROCESSED_EXCHANGE_NAME', 'archived_fits')
 
 
