@@ -1,91 +1,91 @@
-# Las Cumbres Observatory Science Archive
+# Science Archive
 
-This is the LCO Science Data Archive API. It uses the
-[Django Rest Framework](https://www.django-rest-framework.org/api-guide/requests/)
-to provide web accessible endpoints for adding and querying the metadata for frames.
+An application providing an API to save, retrieve, and view an observatory's science data. The data files themselves 
+are stored in AWS S3, with certain metadata for each file stored in a database for easy querying and filtering.
 
-## Requirements
+## Prerequisites
 
-### PostgreSQL with the PostGIS extension installed
+Optional prerequisites can be skipped for reduced functionality.
 
-Amazon Web Services (AWS) Relational Database Service (RDS) provides PostgreSQL
-with the PostGIS extension installed. Please refer to the AWS documentation for
-instructions on how to enable this extension.
-
-For local development, you can use the following Docker image:
-
-- <https://hub.docker.com/r/mdillon/postgis/>
-
-### Amazon Web Services Simple Storage Service Bucket
-
-This project depends upon an Amazon Web Services (AWS) Simple Storage Service
-(S3) bucket to store data.
+-   Python >= 3.6
+-   PostgreSQL with the PostGIS extension installed
+-   An AWS S3 bucket with read/write privileges
+-   (Optional) RabbitMQ
+-   (Optional) Memcached
 
 ## Configuration
 
-This project is configured by environment variables.
+Users can use Oauth for authentication. The authentication server for the science archive is the [observation portal](https://github.com/observatorycontrolsystem/observation-portal).
 
-Environment Variable | Description | Default Value
---- | --- | ---
-`SECRET_KEY` | Django Secret Key | `See settings.py`
-`DEBUG` | Enable Django Debugging Mode | `False`
-`DB_HOST` | PostgreSQL Database Hostname | `127.0.0.1`
-`DB_NAME` | PostgreSQL Database Name | `archive`
-`DB_USER` | PostgreSQL Database Username | `postgres`
-`DB_PASS` | PostgreSQL Database Password | `postgres`
-`AWS_ACCESS_KEY_ID` | AWS Access Key Id | ``
-`AWS_SECRET_ACCESS_KEY` | AWS Secret Access Key | ``
-`AWS_DEFAULT_REGION` | AWS Default Region | `us-west-2`
-`AWS_BUCKET` | AWS S3 Bucket Name | `lcogtarchivetest`
-`CACHE_LOC` | Memcached Cache Location | `memcached.archiveapi:11211`
+This project can be configured to use just a single database, or queries can be routed to separate endpoints of a database cluster such that read operations are routed to replicas and write operations are routed to the main writer database.
 
-## Build
+This project is configured using environment variables.
 
-This project is built automatically by the [LCO Jenkins Server](http://jenkins.lco.gtn/).
-Please see the [Jenkinsfile](Jenkinsfile) for further details.
+|                 | Variable                     | Description                                                                                                                                                                                                                          | Default                         |
+| --------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------- |
+| General         | `SECRET_KEY`                 | Django Secret Key                                                                                                                                                                                                                    | _random string_                 |
+|                 | `DEBUG`                      | Enable Django Debugging Mode                                                                                                                                                                                                         | `False`                         |
+|                 | `CACHE_LOC`                  | Memcached Cache Location                                                                                                                                                                                                             | `memcached.archiveapi:11211`    |
+| Database        | `DB_HOST`                    | PostgreSQL Database Hostname for the writer endpoint                                                                                                                                                                                 | `127.0.0.1`                     |
+|                 | `DB_HOST_READER`             | PostgreSQL Database Hostname for the reader endpoint. This can be set to the same value as `DB_HOST` if a cluster is not being used.                                                                                                 | `127.0.0.1`                     |
+|                 | `DB_NAME`                    | PostgreSQL Database Name                                                                                                                                                                                                             | `archive`                       |
+|                 | `DB_USER`                    | PostgreSQL Database Username                                                                                                                                                                                                         | `postgres`                      |
+|                 | `DB_PASS`                    | PostgreSQL Database Password                                                                                                                                                                                                         | `postgres`                      |
+| AWS             | `AWS_ACCESS_KEY_ID`          | AWS Access Key Id                                                                                                                                                                                                                    | \`\`                            |
+|                 | `AWS_SECRET_ACCESS_KEY`      | AWS Secret Access Key                                                                                                                                                                                                                | \`\`                            |
+|                 | `AWS_DEFAULT_REGION`         | AWS Default Region                                                                                                                                                                                                                   | `us-west-2`                     |
+|                 | `AWS_BUCKET`                 | AWS S3 Bucket Name                                                                                                                                                                                                                   | `lcogtarchivetest`              |
+| Post-processing | `PROCESSED_EXCHANGE_ENABLED` | Enable post-processing. When `True`, details of a newly ingested image are sent to a RabbitMQ exchange. This is useful for e.g. data pipelines that need to know whenever there is a new image available. Set to `False` to disable. | `True`                          |
+|                 | `QUEUE_BROKER_URL`           | RabbitMQ Broker                                                                                                                                                                                                                      | `memory://localhost`            |
+|                 | `PROCESSED_EXCHANGE_NAME`    | Archived FITS exchange name                                                                                                                                                                                                          | `archived_fits`                 |
+| Oauth           | `OAUTH_CLIENT_ID`            | Oauth client ID                                                                                                                                                                                                                      | _empty string_                  |
+|                 | `OAUTH_CLIENT_SECRET`        | Oauth client secret                                                                                                                                                                                                                  | _empty string_                  |
+|                 | `OAUTH_TOKEN_URL`            | Observation portal Oauth token URL                                                                                                                                                                                                | `http://localhost/o/token/`     |
+|                 | `OAUTH_PROFILE_URL`          | Observation portal profile URL                                                                                                                                                                                                       | `http://localhost/api/profile/` |
 
-## Production Deployment
+## Local Development
 
-This project is deployed onto the LCO Kubernetes Cluster. Please see the
-[LCO Helm Charts Repository](https://github.com/LCOGT/helm-charts) for details.
+### **Set up the S3 bucket**
 
-## Development Environment
+Please refer to the [S3 documentation](https://aws.amazon.com/s3/) for how to set up a bucket with read/write access.
 
-This is a standard Django project. You should be familiar with running Django
-in a local development environment before continuing.
+### **Set up a [virtual environment](https://docs.python.org/3/tutorial/venv.html)**
 
-* Configure a PostgreSQL database with the PostGIS extension
-* Configure a Memcached database (optional)
-* Configure your environment variables appropriately (see above chart)
-* Install Python dependencies: `pip install -r requirements.txt`
-* Apply database migrations: `python manage.py migrate`
-* Run the development server: `python manage.py runserver`
+Using a virtual environment is highly recommended. Run the following commands from the base of this project. `(env)`
+is used to denote commands that should be run using your virtual environment.
 
-## Superuser Access
+    python3 -m venv env
+    source env/bin/activate
+    (env) pip install -r requirements.txt
 
-This project will only allow POST requests from a superuser account. A
-superuser account can be created by using the following command:
+### **Set up the database**
 
-```
-python manage.py createsuperuser
-```
+This example uses a [PostgreSQL Docker Image](https://hub.docker.com/r/mdillon/postgis/) that already has PostGIS installed. Make sure that the options that you use to set up your database correspond with your configured database settings.
 
-The resulting user with have an authentcation token. This token can be
-obtained:
+    docker run --name archive-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=archive -p5432:5432 -d mdillon/postgis
 
-```
-python manage.py shell_plus
-In [1]: User.objects.first().auth_token
-Out[1]: <Token: 48d03ec62ce69fef68bd545a751ccb1efef689a5>
-```
+After creating the database, migrations must be applied to set up the tables in the database.
 
-This is the authentication token that should be used in software that can write
-to the archive, such as the Ingester.
+    (env) python manage.py migrate
 
-For instructions on how to use Token Authentication, please see the Django Rest Framework's
-documentation section on [Token Authentication](http://www.django-rest-framework.org/api-guide/authentication/#tokenauthentication).
+### **Run the tests**
 
-## OAuth
+    (env) python manage.py test
 
-Users can authenticate using OAuth. See the authentcation backends in the
-`authentication/` app.
+### **Run the science archive**
+
+    (env) python manage.py runserver
+
+The science archive should now be accessible from <http://127.0.0.1:8000>
+
+## Adding data
+
+Only superusers can ingest data into the science archive. To create a superuser, run the following command and follow the steps:
+
+    (env) python manage.py createsuperuser
+
+Obtain the resulting authentication token which can then be used by the [ingester](https://github.com/observatorycontrolsystem/ingester). 
+
+    python manage.py shell_plus
+    In [1]: User.objects.first().auth_token
+    Out[1]: <Token: 48d03ec62ce69fef68bd545a751ccb1efef689a5>
