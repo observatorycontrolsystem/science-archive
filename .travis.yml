@@ -5,11 +5,12 @@ python:
 - '3.7'
 - '3.8'
 env:
-  matrix:
-  - DB_NAME=archive DB_USER=postgres DB_PASS=
   global:
-    - DOCKER_USERNAME='ocstravisci'
-    secure: dZMUThOC2jY3KHrabw4UbY1LBM3XO8MiI8PXqjmFOQShm3hUSBiKMSAK0NW4K3AVgz56IhrA54AUJk5ZBPfJCR6Hb8+ur95MJ1TB62PLH1sdkQ+N7RLep0G8i7ur/hrqXlVU51HhbKHm8noHsNPVhSqYptNeLfApAgLftANgJ0HKx26/dWsfA+5VORzuQcs7u+3hsMNj7ngD/KnxojxCk4AUeUQDusuosLxobhVIfTd3RZyNwGJOKfoXJ8wOHj/E5gznhSre+FMZTn//UhiW3DccrjZV8kYrI+fy+GZ7vFwsQE4roznq2m8gQ9pF+pvYIdcIqQAbd3WL891lrU+atCjao9pvAXRJ6km1Wup2mhw5qyNTL9/vVQoM3oH6vVyjhW79RyToGXkkkME2s/HBycD+TtGZM8R62aoFXrzwiHFBHs262+U0RRBhgXK/jF9Ws0m0cS3m2b+kmXqv2gMHwHIhlN1+YgCZZ8rveJfPtgyLfSm96RoVscFYNLdRVuT4Tjeie0295gH3rrgvoxHG/0jN1aYpdCF53MVSeB2oJD6gAfY5bTd+tQDt0vXoxZQaRZkwMPY5o2bh5Ow9INg+TqyLMR9XxvnRY12eFgkn/vfjrFStCEeUi2c4FCecq7UZlXpl9jVlXJDJ0b6wL1t0EHP7ll332II4DnvRACwwFlY=
+  - DB_NAME='archive'
+  - DB_USER='postgres'
+  - DB_PASS=''
+  - DOCKER_USERNAME='ocstravisci'
+  - secure: dZMUThOC2jY3KHrabw4UbY1LBM3XO8MiI8PXqjmFOQShm3hUSBiKMSAK0NW4K3AVgz56IhrA54AUJk5ZBPfJCR6Hb8+ur95MJ1TB62PLH1sdkQ+N7RLep0G8i7ur/hrqXlVU51HhbKHm8noHsNPVhSqYptNeLfApAgLftANgJ0HKx26/dWsfA+5VORzuQcs7u+3hsMNj7ngD/KnxojxCk4AUeUQDusuosLxobhVIfTd3RZyNwGJOKfoXJ8wOHj/E5gznhSre+FMZTn//UhiW3DccrjZV8kYrI+fy+GZ7vFwsQE4roznq2m8gQ9pF+pvYIdcIqQAbd3WL891lrU+atCjao9pvAXRJ6km1Wup2mhw5qyNTL9/vVQoM3oH6vVyjhW79RyToGXkkkME2s/HBycD+TtGZM8R62aoFXrzwiHFBHs262+U0RRBhgXK/jF9Ws0m0cS3m2b+kmXqv2gMHwHIhlN1+YgCZZ8rveJfPtgyLfSm96RoVscFYNLdRVuT4Tjeie0295gH3rrgvoxHG/0jN1aYpdCF53MVSeB2oJD6gAfY5bTd+tQDt0vXoxZQaRZkwMPY5o2bh5Ow9INg+TqyLMR9XxvnRY12eFgkn/vfjrFStCEeUi2c4FCecq7UZlXpl9jVlXJDJ0b6wL1t0EHP7ll332II4DnvRACwwFlY=
 install:
 - pip install -r requirements.txt
 addons:
