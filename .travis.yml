@@ -1,6 +1,8 @@
 language: python
 python:
   - '3.6'
+env:
+  - DB_NAME=archive DB_USER=postgres DB_PASS=
 install:
   - pip install -r requirements.txt
 addons:
@@ -12,4 +14,4 @@ before_script:
   - psql -U postgres -c "create extension postgis"
   - psql -c 'create database archive;' -U postgres
 script:
-  - python manage.py test --settings=travis_settings
+  - python manage.py test
