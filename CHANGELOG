@@ -1,3 +1,9 @@
+1.71
+2020-06-01
+Add license file
+Pull Oauth configuration from environment
+Fix django security vulnerability
+
 1.70
 2020-04-22
 Add a database router that routes reads for the frames app to a replica
