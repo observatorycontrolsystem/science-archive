@@ -1,6 +1,7 @@
 # Science Archive
 
 [![Build Status](https://travis-ci.com/observatorycontrolsystem/science-archive.svg?branch=master)](https://travis-ci.com/observatorycontrolsystem/science-archive)
+[![Coverage Status](https://coveralls.io/repos/github/observatorycontrolsystem/science-archive/badge.svg)](https://coveralls.io/github/observatorycontrolsystem/science-archive)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/3ebd5b7fcff845c980f6f6a8bb4f7ab9)](https://www.codacy.com/gh/observatorycontrolsystem/science-archive?utm_source=github.com&utm_medium=referral&utm_content=observatorycontrolsystem/science-archive&utm_campaign=Badge_Grade)
 
 An application providing an API to save, retrieve, and view an observatory's science data. The data files themselves 
