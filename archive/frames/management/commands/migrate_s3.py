@@ -1,13 +1,12 @@
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.utils import timezone
-from archive.frames.models import Frame, Version
+from archive.frames.models import Frame
 from archive.frames.utils import get_s3_client
 from botocore.exceptions import ClientError
 from astropy.io import fits
 
 import logging
-import os
 import io
 from contextlib import closing
 import time
@@ -83,8 +82,6 @@ def fpack_version(version, client, storage_class, frame_id, should_delete=False)
         input_file = io.BytesIO(base_file.read())
     fits_file = fits.open(input_file)
     filename = f'{version.frame.basename}.fits.fz'
-    content_disposition = f'attachment; filename={filename}'
-    content_type = '.fits.fz'
     fpack_file = io.BytesIO()
     setattr(fpack_file, 'name', filename)
     # This works with non-fpacked data in LCO's past, but it doesn't work with funpack fpacked data
