@@ -1,5 +1,9 @@
 # Science Archive
 
+[![Build Status](https://travis-ci.com/observatorycontrolsystem/science-archive.svg?branch=master)](https://travis-ci.com/observatorycontrolsystem/science-archive)
+[![Coverage Status](https://coveralls.io/repos/github/observatorycontrolsystem/science-archive/badge.svg)](https://coveralls.io/github/observatorycontrolsystem/science-archive)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/3ebd5b7fcff845c980f6f6a8bb4f7ab9)](https://www.codacy.com/gh/observatorycontrolsystem/science-archive?utm_source=github.com&utm_medium=referral&utm_content=observatorycontrolsystem/science-archive&utm_campaign=Badge_Grade)
+
 An application providing an API to save, retrieve, and view an observatory's science data. The data files themselves 
 are stored in AWS S3, with certain metadata for each file stored in a database for easy querying and filtering.
 
@@ -10,6 +14,7 @@ Optional prerequisites can be skipped for reduced functionality.
 -   Python >= 3.6
 -   PostgreSQL with the PostGIS extension installed
 -   An AWS S3 bucket with read/write privileges
+-   System dependencies to install the [psycopg2](https://pypi.org/project/psycopg2/) package
 -   (Optional) RabbitMQ
 -   (Optional) Memcached
 
@@ -31,8 +36,8 @@ This project is configured using environment variables.
 |                 | `DB_NAME`                    | PostgreSQL Database Name                                                                                                                                                                                                             | `archive`                       |
 |                 | `DB_USER`                    | PostgreSQL Database Username                                                                                                                                                                                                         | `postgres`                      |
 |                 | `DB_PASS`                    | PostgreSQL Database Password                                                                                                                                                                                                         | `postgres`                      |
-| AWS             | `AWS_ACCESS_KEY_ID`          | AWS Access Key Id                                                                                                                                                                                                                    | \`\`                            |
-|                 | `AWS_SECRET_ACCESS_KEY`      | AWS Secret Access Key                                                                                                                                                                                                                | \`\`                            |
+| AWS             | `AWS_ACCESS_KEY_ID`          | AWS Access Key Id                                                                                                                                                                                                                    | _empty string_                  |
+|                 | `AWS_SECRET_ACCESS_KEY`      | AWS Secret Access Key                                                                                                                                                                                                                | _empty string_                  |
 |                 | `AWS_DEFAULT_REGION`         | AWS Default Region                                                                                                                                                                                                                   | `us-west-2`                     |
 |                 | `AWS_BUCKET`                 | AWS S3 Bucket Name                                                                                                                                                                                                                   | `lcogtarchivetest`              |
 | Post-processing | `PROCESSED_EXCHANGE_ENABLED` | Enable post-processing. When `True`, details of a newly ingested image are sent to a RabbitMQ exchange. This is useful for e.g. data pipelines that need to know whenever there is a new image available. Set to `False` to disable. | `True`                          |
@@ -40,7 +45,7 @@ This project is configured using environment variables.
 |                 | `PROCESSED_EXCHANGE_NAME`    | Archived FITS exchange name                                                                                                                                                                                                          | `archived_fits`                 |
 | Oauth           | `OAUTH_CLIENT_ID`            | Oauth client ID                                                                                                                                                                                                                      | _empty string_                  |
 |                 | `OAUTH_CLIENT_SECRET`        | Oauth client secret                                                                                                                                                                                                                  | _empty string_                  |
-|                 | `OAUTH_TOKEN_URL`            | Observation portal Oauth token URL                                                                                                                                                                                                | `http://localhost/o/token/`     |
+|                 | `OAUTH_TOKEN_URL`            | Observation portal Oauth token URL                                                                                                                                                                                                   | `http://localhost/o/token/`     |
 |                 | `OAUTH_PROFILE_URL`          | Observation portal profile URL                                                                                                                                                                                                       | `http://localhost/api/profile/` |
 
 ## Local Development
@@ -52,7 +57,9 @@ Please refer to the [S3 documentation](https://aws.amazon.com/s3/) for how to se
 ### **Set up a [virtual environment](https://docs.python.org/3/tutorial/venv.html)**
 
 Using a virtual environment is highly recommended. Run the following commands from the base of this project. `(env)`
-is used to denote commands that should be run using your virtual environment.
+is used to denote commands that should be run using your virtual environment. Note that [the system dependencies of
+the psycopg2 PyPI package](https://www.psycopg.org/docs/install.html#install-from-source) must be installed at this
+point.
 
     python3 -m venv env
     source env/bin/activate

@@ -70,7 +70,7 @@ class FrameSerializer(serializers.ModelSerializer):
         return frame
 
     def create_or_update_frame(self, data):
-        frame, created = Frame.objects.update_or_create(defaults=data, basename=data['basename'])
+        frame, _ = Frame.objects.update_or_create(defaults=data, basename=data['basename'])
         return frame
 
     def create_or_update_versions(self, frame, data):
@@ -78,7 +78,7 @@ class FrameSerializer(serializers.ModelSerializer):
             Version.objects.create(frame=frame, **version)
 
     def create_or_update_header(self, frame, data):
-        header, created = Headers.objects.update_or_create(defaults={'data': data}, frame=frame)
+        Headers.objects.update_or_create(defaults={'data': data}, frame=frame)
 
     def create_related_frames(self, frame, data):
         related_frame_keys = [
@@ -89,6 +89,6 @@ class FrameSerializer(serializers.ModelSerializer):
         for key in related_frame_keys:
             related_frame = data.get(key)
             if related_frame and related_frame != frame.basename:
-                rf, created = Frame.objects.get_or_create(basename=related_frame)
+                rf, _ = Frame.objects.get_or_create(basename=related_frame)
                 frame.related_frames.add(rf)
         frame.save()

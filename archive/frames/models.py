@@ -3,7 +3,6 @@ from django.utils.functional import cached_property
 from django.contrib.postgres.fields import JSONField
 import hashlib
 import logging
-from datetime import timedelta
 from django.conf import settings
 from django.contrib.gis.db import models
 

@@ -25,7 +25,7 @@ class OAuth2Backend(object):
             }
         )
         if response.status_code == 200:
-            user, created = User.objects.get_or_create(username=username)
+            user, _ = User.objects.get_or_create(username=username)
             Profile.objects.update_or_create(
                 user=user,
                 defaults={
@@ -62,7 +62,7 @@ class BearerAuthentication(authentication.BaseAuthentication):
         if not response.status_code == 200:
             raise exceptions.AuthenticationFailed('No Such User')
 
-        user, created = User.objects.get_or_create(username=response.json()['email'])
+        user, _ = User.objects.get_or_create(username=response.json()['email'])
         Profile.objects.update_or_create(
             user=user,
             defaults={

@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Install operating system dependencies
 RUN apt-get -y update \
-        && apt-get -y install gdal-bin \
+        && apt-get -y install gdal-bin libpq-dev python-dev gcc \
         && apt-get -y clean
 
 # Install Python dependencies
@@ -14,10 +14,3 @@ RUN pip --no-cache-dir install -r requirements.txt
 
 # Install application code
 COPY . .
-
-FROM app AS tests
-
-RUN pip --no-cache-dir install tox
-ENV DB_HOST=buildpostgres.lco.gtn
-ENV DB_HOST_READER=buildpostgres.lco.gtn
-CMD [ "python", "-c", "import tox; tox.cmdline();", "-c", "tox.ini", "--recreate" ]

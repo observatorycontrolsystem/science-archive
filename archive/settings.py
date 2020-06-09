@@ -43,7 +43,6 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'django_filters',
     'corsheaders',
-    'django_nose',
     'crispy_forms',
     'django_extensions',
     'archive.frames',
@@ -188,8 +187,6 @@ STATIC_URL = '/static/'
 
 MEDIA_ROOT = '/media/'
 MEDIA_URL = '/media/'
-
-TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
 BUCKET = os.getenv('AWS_BUCKET', 'lcogtarchivetest')
 NEW_BUCKET = os.getenv('NEW_AWS_BUCKET', 'newlcogtarchivetest')

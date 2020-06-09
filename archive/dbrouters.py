@@ -41,7 +41,7 @@ class DBClusterRouter:
 
     def allow_relation(self, obj1, obj2, **hints):
         """
-        Allow relations between objects for both databases since 
+        Allow relations between objects for both databases since
         they are replica and writer endpoints pointing at the same data.
         """
         db_list = ('default', 'replica')
