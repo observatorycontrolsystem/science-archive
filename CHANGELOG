@@ -1,3 +1,7 @@
+1.72
+2020-06-09
+Use TravisCI to run tests and build the docker image on tag
+
 1.71
 2020-06-01
 Add license file
