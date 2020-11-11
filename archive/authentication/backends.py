@@ -15,17 +15,17 @@ class OAuth2Backend(object):
         if username == 'eng':
             return None  # disable eng account
         response = requests.post(
-            settings.ODIN_OAUTH_CLIENT['TOKEN_URL'],
+            settings.OAUTH_CLIENT['TOKEN_URL'],
             data={
                 'grant_type': 'password',
                 'username': username,
                 'password': password,
-                'client_id': settings.ODIN_OAUTH_CLIENT['CLIENT_ID'],
-                'client_secret': settings.ODIN_OAUTH_CLIENT['CLIENT_SECRET']
+                'client_id': settings.OAUTH_CLIENT['CLIENT_ID'],
+                'client_secret': settings.OAUTH_CLIENT['CLIENT_SECRET']
             }
         )
         if response.status_code == 200:
-            user, created = User.objects.get_or_create(username=username)
+            user, _ = User.objects.get_or_create(username=username)
             Profile.objects.update_or_create(
                 user=user,
                 defaults={
@@ -55,14 +55,14 @@ class BearerAuthentication(authentication.BaseAuthentication):
 
         bearer = auth_header.split('Bearer')[1].strip()
         response = requests.get(
-            settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
+            settings.OAUTH_CLIENT['PROFILE_URL'],
             headers={'Authorization': 'Bearer {}'.format(bearer)}
         )
 
         if not response.status_code == 200:
             raise exceptions.AuthenticationFailed('No Such User')
 
-        user, created = User.objects.get_or_create(username=response.json()['email'])
+        user, _ = User.objects.get_or_create(username=response.json()['email'])
         Profile.objects.update_or_create(
             user=user,
             defaults={

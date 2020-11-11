@@ -180,7 +180,10 @@ class FrameViewSet(viewsets.ModelViewSet):
 class VersionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (IsAdminUser,)
     serializer_class = VersionSerializer
-    queryset = Version.objects.all()
+    # Always use the default (writer) database instead of the reader to get the most up-to-date
+    # data, as the available endpoint on this admin viewset is used to check whether a version
+    # already exists before attempting to ingest a new version.
+    queryset = Version.objects.using('default').all()
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('md5',)
 

@@ -1,0 +1,9 @@
+[run]
+source = archive
+
+[report]
+omit =
+    */migrations/*
+    *wsgi.py
+    *apps.py
+

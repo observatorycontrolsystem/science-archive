@@ -1,4 +1,4 @@
-from django.test import TestCase
+from archive.test_helpers import ReplicationTestCase
 from unittest.mock import patch
 from archive.authentication.models import Profile
 from django.contrib.auth.models import User
@@ -8,7 +8,7 @@ import json
 import responses
 
 
-class TestUserView(TestCase):
+class TestUserView(ReplicationTestCase):
     @patch('requests.get')
     @patch('requests.post')
     def setUp(self, post_mock, get_mock):
@@ -20,7 +20,7 @@ class TestUserView(TestCase):
     def test_user_view(self):
         responses.add(
             responses.GET,
-            settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
+            settings.OAUTH_CLIENT['PROFILE_URL'],
             body=json.dumps({'proposals': [{'id': 'TestProposal'}]}),
             status=200,
             content_type='application/json'
