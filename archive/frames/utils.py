@@ -63,7 +63,6 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
 
     @return: text document in NGINX mod_zip format
     '''
-
     client = get_s3_client()
     ret = []
 
