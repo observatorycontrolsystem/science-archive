@@ -1,3 +1,7 @@
+1.73
+2020-11-17
+Allow DOMEFLAT as OBSTYPE and allow blank/empty string for FILTER
+
 1.72
 2020-06-09
 Use TravisCI to run tests and build the docker image on tag
