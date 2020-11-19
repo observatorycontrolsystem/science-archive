@@ -1,5 +1,6 @@
 from archive.frames.tests.factories import FrameFactory, VersionFactory, PublicFrameFactory
 from archive.frames.models import Frame
+from archive.frames.views import S3ViewSet
 from archive.authentication.models import Profile
 from django.contrib.auth.models import User
 from unittest.mock import MagicMock, patch
@@ -8,6 +9,7 @@ from django.urls import reverse
 from archive.test_helpers import ReplicationTestCase
 from django.conf import settings
 from django.contrib.gis.geos import Point
+from django.test import override_settings
 from pytz import UTC
 import boto3
 import responses
@@ -384,6 +386,19 @@ class TestZipDownload(ReplicationTestCase):
         self.assertNotContains(response, self.proposal_frame.basename)
         self.assertNotContains(response, self.not_owned.basename)
 
+    def test_public_download_uncompressed(self):
+        # self.public_frame.basename = self.public_frame.basename + '.fits.fz'
+        # self.public_frame.save()
+        # response = self.client.post(
+        #     reverse('frame-zip'),
+        #     data=json.dumps({'frame_ids': [self.public_frame.id], 'uncompress': 'true'}),
+        #     content_type='application/json'
+        # )
+        # self.assertContains(response, self.public_frame.basename)
+        # self.assertNotContains(response, self.proposal_frame.basename)
+        # self.assertNotContains(response, self.not_owned.basename)
+        pass
+
     @responses.activate
     def test_proposal_download(self):
         responses.add(
@@ -410,6 +425,35 @@ class TestZipDownload(ReplicationTestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, 404)
+
+
+class TestS3ViewSet(ReplicationTestCase):
+    def download_fileobj_side_effect(self, *args, **kwargs):
+        print(args)
+        print(kwargs)
+        kwargs['fileobj'] = b'test_value'
+
+    def setUp(self):
+        boto3.client = MagicMock()
+        boto3.client.download_fileobj.side_effect = self.download_fileobj_side_effect
+        self.frame = FrameFactory(DAY_OBS=datetime.datetime(2020, 11, 18, tzinfo=UTC))
+
+    @override_settings(BUCKET='test_bucket_name')
+    def test_get_s3_information(self):
+        bucket, s3_key, client = S3ViewSet.get_s3_information(self.frame.version_set.first().id)
+        self.assertEqual(bucket, 'test_bucket_name')
+        self.assertIn(self.frame.basename, s3_key)
+        self.assertIsNotNone(bucket)
+
+    def test_native_download(self):
+        response = self.client.get(reverse('s3-download-native', kwargs={'pk': self.frame.version_set.first().id}))
+        print(response)
+
+    @patch('archive.frames.views.subprocess')
+    def test_funpack_download(self, mock_subprocess):
+        response = self.client.get(reverse('s3-download-funpack', kwargs={'pk': self.frame.version_set.first().id}))
+        mock_subprocess.run.assert_called_with(['/usr/bin/funpack', '-C', '-S', '-'], input=b'', stdout=mock_subprocess.PIPE)
+        print(response)
 
 
 class TestFrameAggregate(ReplicationTestCase):

@@ -111,12 +111,15 @@ class FrameViewSet(viewsets.ModelViewSet):
     @xframe_options_exempt
     @list_route(methods=['post'], permission_classes=[AllowAny])
     def zip(self, request):
+        logger.info(msg='Reached zip endpoint')
         if request.data.get('auth_token'):  # Needed for hacky ajax file download nonsense
             token = get_object_or_404(Token, key=request.data['auth_token'])
             request.user = token.user
         serializer = ZipSerializer(data=request.data)
         if serializer.is_valid():
+            logger.info(msg=f'Serializer data: {serializer.data}')
             frames = self.get_queryset().filter(pk__in=serializer.data['frame_ids'])
+            logger.info(msg=f'Frames: {frames}')
             if not frames.exists():
                 return Response(status=status.HTTP_404_NOT_FOUND)
             filename = 'lcogtdata-{0}-{1}'.format(
@@ -207,7 +210,9 @@ class S3ViewSet(viewsets.ViewSet):
         automatically send FITS files to the client without needing a special
         NGINX proxy configuration for interacting with AWS S3.
         '''
+        print('native')
         bucket, s3_key, client = self.get_s3_information(pk)
+        logger.info(msg='Downloading file via native endpoint')
 
         with io.BytesIO() as fileobj:
             # download from AWS S3 into an in-memory object
@@ -227,6 +232,7 @@ class S3ViewSet(viewsets.ViewSet):
         themselves.
         '''
         bucket, s3_key, client = self.get_s3_information(pk)
+        logger.info(msg='Downloading file via funpack endpoint')
 
         with io.BytesIO() as fileobj:
             # download from AWS S3 into an in-memory object
