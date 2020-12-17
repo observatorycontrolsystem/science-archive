@@ -3,7 +3,6 @@ from django.utils.functional import cached_property
 from django.contrib.postgres.fields import JSONField
 import hashlib
 import logging
-from datetime import timedelta
 from django.conf import settings
 from django.contrib.gis.db import models
 
@@ -23,6 +22,7 @@ class Frame(models.Model):
         ('SPECTRUM', 'SPECTRUM'),
         ('ARC', 'ARC'),
         ('LAMPFLAT', 'LAMPFLAT'),
+        ('DOMEFLAT', 'DOMEFLAT'),
         ('CATALOG', 'CATALOG'),
         ('BPM', 'BPM'),
         ('TARGET', 'TARGET'),
@@ -85,6 +85,7 @@ class Frame(models.Model):
     )
     FILTER = models.CharField(
         default='',
+        blank=True,
         max_length=100,
         help_text="Filter used. FITS header: FILTER"
     )

@@ -1,5 +1,5 @@
-Django>=2.0,<2.1
-psycopg2>=2.7,<2.8
+Django>=2.2.10,<2.3
+psycopg2>=2.8,<2.9
 djangorestframework>=3.9.4,<3.10
 django-filter>=2.0,<2.1
 boto3>=1.7,<1.8
@@ -13,7 +13,6 @@ kombu>=4.6,<4.7
 responses
 factory_boy
 flake8
-django-nose
 pytz
 lcogt-logging
 django-extensions

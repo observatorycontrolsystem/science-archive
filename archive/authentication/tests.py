@@ -3,12 +3,12 @@ from django.conf import settings
 from unittest.mock import patch
 from archive.authentication.models import Profile
 from archive.frames.tests.factories import FrameFactory
+from archive.test_helpers import ReplicationTestCase
 import responses
-from django.test import TestCase
 import json
 
 
-class TestAuthentication(TestCase):
+class TestAuthentication(ReplicationTestCase):
     @patch('requests.get')
     @patch('requests.post')
     def setUp(self, post_mock, get_mock):
@@ -27,7 +27,7 @@ class TestAuthentication(TestCase):
     def test_oauth_backend_success(self):
         responses.add(
             responses.POST,
-            settings.ODIN_OAUTH_CLIENT['TOKEN_URL'],
+            settings.OAUTH_CLIENT['TOKEN_URL'],
             body=json.dumps({'access_token': 'test_access', 'refresh_token': 'test_refresh'}),
             status=200,
             content_type='application/json'
@@ -46,7 +46,7 @@ class TestAuthentication(TestCase):
     def test_oauth_backend_failure(self):
         responses.add(
             responses.POST,
-            settings.ODIN_OAUTH_CLIENT['TOKEN_URL'],
+            settings.OAUTH_CLIENT['TOKEN_URL'],
             body=json.dumps({'non_field_errors': 'Unable to log in with provided credentials'}),
             status=400,
             content_type='application/json'
@@ -58,7 +58,7 @@ class TestAuthentication(TestCase):
     def test_proposals(self):
         responses.add(
             responses.GET,
-            settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
+            settings.OAUTH_CLIENT['PROFILE_URL'],
             body=json.dumps({'proposals': [{'id': 'TestProposal'}]}),
             status=200,
             content_type='application/json'
@@ -69,7 +69,7 @@ class TestAuthentication(TestCase):
     def test_proposals_bad_token(self):
         responses.add(
             responses.GET,
-            settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
+            settings.OAUTH_CLIENT['PROFILE_URL'],
             body=json.dumps({'error': 'Bad credentials'}),
             status=401,
             content_type='application/json'

@@ -21,7 +21,7 @@ class UserView(RetrieveAPIView):
 class ObtainAuthTokenWithHeaders(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
         if request.user.is_authenticated:
-            token, created = Token.objects.get_or_create(user=request.user)
+            token, _ = Token.objects.get_or_create(user=request.user)
             return Response({'token': token.key})
         else:
             return super().post(request, *args, **kwargs)

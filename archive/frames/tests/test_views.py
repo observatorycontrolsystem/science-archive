@@ -3,8 +3,9 @@ from archive.frames.models import Frame
 from archive.authentication.models import Profile
 from django.contrib.auth.models import User
 from unittest.mock import MagicMock, patch
+from django.utils import timezone
 from django.urls import reverse
-from django.test import TestCase
+from archive.test_helpers import ReplicationTestCase
 from django.conf import settings
 from django.contrib.gis.geos import Point
 from pytz import UTC
@@ -16,7 +17,7 @@ import os
 import random
 
 
-class TestFrameGet(TestCase):
+class TestFrameGet(ReplicationTestCase):
     def setUp(self):
         user = User.objects.create(username='admin', password='admin', is_superuser=True)
         user.backend = settings.AUTHENTICATION_BACKENDS[0]
@@ -53,7 +54,7 @@ class TestFrameGet(TestCase):
         self.assertContains(response, frame.headers.data['TRACKNUM'])
 
 
-class TestFramePost(TestCase):
+class TestFramePost(ReplicationTestCase):
     def setUp(self):
         user = User.objects.create(username='admin', password='admin', is_superuser=True)
         user.backend = settings.AUTHENTICATION_BACKENDS[0]
@@ -201,7 +202,7 @@ class TestFramePost(TestCase):
         self.assertEqual(response.status_code, 400)
 
 
-class TestFrameFiltering(TestCase):
+class TestFrameFiltering(ReplicationTestCase):
     def setUp(self):
         boto3.client = MagicMock()
         self.admin_user = User.objects.create_superuser(username='admin', email='a@a.com', password='password')
@@ -224,7 +225,7 @@ class TestFrameFiltering(TestCase):
     def test_proposal_user(self):
         responses.add(
             responses.GET,
-            settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
+            settings.OAUTH_CLIENT['PROFILE_URL'],
             body=json.dumps({'proposals': [{'id': 'prop1'}]}),
             status=200,
             content_type='application/json'
@@ -242,7 +243,7 @@ class TestFrameFiltering(TestCase):
         self.assertNotContains(response, self.not_owned.basename)
 
 
-class TestQueryFiltering(TestCase):
+class TestQueryFiltering(ReplicationTestCase):
     def setUp(self):
         boto3.client = MagicMock()
 
@@ -287,7 +288,7 @@ class TestQueryFiltering(TestCase):
         user.backend = settings.AUTHENTICATION_BACKENDS[0]
         responses.add(
             responses.GET,
-            settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
+            settings.OAUTH_CLIENT['PROFILE_URL'],
             body=json.dumps({'proposals': [{'id': 'prop1'}]}),
             status=200,
             content_type='application/json'
@@ -352,7 +353,7 @@ class TestQueryFiltering(TestCase):
         self.assertNotContains(response, frame.basename)
 
 
-class TestZipDownload(TestCase):
+class TestZipDownload(ReplicationTestCase):
     def setUp(self):
         boto3.client = MagicMock()
         self.normal_user = User.objects.create(username='frodo', password='theone')
@@ -376,7 +377,7 @@ class TestZipDownload(TestCase):
     def test_proposal_download(self):
         responses.add(
             responses.GET,
-            settings.ODIN_OAUTH_CLIENT['PROFILE_URL'],
+            settings.OAUTH_CLIENT['PROFILE_URL'],
             body=json.dumps({'proposals': [{'id': 'prop1'}]}),
             status=200,
             content_type='application/json'
@@ -400,12 +401,17 @@ class TestZipDownload(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
-class TestFrameAggregate(TestCase):
+class TestFrameAggregate(ReplicationTestCase):
     def setUp(self):
         boto3.client = MagicMock()
-        FrameFactory.create(OBSTYPE='EXPOSE', TELID='1m0a', SITEID='bpl', INSTRUME='kb46')
-        FrameFactory.create(OBSTYPE='BIAS', TELID='0m4a', SITEID='coj', INSTRUME='en05')
-        FrameFactory.create(OBSTYPE='SKYFLAT', TELID='2m0b', SITEID='ogg', INSTRUME='fl10')
+        is_public_date = timezone.now() - datetime.timedelta(days=7)
+        is_not_public_date = timezone.now() + datetime.timedelta(days=7)
+        FrameFactory.create(OBSTYPE='EXPOSE', TELID='1m0a', SITEID='bpl', INSTRUME='kb46', PROPID='prop1', FILTER='rp',
+                            L1PUBDAT=is_public_date)
+        FrameFactory.create(OBSTYPE='BIAS', TELID='0m4a', SITEID='coj', INSTRUME='en05', PROPID='prop2', FILTER='V',
+                            L1PUBDAT=is_not_public_date)
+        FrameFactory.create(OBSTYPE='SKYFLAT', TELID='2m0b', SITEID='ogg', INSTRUME='fl10', PROPID='prop3', FILTER='B',
+                            L1PUBDAT=is_public_date)
 
     def test_frame_aggregate(self):
         response = self.client.get(reverse('frame-aggregate'))
@@ -413,6 +419,8 @@ class TestFrameAggregate(TestCase):
         self.assertEqual(set(response.json()['telescopes']), set(['1m0a', '0m4a', '2m0b']))
         self.assertEqual(set(response.json()['sites']), set(['bpl', 'coj', 'ogg']))
         self.assertEqual(set(response.json()['instruments']), set(['kb46', 'en05', 'fl10']))
+        self.assertEqual(set(response.json()['filters']), set(['rp', 'V', 'B']))
+        self.assertEqual(set(response.json()['proposals']), set(['prop1', 'prop3']))
 
     def test_frame_aggregate_filtered(self):
         response = self.client.get(reverse('frame-aggregate') + '?SITEID=ogg')
@@ -420,3 +428,28 @@ class TestFrameAggregate(TestCase):
         self.assertEqual(set(response.json()['telescopes']), set(['2m0b']))
         self.assertEqual(set(response.json()['sites']), set(['ogg']))
         self.assertEqual(set(response.json()['instruments']), set(['fl10']))
+        self.assertEqual(set(response.json()['filters']), set(['B']))
+        self.assertEqual(set(response.json()['proposals']), set(['prop3']))
+
+    def test_frame_aggregate_single_field(self):
+        response = self.client.get(reverse('frame-aggregate') + '?aggregate_field=SITEID')
+        self.assertEqual(set(response.json()['obstypes']), set([]))
+        self.assertEqual(set(response.json()['telescopes']), set([]))
+        self.assertEqual(set(response.json()['sites']), set(['bpl', 'coj', 'ogg']))
+        self.assertEqual(set(response.json()['instruments']), set([]))
+        self.assertEqual(set(response.json()['filters']), set([]))
+        self.assertEqual(set(response.json()['proposals']), set([]))
+
+    def test_frame_aggregate_single_field_filtered(self):
+        response = self.client.get(reverse('frame-aggregate') + '?INSTRUME=en05&aggregate_field=FILTER')
+        self.assertEqual(set(response.json()['obstypes']), set([]))
+        self.assertEqual(set(response.json()['telescopes']), set([]))
+        self.assertEqual(set(response.json()['sites']), set([]))
+        self.assertEqual(set(response.json()['instruments']), set([]))
+        self.assertEqual(set(response.json()['filters']), set(['V']))
+        self.assertEqual(set(response.json()['proposals']), set([]))
+
+    def test_frame_invalid_aggregate_field(self):
+        response = self.client.get(reverse('frame-aggregate') + '?INSTRUME=en05&aggregate_field=iaminvalid')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Invalid aggregate_field', str(response.content))
