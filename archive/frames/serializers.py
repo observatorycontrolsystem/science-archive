@@ -16,7 +16,7 @@ class VersionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Version
-        fields = ('id', 'created', 'key', 'md5', 'extension', 'url', 'migrated')
+        fields = ('id', 'created', 'key', 'md5', 'extension', 'url')
 
 
 class HeadersSerializer(serializers.ModelSerializer):

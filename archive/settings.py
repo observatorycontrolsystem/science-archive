@@ -189,7 +189,6 @@ MEDIA_ROOT = '/media/'
 MEDIA_URL = '/media/'
 
 BUCKET = os.getenv('AWS_BUCKET', 'lcogtarchivetest')
-NEW_BUCKET = os.getenv('NEW_AWS_BUCKET', 'newlcogtarchivetest')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
