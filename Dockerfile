@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Install operating system dependencies
 RUN apt-get -y update \
-        && apt-get -y install gdal-bin libpq-dev python-dev gcc \
+        && apt-get -y install gdal-bin libpq-dev python-dev gcc make \
         && apt-get -y clean
 
 # Install Python dependencies

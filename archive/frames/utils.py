@@ -66,7 +66,7 @@ def build_nginx_zip_text(frames, directory):
         # ZIP file must be loaded from an internal NGINX location. Replace the leading
         # portion of the generated URL with an internal NGINX location which proxies all
         # traffic to AWS S3.
-        location = url.replace('https://archive-lco-global.s3.amazonaws.com', '/s3')
+        location = url.replace(f"https://{settings.BUCKET}.s3.amazonaws.com", '/s3')
         # The NGINX mod_zip module builds ZIP files using a manifest. Build the manifest
         # line for this frame.
         line = '- {size} {location} {directory}/{basename}{extension}\n'.format(
