@@ -47,7 +47,8 @@ jobs:
       env:
         DB_USER: postgres
         DB_PASS: postgres
-        DB_HOST: localhost
+        DB_HOST: 127.0.0.1
+        DB_HOST_READER: 127.0.0.1
         DB_PORT: 5432
     - name: Generate and send coveralls report
       run: coveralls --service=github
