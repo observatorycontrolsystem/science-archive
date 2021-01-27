@@ -41,7 +41,7 @@ jobs:
         pip install -U coverage coveralls
         pip install -r requirements.txt
     - name: Run tests
-      run: coverage run manage.py test --settings=test_settings
+      run: coverage run manage.py test
       env:
         DB_USER: postgres
         DB_PASS: postgres
