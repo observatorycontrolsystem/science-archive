@@ -17,7 +17,7 @@ def get_tuple_from_environment(variable_name, default):
 # spectrograph autoguider is added to our network!!!
 GUIDE_CAMERAS_TO_PERSIST = get_tuple_from_environment(
     'GUIDE_CAMERAS_TO_PERSIST',
-    'kb42,kb38,ak01,ak02,ak03,ak04,ak05,ak06,ak07,ak08,ak09,ak10,ak11,ak12'
+    ''
 )
 DELETE_BATCH = 1000
 

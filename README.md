@@ -1,6 +1,6 @@
 # Science Archive
 
-[![Build Status](https://travis-ci.com/observatorycontrolsystem/science-archive.svg?branch=master)](https://travis-ci.com/observatorycontrolsystem/science-archive)
+![Build](https://github.com/observatorycontrolsystem/science-archive/workflows/Build/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/observatorycontrolsystem/science-archive/badge.svg)](https://coveralls.io/github/observatorycontrolsystem/science-archive)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/3ebd5b7fcff845c980f6f6a8bb4f7ab9)](https://www.codacy.com/gh/observatorycontrolsystem/science-archive?utm_source=github.com&utm_medium=referral&utm_content=observatorycontrolsystem/science-archive&utm_campaign=Badge_Grade)
 
@@ -43,6 +43,7 @@ This project is configured using environment variables.
 | Post-processing | `PROCESSED_EXCHANGE_ENABLED` | Enable post-processing. When `True`, details of a newly ingested image are sent to a RabbitMQ exchange. This is useful for e.g. data pipelines that need to know whenever there is a new image available. Set to `False` to disable. | `True`                          |
 |                 | `QUEUE_BROKER_URL`           | RabbitMQ Broker                                                                                                                                                                                                                      | `memory://localhost`            |
 |                 | `PROCESSED_EXCHANGE_NAME`    | Archived FITS exchange name                                                                                                                                                                                                          | `archived_fits`                 |
+| Expire Guide Frames         | `GUIDE_CAMERAS_TO_PERSIST`                 | comma delimited list of guide camera names to exclude from expiring after 1 year                                                                                                                                                                                                                     | _empty string_               |
 | Oauth           | `OAUTH_CLIENT_ID`            | Oauth client ID                                                                                                                                                                                                                      | _empty string_                  |
 |                 | `OAUTH_CLIENT_SECRET`        | Oauth client secret                                                                                                                                                                                                                  | _empty string_                  |
 |                 | `OAUTH_TOKEN_URL`            | Observation portal Oauth token URL                                                                                                                                                                                                   | `http://localhost/o/token/`     |

@@ -1,3 +1,7 @@
+1.74
+2021-01-07
+Remove the migrated field and stuff related to migration
+
 1.73
 2020-11-17
 Allow DOMEFLAT as OBSTYPE and allow blank/empty string for FILTER

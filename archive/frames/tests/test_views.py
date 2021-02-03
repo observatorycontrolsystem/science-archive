@@ -188,18 +188,7 @@ class TestFramePost(ReplicationTestCase):
         response = self.client.get(reverse('frame-detail', args=(response.json()['id'],)))
         self.assertIsNone(response.json()['REQNUM'])
 
-    def test_post_version_with_migrated(self):
-        frame_payload = self.single_frame_payload
-        frame_payload['version_set'][0]['migrated'] = True
-        response = self.client.post(
-            reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
-        )
-        self.assertEqual(response.status_code, 201)
-        frame = Frame.objects.get(pk=response.json()['id'])
-        self.assertTrue(frame.version_set.first().migrated)
 
-        response = self.client.get(reverse('frame-detail', args=(response.json()['id'],)))
-        self.assertTrue(response.json()['version_set'][0]['migrated'])
 
     def test_post_duplicate_data(self):
         frame = FrameFactory()
@@ -386,18 +375,24 @@ class TestZipDownload(ReplicationTestCase):
         self.assertNotContains(response, self.proposal_frame.basename)
         self.assertNotContains(response, self.not_owned.basename)
 
-    def test_public_download_uncompressed(self):
-        # self.public_frame.basename = self.public_frame.basename + '.fits.fz'
-        # self.public_frame.save()
-        # response = self.client.post(
-        #     reverse('frame-zip'),
-        #     data=json.dumps({'frame_ids': [self.public_frame.id], 'uncompress': 'true'}),
-        #     content_type='application/json'
-        # )
-        # self.assertContains(response, self.public_frame.basename)
-        # self.assertNotContains(response, self.proposal_frame.basename)
-        # self.assertNotContains(response, self.not_owned.basename)
-        pass
+    @patch('archive.frames.utils.subprocess')
+    def test_public_download_uncompressed(self, mock_subprocess):
+        mock_proc = MagicMock()
+        mock_proc.stdout = b'test_value'
+        mock_subprocess.run.return_value = mock_proc
+        version = self.public_frame.version_set.first()
+        version.extension = 'fits.fz'
+        version.save()
+
+        response = self.client.post(
+            reverse('frame-zip'),
+            data=json.dumps({'frame_ids': [self.public_frame.id], 'uncompress': 'true'}),
+            content_type='application/json'
+        )
+
+        self.assertContains(response, self.public_frame.basename)
+        self.assertNotContains(response, self.proposal_frame.basename)
+        self.assertNotContains(response, self.not_owned.basename)
 
     @responses.activate
     def test_proposal_download(self):
@@ -428,32 +423,30 @@ class TestZipDownload(ReplicationTestCase):
 
 
 class TestS3ViewSet(ReplicationTestCase):
-    def download_fileobj_side_effect(self, *args, **kwargs):
-        print(args)
-        print(kwargs)
-        kwargs['fileobj'] = b'test_value'
+    def download_fileobj_side_effect(self, *args, Fileobj=None, **kwargs):
+        Fileobj.write(b'test_value')
 
     def setUp(self):
-        boto3.client = MagicMock()
-        boto3.client.download_fileobj.side_effect = self.download_fileobj_side_effect
+        m = MagicMock()
+        m.download_fileobj.side_effect = self.download_fileobj_side_effect
+        boto3.client = MagicMock(return_value=m)
         self.frame = FrameFactory(DAY_OBS=datetime.datetime(2020, 11, 18, tzinfo=UTC))
-
-    @override_settings(BUCKET='test_bucket_name')
-    def test_get_s3_information(self):
-        bucket, s3_key, client = S3ViewSet.get_s3_information(self.frame.version_set.first().id)
-        self.assertEqual(bucket, 'test_bucket_name')
-        self.assertIn(self.frame.basename, s3_key)
-        self.assertIsNotNone(bucket)
 
     def test_native_download(self):
         response = self.client.get(reverse('s3-download-native', kwargs={'pk': self.frame.version_set.first().id}))
-        print(response)
+        print(response.content)
+        self.assertContains(response, b'test_value')
 
     @patch('archive.frames.views.subprocess')
     def test_funpack_download(self, mock_subprocess):
+        mock_proc = MagicMock()
+        mock_proc.stdout = b'test_value'
+        mock_subprocess.run.return_value = mock_proc
+        print(mock_subprocess.run)
         response = self.client.get(reverse('s3-download-funpack', kwargs={'pk': self.frame.version_set.first().id}))
-        mock_subprocess.run.assert_called_with(['/usr/bin/funpack', '-C', '-S', '-'], input=b'', stdout=mock_subprocess.PIPE)
-        print(response)
+        mock_subprocess.run.assert_called_with(['/usr/bin/funpack', '-C', '-S', '-'], input=b'test_value', stdout=mock_subprocess.PIPE)
+        print(response.content)
+        self.assertContains(response, b'test_value')
 
 
 class TestFrameAggregate(ReplicationTestCase):

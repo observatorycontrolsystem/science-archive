@@ -14,6 +14,7 @@ from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework import status, filters, viewsets
 from rest_framework.authtoken.models import Token
 from django_filters.rest_framework import DjangoFilterBackend
+from django.conf import settings
 from django.http import HttpResponse
 from django.db.models import Q, Prefetch
 from django.views.decorators.clickjacking import xframe_options_exempt
@@ -193,14 +194,6 @@ class VersionViewSet(viewsets.ReadOnlyModelViewSet):
 
 class S3ViewSet(viewsets.ViewSet):
 
-    @staticmethod
-    def get_s3_information(version_id):
-        version = get_object_or_404(Version, pk=version_id)
-        bucket, s3_key = version.get_bucket_and_s3_key()
-        client = get_s3_client()
-
-        return bucket, s3_key, client
-
     @detail_route()
     def native(self, request, pk=None):
         '''
@@ -210,13 +203,16 @@ class S3ViewSet(viewsets.ViewSet):
         automatically send FITS files to the client without needing a special
         NGINX proxy configuration for interacting with AWS S3.
         '''
-        print('native')
-        bucket, s3_key, client = self.get_s3_information(pk)
         logger.info(msg='Downloading file via native endpoint')
+
+        version = get_object_or_404(Version, pk=pk)
+        client = get_s3_client()
 
         with io.BytesIO() as fileobj:
             # download from AWS S3 into an in-memory object
-            response = client.download_fileobj(Bucket=bucket, Key=s3_key, Fileobj=fileobj)
+            response = client.download_fileobj(Bucket=version.data_params['Bucket'],
+                                               Key=version.data_params['Key'],
+                                               Fileobj=fileobj)
             fileobj.seek(0)
 
             # return it to the client
@@ -231,18 +227,24 @@ class S3ViewSet(viewsets.ViewSet):
         automatically uncompress FITS files for clients that cannot do it
         themselves.
         '''
-        bucket, s3_key, client = self.get_s3_information(pk)
         logger.info(msg='Downloading file via funpack endpoint')
+
+        version = get_object_or_404(Version, pk=pk)
+        client = get_s3_client()
 
         with io.BytesIO() as fileobj:
             # download from AWS S3 into an in-memory object
-            response = client.download_fileobj(Bucket=bucket, Key=s3_key, Fileobj=fileobj)
+            response = client.download_fileobj(Bucket=version.data_params['Bucket'],
+                                               Key=version.data_params['Key'],
+                                               Fileobj=fileobj)
             fileobj.seek(0)
 
             # FITS unpack
             cmd = ['/usr/bin/funpack', '-C', '-S', '-', ]
             proc = subprocess.run(cmd, input=fileobj.getvalue(), stdout=subprocess.PIPE)
             proc.check_returncode()
+
+            print(f'proc.stdout: {proc.stdout}')
 
             # return it to the client
             return HttpResponse(bytes(proc.stdout), content_type='application/octet-stream')

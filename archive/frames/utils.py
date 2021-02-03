@@ -77,42 +77,61 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
         logger.info(msg=f'frame {frame}')
         # retrieve the database record for the Version we will fetch
         version = frame.version_set.first()
-        # default location (return files as-is from AWS S3 Bucket)
-        location = '/s3-download/{}/native/'.format(version.id)
+
+        params = {
+            'Key': version.s3_daydir_key,
+            'Bucket': settings.BUCKET,
+        }
+
+        # Generate a presigned AWS S3 V4 URL which expires in 86400 seconds (1 day)
+        url = client.generate_presigned_url('get_object', Params=params, ExpiresIn=86400)
+
         extension = version.extension
         size = version.size
         # if the user requested that we uncompress the files, then redirect .fits.fz
         # files through our transparent funpacker
         logger.info(msg=f'Checking the extension {extension} for version {version}')
-        if uncompress and extension == '.fits.fz':
+        print(extension)
+        if uncompress and extension == 'fits.fz':
             logger.info(msg='Building manifest for compressed fits file')
-            location = '/s3-download/{}/funpack/'.format(version.id)
+            # The NGINX mod_zip module requires that the files which are used to build the
+            # ZIP file must be loaded from an internal NGINX location. Replace the leading
+            # portion of the generated URL with an internal NGINX location which proxies all
+            # traffic to AWS S3.
+            # funpack location (return decompressed files from AWS S3 Bucket)
+            print(settings.BUCKET)
+            print(url)
+            location = url.replace(f'https://{settings.BUCKET}.s3.amazonaws.com', f'/s3-download/{version.id}/funpack/')
+            print(location)
             extension = '.fits'
 
             # In order to build the manifest for mod_zip, we need to get the uncompressed file size. This is
             # inefficient, but simple.
-            bucket, s3_key = version.get_bucket_and_s3_key()
-            client = get_s3_client()
+            # bucket, s3_key = version.get_bucket_and_s3_key()
 
             with io.BytesIO() as fileobj:
                 # download from AWS S3 into an in-memory object
-                client.download_fileobj(Bucket=bucket, Key=s3_key, Fileobj=fileobj)
+                client.download_fileobj(Bucket=version.data_params['Bucket'],
+                                        Key=version.data_params['Key'],
+                                        Fileobj=fileobj)
                 fileobj.seek(0)
 
                 cmd = ['/usr/bin/funpack', '-C', '-S', '-', ]
                 proc = subprocess.run(cmd, input=fileobj.getvalue(), stdout=subprocess.PIPE)
+                print(proc.stdout)
                 proc.check_returncode()
                 size = len(bytes(proc.stdout))
+        else:
+            # The NGINX mod_zip module requires that the files which are used to build the
+            # ZIP file must be loaded from an internal NGINX location. Replace the leading
+            # portion of the generated URL with an internal NGINX location which proxies all
+            # traffic to AWS S3.
+            # default location (return files as-is from AWS S3 Bucket)
+            location = url.replace(f'https://{settings.BUCKET}.s3.amazonaws.com', f'/s3-download/{version.id}/native/')
 
         # The NGINX mod_zip module builds ZIP files using a manifest. Build the manifest
         # line for this frame.
-        line = '- {size} {location} {directory}/{basename}{extension}\n'.format(
-            size=size,
-            location=location,
-            directory=directory,
-            basename=frame.basename,
-            extension=extension,
-        )
+        line = f'- {size} {location} {directory}/{frame.basename}{extension}\n'
         # Add to returned lines
         ret.append(line)
 
