@@ -381,7 +381,7 @@ class TestZipDownload(ReplicationTestCase):
         mock_proc.stdout = b'test_value'
         mock_subprocess.run.return_value = mock_proc
         version = self.public_frame.version_set.first()
-        version.extension = 'fits.fz'
+        version.extension = '.fits.fz'
         version.save()
 
         response = self.client.post(
@@ -429,22 +429,26 @@ class TestS3ViewSet(ReplicationTestCase):
     def setUp(self):
         m = MagicMock()
         m.download_fileobj.side_effect = self.download_fileobj_side_effect
-        boto3.client = MagicMock(return_value=m)
+        boto3.client = MagicMock(return_value=m)  # NOTE: is this causing a problem when mocked elsewhere?
         self.frame = FrameFactory(DAY_OBS=datetime.datetime(2020, 11, 18, tzinfo=UTC))
 
     def test_native_download(self):
+        """Test that native download endpoint returns correct file content."""
         response = self.client.get(reverse('s3-download-native', kwargs={'pk': self.frame.version_set.first().id}))
         print(response.content)
         self.assertContains(response, b'test_value')
 
     @patch('archive.frames.views.subprocess')
     def test_funpack_download(self, mock_subprocess):
+        """Test that funpack download endpoint returns correct file content and calls funpack."""
         mock_proc = MagicMock()
         mock_proc.stdout = b'test_value'
         mock_subprocess.run.return_value = mock_proc
         print(mock_subprocess.run)
         response = self.client.get(reverse('s3-download-funpack', kwargs={'pk': self.frame.version_set.first().id}))
-        mock_subprocess.run.assert_called_with(['/usr/bin/funpack', '-C', '-S', '-'], input=b'test_value', stdout=mock_subprocess.PIPE)
+        mock_subprocess.run.assert_called_with(
+            ['/usr/bin/funpack', '-C', '-S', '-'], input=b'test_value', stdout=mock_subprocess.PIPE
+        )
         print(response.content)
         self.assertContains(response, b'test_value')
 

@@ -244,7 +244,5 @@ class S3ViewSet(viewsets.ViewSet):
             proc = subprocess.run(cmd, input=fileobj.getvalue(), stdout=subprocess.PIPE)
             proc.check_returncode()
 
-            print(f'proc.stdout: {proc.stdout}')
-
             # return it to the client
             return HttpResponse(bytes(proc.stdout), content_type='application/octet-stream')
