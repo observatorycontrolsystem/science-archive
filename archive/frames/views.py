@@ -112,7 +112,6 @@ class FrameViewSet(viewsets.ModelViewSet):
     @xframe_options_exempt
     @list_route(methods=['post'], permission_classes=[AllowAny])
     def zip(self, request):
-        logger.info(msg='Reached zip endpoint')
         if request.data.get('auth_token'):  # Needed for hacky ajax file download nonsense
             token = get_object_or_404(Token, key=request.data['auth_token'])
             request.user = token.user
