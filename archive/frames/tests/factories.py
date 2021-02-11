@@ -41,10 +41,6 @@ EXTENSIONS = (
     'f00', 'd00', 'e00', 'e90', 'b00', 's00'
 )
 
-FORMATS = (
-    'fits', '.fits.fz'
-)
-
 OBSERVATION_TYPES = (
     'BIAS', 'DARK', 'EXPERIMENTAL', 'EXPOSE', 'SKYFLAT',
     'STANDARD', 'TRAILED', 'GUIDE', 'CATALOG',
@@ -134,7 +130,7 @@ class VersionFactory(factory.django.DjangoModelFactory):
     )
     key = factory.fuzzy.FuzzyText(length=32)
     md5 = factory.fuzzy.FuzzyText(length=32)
-    extension = factory.fuzzy.FuzzyChoice(FORMATS)
+    extension = factory.fuzzy.FuzzyText(length=7)
     frame = factory.SubFactory('archive.frames.tests.factories.FrameFactory')
 
 
