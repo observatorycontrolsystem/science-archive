@@ -1,3 +1,4 @@
+from archive.frames.exceptions import FunpackError
 from archive.frames.models import Frame, Version
 from archive.frames.serializers import (
     FrameSerializer, ZipSerializer, VersionSerializer, HeadersSerializer
@@ -118,9 +119,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             request.user = token.user
         serializer = ZipSerializer(data=request.data)
         if serializer.is_valid():
-            logger.info(msg=f'Serializer data: {serializer.data}')
             frames = self.get_queryset().filter(pk__in=serializer.data['frame_ids'])
-            logger.info(msg=f'Frames: {frames}')
             if not frames.exists():
                 return Response(status=status.HTTP_404_NOT_FOUND)
             filename = 'lcogtdata-{0}-{1}'.format(
@@ -241,8 +240,12 @@ class S3ViewSet(viewsets.ViewSet):
 
             # FITS unpack
             cmd = ['/usr/bin/funpack', '-C', '-S', '-', ]
-            proc = subprocess.run(cmd, input=fileobj.getvalue(), stdout=subprocess.PIPE)
-            proc.check_returncode()
+            try:
+                proc = subprocess.run(cmd, input=fileobj.getvalue(), stdout=subprocess.PIPE)
+                proc.check_returncode()
+            except subprocess.CalledProcessError as cpe:
+                logger.error(f'funpack failed with return code {cpe.returncode} and error {cpe.stderr}')
+                raise FunpackError
 
             # return it to the client
             return HttpResponse(bytes(proc.stdout), content_type='application/octet-stream')

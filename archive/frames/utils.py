@@ -8,6 +8,8 @@ from django.conf import settings
 from kombu.connection import Connection
 from kombu import Exchange
 
+from archive.frames.exceptions import FunpackError
+
 logger = logging.getLogger()
 
 
@@ -74,7 +76,6 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
     ret = []
 
     for frame in frames:
-        logger.info(msg=f'frame {frame}')
         # retrieve the database record for the Version we will fetch
         version = frame.version_set.first()
 
@@ -84,7 +85,7 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
         # files through our transparent funpacker
         logger.info(msg=f'Checking the extension {extension} for version {version}')
         if uncompress and extension == '.fits.fz':
-            logger.info(msg='Building manifest for compressed fits file')
+            logger.info(msg='Adding compressed fits file to manifest')
             # The NGINX mod_zip module requires that the files which are used to build the
             # ZIP file must be loaded from an internal NGINX location. Replace the leading
             # portion of the generated URL with an internal NGINX location which proxies all
@@ -104,9 +105,14 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
                 fileobj.seek(0)
 
                 cmd = ['/usr/bin/funpack', '-C', '-S', '-', ]
-                proc = subprocess.run(cmd, input=fileobj.getvalue(), stdout=subprocess.PIPE)
-                proc.check_returncode()
-                size = len(bytes(proc.stdout))
+                try:
+                    proc = subprocess.run(cmd, input=fileobj.getvalue(), stdout=subprocess.PIPE)
+                    proc.check_returncode()
+                    size = len(bytes(proc.stdout))
+                except subprocess.CalledProcessError as cpe:
+                    logger.error(f'funpack failed with return code {cpe.returncode} and error {cpe.stderr}')
+                    raise FunpackError
+
         else:
             # The NGINX mod_zip module requires that the files which are used to build the
             # ZIP file must be loaded from an internal NGINX location. Replace the leading
