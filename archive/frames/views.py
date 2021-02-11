@@ -15,7 +15,6 @@ from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework import status, filters, viewsets
 from rest_framework.authtoken.models import Token
 from django_filters.rest_framework import DjangoFilterBackend
-from django.conf import settings
 from django.http import HttpResponse
 from django.db.models import Q, Prefetch
 from django.views.decorators.clickjacking import xframe_options_exempt
@@ -202,6 +201,7 @@ class S3ViewSet(viewsets.ViewSet):
         automatically send FITS files to the client without needing a special
         NGINX proxy configuration for interacting with AWS S3.
         '''
+
         logger.info(msg='Downloading file via native endpoint')
 
         version = get_object_or_404(Version, pk=pk)
@@ -226,6 +226,7 @@ class S3ViewSet(viewsets.ViewSet):
         automatically uncompress FITS files for clients that cannot do it
         themselves.
         '''
+
         logger.info(msg='Downloading file via funpack endpoint')
 
         version = get_object_or_404(Version, pk=pk)

@@ -1,7 +1,5 @@
 from archive.frames.tests.factories import FrameFactory, VersionFactory, PublicFrameFactory
-from archive.frames.exceptions import FunpackError
 from archive.frames.models import Frame
-from archive.frames.views import S3ViewSet
 from archive.authentication.models import Profile
 from django.contrib.auth.models import User
 from unittest.mock import MagicMock, patch
@@ -10,7 +8,6 @@ from django.urls import reverse
 from archive.test_helpers import ReplicationTestCase
 from django.conf import settings
 from django.contrib.gis.geos import Point
-from django.test import override_settings
 from pytz import UTC
 from rest_framework import status
 import boto3

@@ -70,6 +70,7 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
 
     @return: text document in NGINX mod_zip format
     '''
+
     logger.info(msg=f'Building nginx zip text for frames {frames} with uncompress flag {uncompress}')
 
     client = get_s3_client()
