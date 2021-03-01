@@ -9,6 +9,7 @@ class ZipSerializer(serializers.Serializer):
     frame_ids = serializers.ListField(
         child=serializers.IntegerField(min_value=1)
     )
+    uncompress = serializers.BooleanField(default=False)
 
 
 class VersionSerializer(serializers.ModelSerializer):
