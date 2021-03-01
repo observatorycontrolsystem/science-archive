@@ -196,11 +196,11 @@ class S3ViewSet(viewsets.ViewSet):
         '''
         Download the given Version (one part of a Frame), and return the file
         exactly as it is stored in AWS S3 to the client.
+
         This is designed to be used by the Archive Client ZIP file support to
         automatically send FITS files to the client without needing a special
         NGINX proxy configuration for interacting with AWS S3.
         '''
-
         logger.info(msg='Downloading file via native endpoint')
 
         version = get_object_or_404(Version, pk=pk)
@@ -208,9 +208,9 @@ class S3ViewSet(viewsets.ViewSet):
 
         with io.BytesIO() as fileobj:
             # download from AWS S3 into an in-memory object
-            response = client.download_fileobj(Bucket=version.data_params['Bucket'],
-                                               Key=version.data_params['Key'],
-                                               Fileobj=fileobj)
+            client.download_fileobj(Bucket=version.data_params['Bucket'],
+                                    Key=version.data_params['Key'],
+                                    Fileobj=fileobj)
             fileobj.seek(0)
 
             # return it to the client
@@ -221,6 +221,7 @@ class S3ViewSet(viewsets.ViewSet):
         '''
         Download the given Version (one part of a Frame), run funpack on it, and
         return the uncompressed FITS file to the client.
+
         This is designed to be used by the Archive Client ZIP file support to
         automatically uncompress FITS files for clients that cannot do it
         themselves.
@@ -233,9 +234,9 @@ class S3ViewSet(viewsets.ViewSet):
 
         with io.BytesIO() as fileobj:
             # download from AWS S3 into an in-memory object
-            response = client.download_fileobj(Bucket=version.data_params['Bucket'],
-                                               Key=version.data_params['Key'],
-                                               Fileobj=fileobj)
+            client.download_fileobj(Bucket=version.data_params['Bucket'],
+                                    Key=version.data_params['Key'],
+                                    Fileobj=fileobj)
             fileobj.seek(0)
 
             # FITS unpack
