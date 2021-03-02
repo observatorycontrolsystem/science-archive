@@ -13,7 +13,7 @@ Optional prerequisites can be skipped for reduced functionality.
 
 -   Python >= 3.6
 -   PostgreSQL with the PostGIS extension installed
--   An AWS S3 bucket with read/write privileges
+-   An AWS S3 bucket with read/write privileges and versioning enabled
 -   System dependencies to install the [psycopg2](https://pypi.org/project/psycopg2/) package
 -   (Optional) RabbitMQ
 -   (Optional) Memcached
