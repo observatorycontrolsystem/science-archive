@@ -23,6 +23,3 @@ class Command(BaseCommand):
             Frame.objects.filter(DATE_OBS__lt=timezone.now() - timedelta(days=frame_expiry_days)).delete()
         else:
             Frame.objects.filter(DATE_OBS__lt=timezone.now() - timedelta(days=frame_expiry_days)).exclude(OBSTYPE='BPM').delete()
-
-
-
