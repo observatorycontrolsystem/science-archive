@@ -1,10 +1,11 @@
+from archive.frames.exceptions import FunpackError
 from archive.frames.models import Frame, Version
 from archive.frames.serializers import (
     FrameSerializer, ZipSerializer, VersionSerializer, HeadersSerializer
 )
 from archive.frames.utils import (
     remove_dashes_from_keys, fits_keywords_only, build_nginx_zip_text, post_to_archived_queue,
-    archived_queue_payload
+    archived_queue_payload, get_s3_client
 )
 from archive.frames.permissions import AdminOrReadOnly
 from archive.frames.filters import FrameFilter
@@ -23,8 +24,10 @@ from dateutil.parser import parse
 from django.utils import timezone
 from hashlib import blake2s
 from pytz import UTC
-import logging
+import subprocess
 import datetime
+import logging
+import io
 
 logger = logging.getLogger()
 
@@ -121,7 +124,7 @@ class FrameViewSet(viewsets.ModelViewSet):
                 datetime.date.strftime(datetime.date.today(), '%Y%m%d'),
                 frames.count()
             )
-            body = build_nginx_zip_text(frames, filename)
+            body = build_nginx_zip_text(frames, filename, uncompress=serializer.data.get('uncompress'))
             response = HttpResponse(body, content_type='text/plain')
             response['X-Archive-Files'] = 'zip'
             response['Content-Disposition'] = 'attachment; filename={0}.zip'.format(filename)
@@ -184,3 +187,66 @@ class VersionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Version.objects.using('default').all()
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('md5',)
+
+
+class S3ViewSet(viewsets.ViewSet):
+
+    @detail_route()
+    def native(self, request, pk=None):
+        '''
+        Download the given Version (one part of a Frame), and return the file
+        exactly as it is stored in AWS S3 to the client.
+
+        This is designed to be used by the Archive Client ZIP file support to
+        automatically send FITS files to the client without needing a special
+        NGINX proxy configuration for interacting with AWS S3.
+        '''
+        logger.info(msg='Downloading file via native endpoint')
+
+        version = get_object_or_404(Version, pk=pk)
+        client = get_s3_client()
+
+        with io.BytesIO() as fileobj:
+            # download from AWS S3 into an in-memory object
+            client.download_fileobj(Bucket=version.data_params['Bucket'],
+                                    Key=version.data_params['Key'],
+                                    Fileobj=fileobj)
+            fileobj.seek(0)
+
+            # return it to the client
+            return HttpResponse(fileobj.getvalue(), content_type='application/octet-stream')
+
+    @detail_route()
+    def funpack(self, request, pk=None):
+        '''
+        Download the given Version (one part of a Frame), run funpack on it, and
+        return the uncompressed FITS file to the client.
+
+        This is designed to be used by the Archive Client ZIP file support to
+        automatically uncompress FITS files for clients that cannot do it
+        themselves.
+        '''
+
+        logger.info(msg='Downloading file via funpack endpoint')
+
+        version = get_object_or_404(Version, pk=pk)
+        client = get_s3_client()
+
+        with io.BytesIO() as fileobj:
+            # download from AWS S3 into an in-memory object
+            client.download_fileobj(Bucket=version.data_params['Bucket'],
+                                    Key=version.data_params['Key'],
+                                    Fileobj=fileobj)
+            fileobj.seek(0)
+
+            # FITS unpack
+            cmd = ['/usr/bin/funpack', '-C', '-S', '-', ]
+            try:
+                proc = subprocess.run(cmd, input=fileobj.getvalue(), stdout=subprocess.PIPE)
+                proc.check_returncode()
+            except subprocess.CalledProcessError as cpe:
+                logger.error(f'funpack failed with return code {cpe.returncode} and error {cpe.stderr}')
+                raise FunpackError
+
+            # return it to the client
+            return HttpResponse(bytes(proc.stdout), content_type='application/octet-stream')
