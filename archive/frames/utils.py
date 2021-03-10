@@ -4,6 +4,7 @@ import logging
 import subprocess
 from functools import lru_cache
 from django.conf import settings
+from django.urls import reverse
 
 from kombu.connection import Connection
 from kombu import Exchange
@@ -91,7 +92,7 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
             # portion of the generated URL with an internal NGINX location which proxies all
             # traffic to AWS S3.
             # funpack location (return decompressed files from AWS S3 Bucket)
-            location = f'/s3-download/{version.id}/funpack/'
+            location = reverse('s3-funpack-funpack', kwargs={'pk': version.id})
             extension = '.fits'
 
             # In order to build the manifest for mod_zip, we need to get the uncompressed file size. This is
@@ -119,7 +120,13 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
             # portion of the generated URL with an internal NGINX location which proxies all
             # traffic to AWS S3.
             # default location (return files as-is from AWS S3 Bucket)
-            location = f'/s3-download/{version.id}/native/'
+            params = {
+                'Key': version.s3_daydir_key,
+                'Bucket': settings.BUCKET,
+            }
+            url = client.generate_presigned_url('get_object', Params=params, ExpiresIn=86400)
+            logger.info(f'url: {url}')
+            location = url.replace(f'https://{settings.BUCKET}.s3.amazonaws.com', '/s3-native')
 
         # The NGINX mod_zip module builds ZIP files using a manifest. Build the manifest
         # line for this frame.

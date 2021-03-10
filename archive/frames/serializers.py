@@ -4,12 +4,17 @@ from archive.frames.models import Frame, Version, Headers
 from django.contrib.gis.geos import GEOSGeometry
 from django.db import transaction
 
+from archive.frames.validators import ZipValidator
+
 
 class ZipSerializer(serializers.Serializer):
     frame_ids = serializers.ListField(
         child=serializers.IntegerField(min_value=1)
     )
     uncompress = serializers.BooleanField(default=False)
+
+    class Meta:
+        validators = [ZipValidator()]
 
 
 class VersionSerializer(serializers.ModelSerializer):
