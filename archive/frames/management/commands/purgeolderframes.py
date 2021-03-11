@@ -19,7 +19,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         frame_expiry_days = options['frame_expiry_days']
         logger.info(f"Purging frames older than {frame_expiry_days} days.")
-        if options['delete_bpms']:
-            Frame.objects.filter(DATE_OBS__lt=timezone.now() - timedelta(days=frame_expiry_days)).delete()
-        else:
-            Frame.objects.filter(DATE_OBS__lt=timezone.now() - timedelta(days=frame_expiry_days)).exclude(OBSTYPE='BPM').delete()
+        frames = Frame.objects.filter(DATE_OBS__lt=timezone.now() - timedelta(days=frame_expiry_days))
+        if not options['delete_bpms']:
+            frames.exclude(OBSTYPE='BPM')
+        frames.delete()
