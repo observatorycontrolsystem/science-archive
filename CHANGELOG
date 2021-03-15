@@ -1,8 +1,12 @@
-1.76
-2021-03-12
+1.77
+2021-03-15
 Separated proxy endpoints for uncompressed and compressed fits download endpoints to direct 
 compressed downloads directly to S3.
 Put a limit on the number of uncompressed files that can be downloaded in one request.
+
+1.76
+2021-03-15
+Add management command to purge frames older than a specified number of days
 
 1.75
 2021-02-10
