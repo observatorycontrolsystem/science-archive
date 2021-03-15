@@ -1,8 +1,10 @@
-from django.core.management.base import BaseCommand
-from archive.frames.models import Frame
 from datetime import timedelta
-from django.utils import timezone
 import logging
+
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+
+from archive.frames.models import Frame
 
 logger = logging.getLogger()
 
