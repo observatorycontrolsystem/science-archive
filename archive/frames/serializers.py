@@ -4,8 +4,6 @@ from archive.frames.models import Frame, Version, Headers
 from django.contrib.gis.geos import GEOSGeometry
 from django.db import transaction
 
-from archive.frames.validators import ZipValidator
-
 
 class ZipSerializer(serializers.Serializer):
     frame_ids = serializers.ListField(
@@ -13,8 +11,13 @@ class ZipSerializer(serializers.Serializer):
     )
     uncompress = serializers.BooleanField(default=False)
 
-    class Meta:
-        validators = [ZipValidator()]
+    def validate(self, data):
+        selected_frames_count = len(data.get('frame_ids', []))
+        uncompress = data.get('uncompress', False)
+        if uncompress and selected_frames_count > 10:
+            raise serializers.ValidationError('A maximum of 10 frames can be downloaded with the uncompress flag. '
+                                              'Please try again with fewer frame_ids.')
+        return data
 
 
 class VersionSerializer(serializers.ModelSerializer):
