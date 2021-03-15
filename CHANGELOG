@@ -1,3 +1,7 @@
+1.76
+2021-03-15
+Add management command to purge frames older than a specified number of days
+
 1.75
 2021-02-10
 Added support for funpack endpoint and refactored existing compressed fits download endpoints.
