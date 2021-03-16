@@ -192,31 +192,6 @@ class VersionViewSet(viewsets.ReadOnlyModelViewSet):
 class S3ViewSet(viewsets.ViewSet):
 
     @detail_route()
-    def native(self, request, pk=None):
-        '''
-        Download the given Version (one part of a Frame), and return the file
-        exactly as it is stored in AWS S3 to the client.
-
-        This is designed to be used by the Archive Client ZIP file support to
-        automatically send FITS files to the client without needing a special
-        NGINX proxy configuration for interacting with AWS S3.
-        '''
-        logger.info(msg='Downloading file via native endpoint')
-
-        version = get_object_or_404(Version, pk=pk)
-        client = get_s3_client()
-
-        with io.BytesIO() as fileobj:
-            # download from AWS S3 into an in-memory object
-            client.download_fileobj(Bucket=version.data_params['Bucket'],
-                                    Key=version.data_params['Key'],
-                                    Fileobj=fileobj)
-            fileobj.seek(0)
-
-            # return it to the client
-            return HttpResponse(fileobj.getvalue(), content_type='application/octet-stream')
-
-    @detail_route()
     def funpack(self, request, pk=None):
         '''
         Download the given Version (one part of a Frame), run funpack on it, and

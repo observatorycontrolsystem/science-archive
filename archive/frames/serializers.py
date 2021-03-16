@@ -11,6 +11,14 @@ class ZipSerializer(serializers.Serializer):
     )
     uncompress = serializers.BooleanField(default=False)
 
+    def validate(self, data):
+        selected_frames_count = len(data.get('frame_ids', []))
+        uncompress = data.get('uncompress', False)
+        if uncompress and selected_frames_count > 10:
+            raise serializers.ValidationError('A maximum of 10 frames can be downloaded with the uncompress flag. '
+                                              'Please try again with fewer frame_ids.')
+        return data
+
 
 class VersionSerializer(serializers.ModelSerializer):
     url = serializers.CharField(read_only=True)

@@ -394,22 +394,17 @@ class TestZipDownload(ReplicationTestCase):
         self.assertNotContains(response, self.proposal_frame.basename)
         self.assertNotContains(response, self.not_owned.basename)
 
-    @patch.object(subprocess, 'run')
-    def test_public_download_uncompressed_failure(self, mock_run):
-        mock_run.side_effect = subprocess.CalledProcessError(-9, 'funpack')
-        version = self.public_frame.version_set.first()
-        version.extension = '.fits.fz'
-        version.save()
-
+    def test_public_download_uncompressed_failure(self):
         response = self.client.post(
             reverse('frame-zip'),
-            data=json.dumps({'frame_ids': [self.public_frame.id], 'uncompress': 'true'}),
+            data=json.dumps({'frame_ids': [num for num in range(1, 20)], 'uncompress': 'true'}),
             content_type='application/json'
         )
 
         self.assertContains(response,
-                            'There was a problem downloading your files. Please try again later or select fewer files.',
-                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                            'A maximum of 10 frames can be downloaded with the uncompress flag. Please '
+                            'try again with fewer frame_ids.',
+                            status_code=status.HTTP_400_BAD_REQUEST)
 
     @responses.activate
     def test_proposal_download(self):
@@ -449,13 +444,6 @@ class TestS3ViewSet(ReplicationTestCase):
         self.frame = FrameFactory(DAY_OBS=datetime.datetime(2020, 11, 18, tzinfo=UTC))
 
     @patch('archive.frames.views.get_s3_client')
-    def test_native_download(self, mock_client):
-        """Test that native download endpoint returns correct file content."""
-        mock_client.return_value = self.m
-        response = self.client.get(reverse('s3-download-native', kwargs={'pk': self.frame.version_set.first().id}))
-        self.assertContains(response, b'test_value')
-
-    @patch('archive.frames.views.get_s3_client')
     @patch('archive.frames.views.subprocess')
     def test_funpack_download(self, mock_subprocess, mock_client):
         """Test that funpack download endpoint returns correct file content and calls funpack."""
@@ -463,7 +451,7 @@ class TestS3ViewSet(ReplicationTestCase):
         mock_proc = MagicMock()
         mock_proc.stdout = b'test_value'
         mock_subprocess.run.return_value = mock_proc
-        response = self.client.get(reverse('s3-download-funpack', kwargs={'pk': self.frame.version_set.first().id}))
+        response = self.client.get(reverse('s3-funpack-funpack', kwargs={'pk': self.frame.version_set.first().id}))
         mock_subprocess.run.assert_called_with(
             ['/usr/bin/funpack', '-C', '-S', '-'], input=b'test_value', stdout=mock_subprocess.PIPE
         )
@@ -475,7 +463,7 @@ class TestS3ViewSet(ReplicationTestCase):
         """Test that funpack download endpoint returns correct response following a failure."""
         mock_run.side_effect = subprocess.CalledProcessError(-9, 'funpack')
 
-        response = self.client.get(reverse('s3-download-funpack', kwargs={'pk': self.frame.version_set.first().id}))
+        response = self.client.get(reverse('s3-funpack-funpack', kwargs={'pk': self.frame.version_set.first().id}))
 
         self.assertContains(response,
                             'There was a problem downloading your files. Please try again later or select fewer files.',
