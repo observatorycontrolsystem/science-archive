@@ -16,9 +16,8 @@ logger = logging.getLogger()
 
 @lru_cache(maxsize=1)
 def get_s3_client():
-    session = boto3.Session()
     config = boto3.session.Config( signature_version='s3v4')
-    return session.client('s3', endpoint_url=settings.S3_ENDPOINT_URL, config=config)
+    return boto3.client('s3', endpoint_url=settings.S3_ENDPOINT_URL, config=config)
 
 
 def remove_dashes_from_keys(dictionary):
