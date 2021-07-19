@@ -1,3 +1,7 @@
+1.78
+2021-07-19
+Add configurable endpoint_url for s3
+
 1.77
 2021-03-15
 Separated proxy endpoints for uncompressed and compressed fits download endpoints to direct 
