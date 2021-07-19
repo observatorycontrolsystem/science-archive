@@ -189,6 +189,7 @@ MEDIA_ROOT = '/media/'
 MEDIA_URL = '/media/'
 
 BUCKET = os.getenv('AWS_BUCKET', 'lcogtarchivetest')
+S3_ENDPOINT_URL = os.getenv('S3_ENDPOINT_URL', 'http://s3.us-west-2.amazonaws.com')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
