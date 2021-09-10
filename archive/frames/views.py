@@ -9,7 +9,7 @@ from archive.frames.utils import (
 )
 from archive.frames.permissions import AdminOrReadOnly
 from archive.frames.filters import FrameFilter
-from rest_framework.decorators import list_route, detail_route
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework import status, filters, viewsets
@@ -95,7 +95,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             logger.fatal('Request to process frame failed', extra=logger_tags)
             return Response(frame_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @detail_route()
+    @action(detail=True)
     def related(self, request, pk=None):
         frame = self.get_object()
         serializer = self.get_serializer(
@@ -103,14 +103,14 @@ class FrameViewSet(viewsets.ModelViewSet):
         )
         return Response(serializer.data)
 
-    @detail_route()
+    @action(detail=True)
     def headers(self, request, pk=None):
         frame = self.get_object()
         serializer = HeadersSerializer(frame.headers)
         return Response(serializer.data)
 
     @xframe_options_exempt
-    @list_route(methods=['post'], permission_classes=[AllowAny])
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def zip(self, request):
         if request.data.get('auth_token'):  # Needed for hacky ajax file download nonsense
             token = get_object_or_404(Token, key=request.data['auth_token'])
@@ -139,7 +139,7 @@ class FrameViewSet(viewsets.ModelViewSet):
         else:
             return []
 
-    @list_route()
+    @action(detail=False)
     def aggregate(self, request):
         fields = ('SITEID', 'TELID', 'FILTER', 'INSTRUME', 'OBSTYPE', 'PROPID')
         aggregate_field = request.GET.get('aggregate_field', 'ALL')
@@ -191,7 +191,7 @@ class VersionViewSet(viewsets.ReadOnlyModelViewSet):
 
 class S3ViewSet(viewsets.ViewSet):
 
-    @detail_route()
+    @action(detail=True)
     def funpack(self, request, pk=None):
         '''
         Download the given Version (one part of a Frame), run funpack on it, and

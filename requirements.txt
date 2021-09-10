@@ -1,11 +1,10 @@
 Django>=2.2.10,<2.3
 psycopg2>=2.8,<2.9
-djangorestframework>=3.9.4,<3.10
-django-filter>=2.0,<2.1
+djangorestframework>=3.12,<3.13
 boto3>=1.7,<1.8
 astropy>=4.0,<4.1
 django-crispy-forms>=1.7,<1.8
-markdown>=2.6,<2.7
+markdown>=3.0,<3.1
 gunicorn[gevent]==19.9.0
 django-cors-headers>=2.4,<2.5
 python3-memcached>=1.51,<2.0
