@@ -7,8 +7,11 @@ django-crispy-forms>=1.7,<1.8
 markdown>=3.0,<3.1
 gunicorn[gevent]==19.9.0
 django-cors-headers>=2.4,<2.5
+drf-yasg>=1.20,<1.21
 python3-memcached>=1.51,<2.0
+uritemplate==3.0.1
 kombu>=4.6,<4.7
+setuptools-scm==6.0.1
 responses
 factory_boy
 flake8
