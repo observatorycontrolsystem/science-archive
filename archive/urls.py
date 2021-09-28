@@ -10,6 +10,7 @@ from django.views.generic import TemplateView
 from archive.frames import urls as frame_urls
 from archive.authentication import urls as auth_urls
 from archive.authentication.views import ObtainAuthTokenWithHeaders, HealthCheckView
+from archive.schema import ScienceArchiveSchemaGenerator
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -21,7 +22,8 @@ schema_view = get_schema_view(
       license=openapi.License(name="GPL 3.0 License"),
    ),
    public=True,
-   permission_classes=(permissions.AllowAny,))
+   permission_classes=(permissions.AllowAny,),
+   generator_class=ScienceArchiveSchemaGenerator)
 
 urlpatterns = [
     url(r'^robots.txt$', lambda r: HttpResponse("User-agent: *\nDisallow: /", content_type='text/plain')),

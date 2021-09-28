@@ -1,7 +1,8 @@
+from archive.schema import ScienceArchiveSchema
 from archive.frames.exceptions import FunpackError
 from archive.frames.models import Frame, Version
 from archive.frames.serializers import (
-    FrameSerializer, ZipSerializer, VersionSerializer, HeadersSerializer
+    AggregateSerializer, FrameSerializer, ZipSerializer, VersionSerializer, HeadersSerializer
 )
 from archive.frames.utils import (
     remove_dashes_from_keys, fits_keywords_only, build_nginx_zip_text, post_to_archived_queue,
@@ -34,6 +35,7 @@ logger = logging.getLogger()
 
 class FrameViewSet(viewsets.ModelViewSet):
     permission_classes = (AdminOrReadOnly,)
+    schema = ScienceArchiveSchema(tags=['Frames'])
     serializer_class = FrameSerializer
     filter_backends = (
         DjangoFilterBackend,
@@ -97,40 +99,49 @@ class FrameViewSet(viewsets.ModelViewSet):
 
     @action(detail=True)
     def related(self, request, pk=None):
+        """
+        Return the related files associated with the archive record
+        """
         frame = self.get_object()
-        serializer = self.get_serializer(
+        response_serializer = self.get_response_serializer(
             self.get_queryset().filter(pk__in=frame.related_frames.all()), many=True
         )
-        return Response(serializer.data)
+        return Response(response_serializer.data)
 
     @action(detail=True)
     def headers(self, request, pk=None):
+        """
+        Return the metadata (headers) associated with the archive record
+        """
         frame = self.get_object()
-        serializer = HeadersSerializer(frame.headers)
-        return Response(serializer.data)
+        response_serializer = self.get_response_serializer(frame.headers)
+        return Response(response_serializer.data)
 
     @xframe_options_exempt
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def zip(self, request):
+        """
+        Return a zip archive of files matching the frame IDs specified in the request
+        """
         if request.data.get('auth_token'):  # Needed for hacky ajax file download nonsense
             token = get_object_or_404(Token, key=request.data['auth_token'])
             request.user = token.user
-        serializer = ZipSerializer(data=request.data)
-        if serializer.is_valid():
-            frames = self.get_queryset().filter(pk__in=serializer.data['frame_ids'])
+        request_serializer = self.get_request_serializer(data=request.data)
+        if request_serializer.is_valid():
+            frames = self.get_queryset().filter(pk__in=request_serializer.data['frame_ids'])
             if not frames.exists():
                 return Response(status=status.HTTP_404_NOT_FOUND)
             filename = 'lcogtdata-{0}-{1}'.format(
                 datetime.date.strftime(datetime.date.today(), '%Y%m%d'),
                 frames.count()
             )
-            body = build_nginx_zip_text(frames, filename, uncompress=serializer.data.get('uncompress'))
+            body = build_nginx_zip_text(frames, filename, uncompress=request_serializer.data.get('uncompress'))
             response = HttpResponse(body, content_type='text/plain')
             response['X-Archive-Files'] = 'zip'
             response['Content-Disposition'] = 'attachment; filename={0}.zip'.format(filename)
             response['Set-Cookie'] = 'fileDownload=true; path=/'
             return response
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @staticmethod
     def _get_aggregate_values(query_set, field, aggregate_field):
@@ -141,6 +152,9 @@ class FrameViewSet(viewsets.ModelViewSet):
 
     @action(detail=False)
     def aggregate(self, request):
+        """
+        Aggregate field values based on start/end time
+        """
         fields = ('SITEID', 'TELID', 'FILTER', 'INSTRUME', 'OBSTYPE', 'PROPID')
         aggregate_field = request.GET.get('aggregate_field', 'ALL')
         if aggregate_field != 'ALL' and aggregate_field not in fields:
@@ -175,8 +189,25 @@ class FrameViewSet(viewsets.ModelViewSet):
                 'proposals': proposals
             }
             cache.set(cache_hash, response_dict, 60 * 60)
-        return Response(response_dict)
+        response_serializer = self.get_response_serializer(response_dict)
+        return Response(response_serializer.data)
 
+    def get_request_serializer(self, *args, **kwargs):
+        request_serializers = {'zip': ZipSerializer}
+        
+        return request_serializers.get(self.action, self.serializer_class)(*args, **kwargs)
+
+    def get_response_serializer(self, *args, **kwargs):
+        response_serializers = {'aggregate':  AggregateSerializer,
+                                'headers': HeadersSerializer,
+                                'related': FrameSerializer}
+        
+        return response_serializers.get(self.action, self.serializer_class)(*args, **kwargs)
+
+    def get_example_response(self, *args, **kwargs):
+        example_responses = {'zip': Response(None, 200)}
+
+        return example_responses.get(self.action)
 
 class VersionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (IsAdminUser,)
@@ -190,6 +221,7 @@ class VersionViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class S3ViewSet(viewsets.ViewSet):
+    schema = ScienceArchiveSchema(tags=['Frames'])
 
     @action(detail=True)
     def funpack(self, request, pk=None):

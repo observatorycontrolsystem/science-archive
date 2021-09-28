@@ -101,3 +101,12 @@ class FrameSerializer(serializers.ModelSerializer):
                 rf, _ = Frame.objects.get_or_create(basename=related_frame)
                 frame.related_frames.add(rf)
         frame.save()
+
+
+class AggregateSerializer(serializers.Serializer):
+    sites = serializers.ListField(child=serializers.CharField())
+    telescopes = serializers.ListField(child=serializers.CharField())
+    filters = serializers.ListField(child=serializers.CharField())
+    instruments = serializers.ListField(child=serializers.CharField())
+    obstypes = serializers.ListField(child=serializers.CharField())
+    proposals = serializers.ListField(child=serializers.CharField())
