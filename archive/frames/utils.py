@@ -11,29 +11,21 @@ from kombu import Exchange
 
 from archive.frames.exceptions import FunpackError
 
+from ocs_archive.input.file import DataFile, EmptyFile
+from ocs_archive.input.filefactory import FileFactory
+from ocs_archive.storage.filestorefactory import FileStoreFactory
+from ocs_archive.settings import settings as archive_settings
+
 logger = logging.getLogger()
 
 
-@lru_cache(maxsize=1)
-def get_s3_client():
-    config = boto3.session.Config(signature_version='s3v4')
-    return boto3.client('s3', endpoint_url=settings.S3_ENDPOINT_URL, config=config)
-
-
-def remove_dashes_from_keys(dictionary):
-    new_dictionary = {}
-    for k in dictionary:
-        new_key = k.replace('-', '_')
-        new_dictionary[new_key] = dictionary[k]
-    return new_dictionary
-
-
-def fits_keywords_only(dictionary):
-    new_dictionary = {}
-    for k in dictionary:
-        if k[0].isupper():
-            new_dictionary[k] = dictionary[k]
-    return new_dictionary
+def get_file_store_path(filename, file_metadata):
+    # The file store path can depend on specific info in the filename, which is only available within
+    # specific DataFile subclasses based on extension, so this EmptyFile with the filename is needed
+    # to be able to build the correct file store path
+    empty_file = EmptyFile(filename)
+    data_file = FileFactory.get_datafile_class_for_extension(empty_file.extension)(empty_file, file_metadata, {}, {})
+    return data_file.get_filestore_path()
 
 
 def archived_queue_payload(dictionary, frame):
@@ -73,13 +65,13 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
     '''
     logger.info(msg=f'Building nginx zip text for frames {frames} with uncompress flag {uncompress}')
 
-    client = get_s3_client()
+    file_store = FileStoreFactory.get_file_store_class()()
     ret = []
 
     for frame in frames:
         # retrieve the database record for the Version we will fetch
         version = frame.version_set.first()
-
+        path = get_file_store_path(frame.filename, frame.get_header_dict())
         extension = version.extension
         size = version.size
         # if the user requested that we uncompress the files, then redirect .fits.fz
@@ -97,14 +89,7 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
 
             # In order to build the manifest for mod_zip, we need to get the uncompressed file size. This is
             # inefficient, but simple.
-
-            with io.BytesIO() as fileobj:
-                # download from AWS S3 into an in-memory object
-                client.download_fileobj(Bucket=version.data_params['Bucket'],
-                                        Key=version.data_params['Key'],
-                                        Fileobj=fileobj)
-                fileobj.seek(0)
-
+            with file_store.get_fileobj(path) as fileobj:
                 cmd = ['/usr/bin/funpack', '-C', '-S', '-', ]
                 try:
                     proc = subprocess.run(cmd, input=fileobj.getvalue(), stdout=subprocess.PIPE)
@@ -120,12 +105,8 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
             # portion of the generated URL with an internal NGINX location which proxies all
             # traffic to AWS S3.
             # default location (return files as-is from AWS S3 Bucket)
-            params = {
-                'Key': version.s3_daydir_key,
-                'Bucket': settings.BUCKET,
-            }
-            url = client.generate_presigned_url('get_object', Params=params, ExpiresIn=86400)
-            location = url.replace(f'https://{settings.BUCKET}.s3.amazonaws.com', '/s3-native')
+            url = file_store.get_url(path, version.key, expiration=86400)
+            location = url.replace(f'https://{archive_settings.BUCKET}.s3.amazonaws.com', '/s3-native')
 
         # The NGINX mod_zip module builds ZIP files using a manifest. Build the manifest
         # line for this frame.

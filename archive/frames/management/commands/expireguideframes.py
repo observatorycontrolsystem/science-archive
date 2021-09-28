@@ -27,16 +27,16 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('-s', '--site', type=str, default='all',
-                            help='SITEID to delete guide frames for. Default is all sites.')
+                            help='site_id to delete guide frames for. Default is all sites.')
 
     def handle(self, *args, **options):
         expiration_date = timezone.now() - timedelta(days=365)
         logger.info(f"Expiring imager guide frames from before {expiration_date.isoformat()} for {options['site']} site(s)")
 
-        guide_frames = Frame.objects.using('default').filter(DATE_OBS__lte=expiration_date, OBSTYPE='GUIDE').exclude(
-            INSTRUME__in=GUIDE_CAMERAS_TO_PERSIST)
+        guide_frames = Frame.objects.using('default').filter(observation_date__lte=expiration_date, configuration_type='GUIDE').exclude(
+            instrument_id__in=GUIDE_CAMERAS_TO_PERSIST)
         if options['site'].lower() != 'all':
-            guide_frames = guide_frames.filter(SITEID=options['site'].lower())
+            guide_frames = guide_frames.filter(site_id=options['site'].lower())
 
         while guide_frames.count() > 0:
             pks_to_delete = guide_frames.values_list('pk', flat=True)[:DELETE_BATCH]

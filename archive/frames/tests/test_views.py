@@ -10,6 +10,8 @@ from django.conf import settings
 from django.contrib.gis.geos import Point
 from pytz import UTC
 from rest_framework import status
+from contextlib import contextmanager
+from io import BytesIO
 import boto3
 import responses
 import datetime
@@ -134,7 +136,7 @@ class TestFramePost(ReplicationTestCase):
 
     def test_long_exptime(self):
         frame_payload = self.single_frame_payload
-        frame_payload['EXPTIME'] = 10.032415
+        frame_payload['exposure_time'] = 10.032415
         response = self.client.post(
             reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
         )
@@ -142,7 +144,7 @@ class TestFramePost(ReplicationTestCase):
 
     def test_exptime_way_too_long(self):
         frame_payload = self.single_frame_payload
-        frame_payload['EXPTIME'] = 10.03241524124232134
+        frame_payload['exposure_time'] = 10.03241524124232134
         response = self.client.post(
             reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
         )
@@ -179,14 +181,14 @@ class TestFramePost(ReplicationTestCase):
 
     def test_post_non_required_data(self):
         frame_payload = self.single_frame_payload
-        del frame_payload['REQNUM']
+        del frame_payload['request_id']
         response = self.client.post(
             reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
         )
         self.assertEqual(response.status_code, 201)
 
         response = self.client.get(reverse('frame-detail', args=(response.json()['id'],)))
-        self.assertIsNone(response.json()['REQNUM'])
+        self.assertIsNone(response.json()['request_id'])
 
 
 
@@ -212,9 +214,9 @@ class TestFrameFiltering(ReplicationTestCase):
         self.normal_user = User.objects.create(username='frodo', password='theone')
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
-        self.public_frame = FrameFactory(PROPID='public', L1PUBDAT=datetime.datetime(2000, 1, 1, tzinfo=UTC))
-        self.proposal_frame = FrameFactory(PROPID='prop1', L1PUBDAT=datetime.datetime(2099, 1, 1, tzinfo=UTC))
-        self.not_owned = FrameFactory(PROPID='notyours', L1PUBDAT=datetime.datetime(2099, 1, 1, tzinfo=UTC))
+        self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=UTC))
+        self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
+        self.not_owned = FrameFactory(proposal_id='notyours', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
 
     def test_admin_view_all(self):
         self.client.login(username='admin', password='password')
@@ -250,7 +252,7 @@ class TestQueryFiltering(ReplicationTestCase):
         boto3.client = MagicMock()
 
     def test_start_end(self):
-        frame = PublicFrameFactory(DATE_OBS=datetime.datetime(2011, 2, 1, tzinfo=UTC))
+        frame = PublicFrameFactory(observation_date=datetime.datetime(2011, 2, 1, tzinfo=UTC))
         response = self.client.get(reverse('frame-list') + '?start=2011-01-01&end=2011-03-01')
         self.assertContains(response, frame.basename)
         response = self.client.get(reverse('frame-list') + '?start=2012-01-01&end=2012-03-01')
@@ -266,7 +268,7 @@ class TestQueryFiltering(ReplicationTestCase):
         self.assertNotContains(response, frame.basename)
 
     def test_object(self):
-        frame = PublicFrameFactory(OBJECT='planet9')
+        frame = PublicFrameFactory(target_name='planet9')
         response = self.client.get(reverse('frame-list') + '?OBJECT=planet')
         self.assertContains(response, frame.basename)
         response = self.client.get(reverse('frame-list') + '?OBJECT=planet9')
@@ -275,7 +277,7 @@ class TestQueryFiltering(ReplicationTestCase):
         self.assertNotContains(response, frame.basename)
 
     def test_exptime(self):
-        frame = PublicFrameFactory(EXPTIME=300)
+        frame = PublicFrameFactory(exposure_time=300)
         response = self.client.get(reverse('frame-list') + '?EXPTIME=300')
         self.assertContains(response, frame.basename)
         response = self.client.get(reverse('frame-list') + '?EXPTIME=200')
@@ -296,7 +298,7 @@ class TestQueryFiltering(ReplicationTestCase):
             content_type='application/json'
         )
         self.client.force_login(user)
-        proposal_frame = FrameFactory(L1PUBDAT=datetime.datetime(2999, 1, 1, tzinfo=UTC), PROPID='prop1')
+        proposal_frame = FrameFactory(public_date=datetime.datetime(2999, 1, 1, tzinfo=UTC), proposal_id='prop1')
         public_frame = PublicFrameFactory()
 
         for false_string in ['false', 'False', '0']:
@@ -347,7 +349,7 @@ class TestQueryFiltering(ReplicationTestCase):
         self.assertContains(response, frame.basename)
 
     def test_rlevel(self):
-        frame = PublicFrameFactory(RLEVEL=10)
+        frame = PublicFrameFactory(reduction_level=10)
         response = self.client.get(reverse('frame-list') + '?RLEVEL=10')
         self.assertContains(response, frame.basename)
 
@@ -361,9 +363,9 @@ class TestZipDownload(ReplicationTestCase):
         self.normal_user = User.objects.create(username='frodo', password='theone')
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
-        self.public_frame = FrameFactory(PROPID='public', L1PUBDAT=datetime.datetime(2000, 1, 1, tzinfo=UTC))
-        self.proposal_frame = FrameFactory(PROPID='prop1', L1PUBDAT=datetime.datetime(2099, 1, 1, tzinfo=UTC))
-        self.not_owned = FrameFactory(PROPID='notyours', L1PUBDAT=datetime.datetime(2099, 1, 1, tzinfo=UTC))
+        self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=UTC))
+        self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
+        self.not_owned = FrameFactory(proposal_id='notyours', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
 
     def test_public_download(self):
         response = self.client.post(
@@ -435,13 +437,15 @@ class TestZipDownload(ReplicationTestCase):
 
 
 class TestS3ViewSet(ReplicationTestCase):
-    def download_fileobj_side_effect(self, *args, Fileobj=None, **kwargs):
-        Fileobj.write(b'test_value')
+    @contextmanager
+    def get_fileobj(self, *args, **kwargs):
+        fileobj = BytesIO(b'test_value')
+        yield fileobj
 
     def setUp(self):
         self.m = MagicMock()
-        self.m.download_fileobj.side_effect = self.download_fileobj_side_effect
-        self.frame = FrameFactory(DAY_OBS=datetime.datetime(2020, 11, 18, tzinfo=UTC))
+        self.m.get_fileobj = self.get_fileobj
+        self.frame = FrameFactory(observation_day=datetime.datetime(2020, 11, 18, tzinfo=UTC))
 
     @patch('archive.frames.views.get_s3_client')
     @patch('archive.frames.views.subprocess')
@@ -475,12 +479,12 @@ class TestFrameAggregate(ReplicationTestCase):
         boto3.client = MagicMock()
         is_public_date = timezone.now() - datetime.timedelta(days=7)
         is_not_public_date = timezone.now() + datetime.timedelta(days=7)
-        FrameFactory.create(OBSTYPE='EXPOSE', TELID='1m0a', SITEID='bpl', INSTRUME='kb46', PROPID='prop1', FILTER='rp',
-                            L1PUBDAT=is_public_date)
-        FrameFactory.create(OBSTYPE='BIAS', TELID='0m4a', SITEID='coj', INSTRUME='en05', PROPID='prop2', FILTER='V',
-                            L1PUBDAT=is_not_public_date)
-        FrameFactory.create(OBSTYPE='SKYFLAT', TELID='2m0b', SITEID='ogg', INSTRUME='fl10', PROPID='prop3', FILTER='B',
-                            L1PUBDAT=is_public_date)
+        FrameFactory.create(configuration_type='EXPOSE', telescope_id='1m0a', site_id='bpl', instrument_id='kb46',
+                            proposal_id='prop1', primary_filter='rp', public_date=is_public_date)
+        FrameFactory.create(configuration_type='BIAS', telescope_id='0m4a', site_id='coj', instrument_id='en05',
+                            proposal_id='prop2', primary_filter='V', public_date=is_not_public_date)
+        FrameFactory.create(configuration_type='SKYFLAT', telescope_id='2m0b', site_id='ogg', instrument_id='fl10',
+                            proposal_id='prop3', primary_filter='B', public_date=is_public_date)
 
     def test_frame_aggregate(self):
         response = self.client.get(reverse('frame-aggregate'))
@@ -501,7 +505,7 @@ class TestFrameAggregate(ReplicationTestCase):
         self.assertEqual(set(response.json()['proposals']), set(['prop3']))
 
     def test_frame_aggregate_single_field(self):
-        response = self.client.get(reverse('frame-aggregate') + '?aggregate_field=SITEID')
+        response = self.client.get(reverse('frame-aggregate') + '?aggregate_field=site_id')
         self.assertEqual(set(response.json()['obstypes']), set([]))
         self.assertEqual(set(response.json()['telescopes']), set([]))
         self.assertEqual(set(response.json()['sites']), set(['bpl', 'coj', 'ogg']))
@@ -510,7 +514,7 @@ class TestFrameAggregate(ReplicationTestCase):
         self.assertEqual(set(response.json()['proposals']), set([]))
 
     def test_frame_aggregate_single_field_filtered(self):
-        response = self.client.get(reverse('frame-aggregate') + '?INSTRUME=en05&aggregate_field=FILTER')
+        response = self.client.get(reverse('frame-aggregate') + '?INSTRUME=en05&aggregate_field=primary_filter')
         self.assertEqual(set(response.json()['obstypes']), set([]))
         self.assertEqual(set(response.json()['telescopes']), set([]))
         self.assertEqual(set(response.json()['sites']), set([]))

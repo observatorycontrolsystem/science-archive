@@ -26,7 +26,7 @@ class Profile(models.Model):
             if self.user.is_superuser:
                 proposals = [
                     i[0] for i in Frame.objects.all()
-                                               .order_by().values_list('PROPID')
+                                               .order_by().values_list('proposal_id')
                                                .distinct() if i[0]
                 ]
             else:

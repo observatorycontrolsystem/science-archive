@@ -51,10 +51,12 @@ class FrameSerializer(serializers.ModelSerializer):
     url = serializers.CharField(read_only=True)
     filename = serializers.CharField(read_only=True)
     area = PolygonField(allow_null=True)
-    DAY_OBS = serializers.DateField(input_formats=['iso-8601', '%Y%m%d'])
+    observation_day = serializers.DateField(input_formats=['iso-8601', '%Y%m%d'])
+    headers = serializers.JSONField(required=True, write_only=True)
+    related_frame_filenames = serializers.ListField(child=serializers.CharField(), required=True, write_only=True)
     related_frames = serializers.PrimaryKeyRelatedField(
         many=True,
-        queryset=Frame.objects.exclude(DATE_OBS=None),
+        read_only=True,
         required=False,
         style={'base_template': 'input.html'}
     )
@@ -62,20 +64,26 @@ class FrameSerializer(serializers.ModelSerializer):
     class Meta:
         model = Frame
         fields = (
-            'id', 'basename', 'area', 'related_frames', 'version_set',
-            'filename', 'url', 'RLEVEL', 'DAY_OBS', 'DATE_OBS', 'PROPID',
-            'INSTRUME', 'OBJECT', 'SITEID', 'TELID', 'EXPTIME', 'FILTER',
-            'L1PUBDAT', 'OBSTYPE', 'BLKUID', 'REQNUM',
+            'id', 'basename', 'area', 'related_frames', 'version_set', 'headers',
+            'filename', 'url', 'reduction_level', 'observation_day', 'observation_date', 'proposal_id',
+            'instrument_id', 'target_name', 'site_id', 'telescope_id', 'exposure_time', 'primary_filter',
+            'public_date', 'configuration_type', 'observation_id', 'request_id', 'related_frame_filenames'
         )
+        # For when we update django/drf
+        # extra_kwargs = {
+        #     'headers': {'write_only': True},
+        #     'related_frame_filenames': {'write_only': True}
+        # }
 
     def create(self, validated_data):
         version_data = validated_data.pop('version_set')
-        header_data = validated_data.pop('header')
+        header_data = validated_data.pop('headers')
+        related_frames = validated_data.pop('related_frame_filenames')
         with transaction.atomic():
             frame = self.create_or_update_frame(validated_data)
             self.create_or_update_versions(frame, version_data)
             self.create_or_update_header(frame, header_data)
-            self.create_related_frames(frame, header_data)
+            self.create_related_frames(frame, related_frames)
         return frame
 
     def create_or_update_frame(self, data):
@@ -90,13 +98,7 @@ class FrameSerializer(serializers.ModelSerializer):
         Headers.objects.update_or_create(defaults={'data': data}, frame=frame)
 
     def create_related_frames(self, frame, data):
-        related_frame_keys = [
-            'L1IDBIAS', 'L1IDDARK', 'L1IDFLAT', 'L1IDSHUT',
-            'L1IDMASK', 'L1IDFRNG', 'L1IDCAT', 'TARFILE',
-            'ORIGNAME', 'L1IDARC', 'L1IDTMPL', 'L1IDTRAC',
-        ]
-        for key in related_frame_keys:
-            related_frame = data.get(key)
+        for related_frame in data:
             if related_frame and related_frame != frame.basename:
                 rf, _ = Frame.objects.get_or_create(basename=related_frame)
                 frame.related_frames.add(rf)
