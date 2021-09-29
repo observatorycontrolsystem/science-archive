@@ -10,6 +10,7 @@ from archive.frames.utils import (
 )
 from archive.frames.permissions import AdminOrReadOnly
 from archive.frames.filters import FrameFilter
+from archive.doc_examples import EXAMPLE_RESPONSES
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
@@ -204,14 +205,16 @@ class FrameViewSet(viewsets.ModelViewSet):
         
         return response_serializers.get(self.action, self.serializer_class)(*args, **kwargs)
 
-    def get_example_response(self, *args, **kwargs):
-        example_responses = {'zip': Response(None, 200)}
+    def get_example_response(self):
+        example_responses = {'zip': Response(EXAMPLE_RESPONSES['frames']['zip'], 200, content_type='application/zip'),
+                             'headers': Response(EXAMPLE_RESPONSES['frames']['headers'], 200)}
 
         return example_responses.get(self.action)
 
 class VersionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (IsAdminUser,)
     serializer_class = VersionSerializer
+    schema = ScienceArchiveSchema(tags=['Versions'])
     # Always use the default (writer) database instead of the reader to get the most up-to-date
     # data, as the available endpoint on this admin viewset is used to check whether a version
     # already exists before attempting to ingest a new version.
@@ -257,3 +260,9 @@ class S3ViewSet(viewsets.ViewSet):
 
             # return it to the client
             return HttpResponse(bytes(proc.stdout), content_type='application/octet-stream')
+    
+    def get_example_response(self):
+        example_responses = {'funpack': Response(EXAMPLE_RESPONSES['frames']['funpack'], 
+                                                 200, content_type='application/octet-stream')}
+
+        return example_responses.get(self.action)

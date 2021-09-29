@@ -7,6 +7,7 @@ from rest_framework import throttling, status
 
 from archive.authentication.serializers import UserSerializer
 from archive.schema import ScienceArchiveSchema
+from archive.doc_examples import EXAMPLE_REQUESTS, EXAMPLE_RESPONSES
 
 
 class UserView(RetrieveAPIView):
@@ -21,6 +22,9 @@ class UserView(RetrieveAPIView):
 
 
 class ObtainAuthTokenWithHeaders(ObtainAuthToken):
+    """
+    Obtain the auth token associated with the given user account
+    """
     schema = ScienceArchiveSchema(tags=['Authentication'])
 
     def post(self, request, *args, **kwargs):
@@ -31,8 +35,10 @@ class ObtainAuthTokenWithHeaders(ObtainAuthToken):
             return super().post(request, *args, **kwargs)
 
     def get_example_request(self):
-        return {'username': 'OCSUser',
-                'password': 'myStrongPassword##'}
+        return EXAMPLE_REQUESTS['authentication']['auth_token']
+
+    def get_endpoint_name(self):
+        return 'getAuthToken'
 
 
 class NoThrottle(throttling.BaseThrottle):
@@ -51,7 +57,7 @@ class HealthCheckView(APIView):
         return Response('ok')
 
     def get_example_response(self):
-        return Response('ok', status=status.HTTP_200_OK)
+        return Response(EXAMPLE_RESPONSES['authentication']['health'], status=status.HTTP_200_OK)
 
     def get_endpoint_name(self):
         return 'healthCheck'

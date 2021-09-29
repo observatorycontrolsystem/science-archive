@@ -7,9 +7,13 @@ from django.db import transaction
 
 class ZipSerializer(serializers.Serializer):
     frame_ids = serializers.ListField(
-        child=serializers.IntegerField(min_value=1)
+        child=serializers.IntegerField(min_value=1),
+        help_text='Frame IDs of images to include in zip archive'
     )
-    uncompress = serializers.BooleanField(default=False)
+    uncompress = serializers.BooleanField(
+        default=False, 
+        help_text='Whether to uncompress the FITS files prior to creating zip archive'
+    )
 
     def validate(self, data):
         selected_frames_count = len(data.get('frame_ids', []))
@@ -21,7 +25,7 @@ class ZipSerializer(serializers.Serializer):
 
 
 class VersionSerializer(serializers.ModelSerializer):
-    url = serializers.CharField(read_only=True)
+    url = serializers.CharField(read_only=True, help_text='Download URL for given version')
 
     class Meta:
         model = Version
@@ -46,17 +50,18 @@ class PolygonField(serializers.Field):
 
 
 class FrameSerializer(serializers.ModelSerializer):
-    basename = serializers.CharField(required=True)
-    version_set = VersionSerializer(many=True)
-    url = serializers.CharField(read_only=True)
-    filename = serializers.CharField(read_only=True)
-    area = PolygonField(allow_null=True)
-    DAY_OBS = serializers.DateField(input_formats=['iso-8601', '%Y%m%d'])
+    basename = serializers.CharField(required=True, help_text='File basename without extension')
+    version_set = VersionSerializer(many=True, help_text='Set of versions associated with this file')
+    url = serializers.CharField(read_only=True, help_text='File download URL associated with most recent version')
+    filename = serializers.CharField(read_only=True, help_text='Full filename')
+    area = PolygonField(allow_null=True, help_text='GeoJSON area that this frame covers')
+    DAY_OBS = serializers.DateField(input_formats=['iso-8601', '%Y%m%d'], help_text='Observation day in %Y%m%d format')
     related_frames = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Frame.objects.exclude(DATE_OBS=None),
         required=False,
-        style={'base_template': 'input.html'}
+        style={'base_template': 'input.html'},
+        help_text='Set of related frames for this file'
     )
 
     class Meta:

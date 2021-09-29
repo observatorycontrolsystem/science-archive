@@ -24,6 +24,21 @@ class ScienceArchiveSchema(AutoSchema):
     def __init__(self, tags=None, operation_id_base=None, component_name=None):
         super().__init__(tags=tags, operation_id_base=operation_id_base, component_name=component_name)
 
+    def get_operation_id(self, path, method):
+        """
+        This method is used to determine the descriptive name of the endpoint displayed in the documentation.
+        Allow this to be overridden in the view - a view that defines get_endpoint_name can override the default
+        DRF naming scheme.
+        """
+        operation_id = super().get_operation_id(path, method)
+        if getattr(self.view, 'get_endpoint_name', None) is not None:
+            name_override = self.view.get_endpoint_name()
+            # For some viewsets, we may not have specified a name for an action - guard against that
+            if name_override is not None:
+                operation_id = name_override
+
+        return operation_id
+
     def get_operation(self, path, method):
         """
         This method is used to determine, among other things, the request and response bodies for a particular endpoint.
@@ -38,7 +53,8 @@ class ScienceArchiveSchema(AutoSchema):
             if example_response is not None:
                 status_code = example_response.status_code
                 example_data = example_response.data
-                operations['responses'] = {status_code: {'content': {'application/json': {'example': example_data}}}}
+                content_type = example_response.content_type if example_response.content_type is not None else 'application/json'
+                operations['responses'] = {status_code: {'content': {content_type: {'example': example_data}}}}
 
         # If the view has implemented get_example_request, then use it to present in the documentation
         if getattr(self.view, 'get_example_request', None) is not None:
