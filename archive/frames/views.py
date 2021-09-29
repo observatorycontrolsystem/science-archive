@@ -211,6 +211,14 @@ class FrameViewSet(viewsets.ModelViewSet):
 
         return example_responses.get(self.action)
 
+    def get_endpoint_name(self):
+        endpoint_names = {'aggregate': 'aggregateFields',
+                          'headers': 'getHeaders',
+                          'related': 'getRelatedFrames',
+                          'zip': 'getZipArchive'}
+
+        return endpoint_names.get(self.action)
+
 class VersionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (IsAdminUser,)
     serializer_class = VersionSerializer
@@ -266,3 +274,8 @@ class S3ViewSet(viewsets.ViewSet):
                                                  200, content_type='application/octet-stream')}
 
         return example_responses.get(self.action)
+
+    def get_endpoint_name(self):
+        endpoint_names = {'funpack': 'getFunpackedFile'}
+
+        return endpoint_names.get(self.action)
