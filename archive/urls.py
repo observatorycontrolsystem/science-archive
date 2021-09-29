@@ -14,9 +14,9 @@ from archive.schema import ScienceArchiveSchemaGenerator
 
 schema_view = get_schema_view(
    openapi.Info(
-      title="Archive API",
+      title="Science Archive API",
       default_version='v1',
-      description="Test description",
+      description="API documentation for the OCS Science Archive",
       terms_of_service="https://lco.global/policies/terms/",
       contact=openapi.Contact(email="ocs@lco.global"),
       license=openapi.License(name="GPL 3.0 License"),

@@ -21,7 +21,7 @@ jobs:
         pip install -r requirements.txt
     - name: Build docs
       run: |
-        python manage.py generateschema --file science-archive.yaml
+        python manage.py generateschema --file science-archive.yaml --generator_class archive.schema.ScienceArchiveSchemaGenerator
         npx redoc-cli bundle science-archive.yaml
         mkdir openapi; mv redoc-static.html openapi/science-archive.html
     - name: Deploy to GitHub Pages

@@ -15,7 +15,8 @@ def version_scheme(version: ScmVersion) -> str:
 class ScienceArchiveSchemaGenerator(SchemaGenerator):
     def get_schema(self, *args, **kwargs):
         schema = super().get_schema(*args, **kwargs)
-        schema['info']['title'] = 'Science Archive'
+        schema['info']['title'] = 'Science Archive API'
+        schema['info']['description'] = 'API documentation for the OCS Science Archive'
         schema['info']['version'] = get_version(version_scheme=version_scheme, local_scheme='no-local-version')
         return schema
 
