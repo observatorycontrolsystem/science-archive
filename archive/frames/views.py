@@ -271,7 +271,7 @@ class S3ViewSet(viewsets.ViewSet):
     
     def get_example_response(self):
         example_responses = {'funpack': Response(EXAMPLE_RESPONSES['frames']['funpack'], 
-                                                 200, content_type='application/octet-stream')}
+                                                 status=status.HTTP_200_OK, content_type='application/octet-stream')}
 
         return example_responses.get(self.action)
 
