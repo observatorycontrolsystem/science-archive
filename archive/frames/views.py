@@ -10,7 +10,7 @@ from archive.frames.utils import (
 )
 from archive.frames.permissions import AdminOrReadOnly
 from archive.frames.filters import FrameFilter
-from archive.doc_examples import EXAMPLE_RESPONSES
+from archive.doc_examples import EXAMPLE_RESPONSES, QUERY_PARAMETERS
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
@@ -154,7 +154,8 @@ class FrameViewSet(viewsets.ModelViewSet):
     @action(detail=False)
     def aggregate(self, request):
         """
-        Aggregate field values based on start/end time
+        Aggregate field values based on start/end time. 
+        Returns the unique values shared across all FITS files for site, telescope, instrument, filter, proposal, and obstype.
         """
         fields = ('SITEID', 'TELID', 'FILTER', 'INSTRUME', 'OBSTYPE', 'PROPID')
         aggregate_field = request.GET.get('aggregate_field', 'ALL')
@@ -210,6 +211,11 @@ class FrameViewSet(viewsets.ModelViewSet):
                              'headers': Response(EXAMPLE_RESPONSES['frames']['headers'], 200)}
 
         return example_responses.get(self.action)
+
+    def get_query_parameters(self):
+        query_parameters = {'aggregate': QUERY_PARAMETERS['frames']['aggregate']}
+
+        return query_parameters.get(self.action)
 
     def get_endpoint_name(self):
         endpoint_names = {'aggregate': 'aggregateFields',

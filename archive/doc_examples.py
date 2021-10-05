@@ -154,3 +154,18 @@ EXAMPLE_RESPONSES = {
         'health': 'ok'
     }
 }
+
+QUERY_PARAMETERS = {
+    'frames': {
+        'aggregate': [{'in': 'query', 'name': 'start', 'required': False, 'schema': {'type': 'string'}, 'description': 'Start time'},
+                      {'in': 'query', 'name': 'end', 'required': False, 'schema': {'type': 'string'}, 'description': 'End time'},
+                      {'in': 'query', 'name': 'aggregate_field', 'required': False, 'schema': {'type': 'string', 'default': 'ALL'}, 'description': 'Field to retrieve aggregated values for. Defaults to all fields if not specified.'},
+                      {'in': 'query', 'name': 'SITEID', 'required': False, 'schema': {'type': 'string'}, 'description': 'Aggregate all fields for a given site'},
+                      {'in': 'query', 'name': 'TELID', 'required': False, 'schema': {'type': 'string'}, 'description': 'Aggregate all fields for a given telescope'},
+                      {'in': 'query', 'name': 'FILTER', 'required': False, 'schema': {'type': 'string'}, 'description': 'Aggregate all fields for a given filter'},
+                      {'in': 'query', 'name': 'INSTRUME', 'required': False, 'schema': {'type': 'string'}, 'description': 'Aggregate all fields for a given instrument'},
+                      {'in': 'query', 'name': 'OBSTYPE', 'required': False, 'schema': {'type': 'string'}, 'description': 'Aggregate all fields for a given observation type'},
+                      {'in': 'query', 'name': 'PROPID', 'required': False, 'schema': {'type': 'string'}, 'description': 'Aggregate all fields for a given proposal ID'},
+                     ]
+    }
+}

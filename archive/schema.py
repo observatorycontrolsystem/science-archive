@@ -65,6 +65,15 @@ class ScienceArchiveSchema(AutoSchema):
 
         return operations
 
+    def get_filter_parameters(self, path, method):
+        if getattr(self.view, 'get_query_parameters', None) is not None:
+            override_query_parameters = self.view.get_query_parameters()
+            if override_query_parameters is not None:
+                return override_query_parameters
+    
+        return super().get_filter_parameters(path, method)
+
+
     # The following class methods are based off a change merged to master in the DRF repository
     # that allows for the specification of separate request and response serializers for view introspection.
     # See https://github.com/encode/django-rest-framework/pull/7424
