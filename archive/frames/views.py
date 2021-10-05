@@ -154,7 +154,7 @@ class FrameViewSet(viewsets.ModelViewSet):
     @action(detail=False)
     def aggregate(self, request):
         """
-        Aggregate field values based on start/end time. 
+        Aggregate field values based on start/end time.
         Returns the unique values shared across all FITS files for site, telescope, instrument, filter, proposal, and obstype.
         """
         fields = ('SITEID', 'TELID', 'FILTER', 'INSTRUME', 'OBSTYPE', 'PROPID')
@@ -196,7 +196,7 @@ class FrameViewSet(viewsets.ModelViewSet):
 
     def get_request_serializer(self, *args, **kwargs):
         request_serializers = {'zip': ZipSerializer}
-        
+
         return request_serializers.get(self.action, self.serializer_class)(*args, **kwargs)
 
     def get_response_serializer(self, *args, **kwargs):
@@ -276,7 +276,7 @@ class S3ViewSet(viewsets.ViewSet):
             return HttpResponse(bytes(proc.stdout), content_type='application/octet-stream')
     
     def get_example_response(self):
-        example_responses = {'funpack': Response(EXAMPLE_RESPONSES['frames']['funpack'], 
+        example_responses = {'funpack': Response(EXAMPLE_RESPONSES['frames']['funpack'],
                                                  status=status.HTTP_200_OK, content_type='application/octet-stream')}
 
         return example_responses.get(self.action)

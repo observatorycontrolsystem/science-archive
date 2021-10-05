@@ -11,7 +11,7 @@ class ZipSerializer(serializers.Serializer):
         help_text='Frame IDs of images to include in zip archive'
     )
     uncompress = serializers.BooleanField(
-        default=False, 
+        default=False,
         help_text='Whether to uncompress the FITS files prior to creating zip archive'
     )
 

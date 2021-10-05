@@ -70,7 +70,7 @@ class ScienceArchiveSchema(AutoSchema):
             override_query_parameters = self.view.get_query_parameters()
             if override_query_parameters is not None:
                 return override_query_parameters
-    
+
         return super().get_filter_parameters(path, method)
 
 
