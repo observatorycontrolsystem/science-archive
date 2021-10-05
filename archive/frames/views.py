@@ -243,7 +243,7 @@ class S3ViewSet(viewsets.ViewSet):
     @action(detail=True)
     def funpack(self, request, pk=None):
         '''
-        Download the given Version (one part of a Frame), run funpack on it, and
+        Instruct the server to download the given Version (one part of a Frame), run funpack on it, and
         return the uncompressed FITS file to the client.
 
         This is designed to be used by the Archive Client ZIP file support to
