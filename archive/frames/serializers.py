@@ -7,9 +7,13 @@ from django.db import transaction
 
 class ZipSerializer(serializers.Serializer):
     frame_ids = serializers.ListField(
-        child=serializers.IntegerField(min_value=1)
+        child=serializers.IntegerField(min_value=1),
+        help_text='Frame IDs of images to include in zip archive'
     )
-    uncompress = serializers.BooleanField(default=False)
+    uncompress = serializers.BooleanField(
+        default=False,
+        help_text='Whether to uncompress the FITS files prior to creating zip archive'
+    )
 
     def validate(self, data):
         selected_frames_count = len(data.get('frame_ids', []))
@@ -21,7 +25,7 @@ class ZipSerializer(serializers.Serializer):
 
 
 class VersionSerializer(serializers.ModelSerializer):
-    url = serializers.CharField(read_only=True)
+    url = serializers.CharField(read_only=True, help_text='Download URL for given version')
 
     class Meta:
         model = Version
@@ -41,24 +45,22 @@ class PolygonField(serializers.Field):
     def to_internal_value(self, data):
         try:
             return GEOSGeometry(json.dumps(data))
-        except:
+        except Exception:
             raise serializers.ValidationError('Invalid polygon: {0}'.format(data))
 
 
 class FrameSerializer(serializers.ModelSerializer):
-    basename = serializers.CharField(required=True)
-    version_set = VersionSerializer(many=True)
-    url = serializers.CharField(read_only=True)
-    filename = serializers.CharField(read_only=True)
-    area = PolygonField(allow_null=True)
-    observation_day = serializers.DateField(input_formats=['iso-8601', '%Y%m%d'])
+    basename = serializers.CharField(required=True, help_text='File basename without extension')
+    version_set = VersionSerializer(many=True, help_text='Set of versions associated with this file')
+    url = serializers.CharField(read_only=True, help_text='File download URL associated with most recent version')
+    filename = serializers.CharField(read_only=True, help_text='Full filename')
+    area = PolygonField(allow_null=True, help_text='GeoJSON area that this frame covers')
+    observation_day = serializers.DateField(input_formats=['iso-8601', '%Y%m%d'], help_text='Observation day in %Y%m%d format')
     headers = serializers.JSONField(required=True, write_only=True)
-    related_frame_filenames = serializers.ListField(child=serializers.CharField(), required=True, write_only=True)
-    related_frames = serializers.PrimaryKeyRelatedField(
-        many=True,
-        read_only=True,
-        required=False,
-        style={'base_template': 'input.html'}
+    related_frame_filenames = serializers.ListField(
+        child=serializers.CharField(), required=True, write_only=True,
+        style={'base_template': 'input.html'},
+        help_text='Set of related frames for this file'
     )
 
     class Meta:
@@ -103,3 +105,12 @@ class FrameSerializer(serializers.ModelSerializer):
                 rf, _ = Frame.objects.get_or_create(basename=related_frame)
                 frame.related_frames.add(rf)
         frame.save()
+
+
+class AggregateSerializer(serializers.Serializer):
+    sites = serializers.ListField(child=serializers.CharField())
+    telescopes = serializers.ListField(child=serializers.CharField())
+    filters = serializers.ListField(child=serializers.CharField())
+    instruments = serializers.ListField(child=serializers.CharField())
+    obstypes = serializers.ListField(child=serializers.CharField())
+    proposals = serializers.ListField(child=serializers.CharField())

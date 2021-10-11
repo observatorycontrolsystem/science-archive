@@ -3,12 +3,15 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import throttling
+from rest_framework import throttling, status
 
 from archive.authentication.serializers import UserSerializer
+from archive.schema import ScienceArchiveSchema
+from archive.doc_examples import EXAMPLE_REQUESTS, EXAMPLE_RESPONSES
 
 
 class UserView(RetrieveAPIView):
+    schema = ScienceArchiveSchema(tags=['Users'])
     serializer_class = UserSerializer
 
     def get_object(self):
@@ -19,12 +22,23 @@ class UserView(RetrieveAPIView):
 
 
 class ObtainAuthTokenWithHeaders(ObtainAuthToken):
+    """
+    Obtain the auth token associated with the given user account
+    """
+    schema = ScienceArchiveSchema(tags=['Authentication'])
+
     def post(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             token, _ = Token.objects.get_or_create(user=request.user)
             return Response({'token': token.key})
         else:
             return super().post(request, *args, **kwargs)
+
+    def get_example_request(self):
+        return EXAMPLE_REQUESTS['authentication']['auth_token']
+
+    def get_endpoint_name(self):
+        return 'getAuthToken'
 
 
 class NoThrottle(throttling.BaseThrottle):
@@ -33,7 +47,17 @@ class NoThrottle(throttling.BaseThrottle):
 
 
 class HealthCheckView(APIView):
+    """
+    Endpoint to check the health of the Science Archive service
+    """
+    schema = ScienceArchiveSchema(tags=['Health'])
     throttle_classes = (NoThrottle,)
 
     def get(self, request, format=None):
         return Response('ok')
+
+    def get_example_response(self):
+        return Response(EXAMPLE_RESPONSES['authentication']['health'], status=status.HTTP_200_OK)
+
+    def get_endpoint_name(self):
+        return 'healthCheck'
