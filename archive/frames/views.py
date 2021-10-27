@@ -69,7 +69,7 @@ class FrameViewSet(viewsets.ModelViewSet):
         elif self.request.user.is_authenticated:
             return queryset.filter(
                 Q(proposal_id__in=self.request.user.profile.proposals) |
-                Q(oublic_date__lt=datetime.datetime.now(datetime.timezone.utc))
+                Q(public_date__lt=datetime.datetime.now(datetime.timezone.utc))
             )
         else:
             return queryset.filter(public_date__lt=datetime.datetime.now(datetime.timezone.utc))
@@ -161,16 +161,30 @@ class FrameViewSet(viewsets.ModelViewSet):
         Aggregate field values based on start/end time.
         Returns the unique values shared across all FITS files for site, telescope, instrument, filter, proposal, and obstype.
         """
+        # TODO: This should be removed after a while, it is just here for temporary API compatibility
+        FIELD_MAPPING = {
+            'SITEID': 'site_id',
+            'TELID': 'telescope_id',
+            'FILTER': 'primary_filter',
+            'INSTRUME': 'instrument_id',
+            'OBSTYPE': 'configuration_type',
+            'PROPID': 'proposal_id'
+        }
         fields = ('site_id', 'telescope_id', 'primary_filter', 'instrument_id', 'configuration_type', 'proposal_id')
         aggregate_field = request.GET.get('aggregate_field', 'ALL')
+        if aggregate_field in FIELD_MAPPING:
+            aggregate_field = FIELD_MAPPING[aggregate_field]
         if aggregate_field != 'ALL' and aggregate_field not in fields:
             return Response(
                 'Invalid aggregate_field. Valid fields are {}'.format(', '.join(fields)),
                 status=status.HTTP_400_BAD_REQUEST
             )
         query_filters = {}
+        for k in FIELD_MAPPING.keys():
+            if k in request.GET:
+                query_filters[FIELD_MAPPING[k]] = request.GET[k]
         for k in fields:
-            if request.GET.get(k):
+            if k in request.GET:
                 query_filters[k] = request.GET[k]
         if 'start' in request.GET:
             query_filters['observation_date__gte'] = parse(request.GET['start']).replace(tzinfo=UTC, second=0, microsecond=0)
@@ -179,7 +193,8 @@ class FrameViewSet(viewsets.ModelViewSet):
         cache_hash = blake2s(repr(frozenset(list(query_filters.items()) + [aggregate_field])).encode()).hexdigest()
         response_dict = cache.get(cache_hash)
         if not response_dict:
-            qs = Frame.objects.order_by().filter(**query_filters)
+            qs = Frame.objects.all()
+            qs = DjangoFilterBackend().filter_queryset(request, qs, view=self)
             sites = self._get_aggregate_values(qs, 'site_id', aggregate_field)
             telescopes = self._get_aggregate_values(qs, 'telescope_id', aggregate_field)
             filters = self._get_aggregate_values(qs, 'primary_filter', aggregate_field)
@@ -241,7 +256,7 @@ class VersionViewSet(viewsets.ReadOnlyModelViewSet):
     filter_fields = ('md5',)
 
 
-class S3ViewSet(viewsets.ViewSet):
+class FunpackViewSet(viewsets.ViewSet):
     schema = ScienceArchiveSchema(tags=['Frames'])
 
     @action(detail=True)

@@ -82,9 +82,9 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
             # The NGINX mod_zip module requires that the files which are used to build the
             # ZIP file must be loaded from an internal NGINX location. Replace the leading
             # portion of the generated URL with an internal NGINX location which proxies all
-            # traffic to AWS S3.
-            # funpack location (return decompressed files from AWS S3 Bucket)
-            location = reverse('s3-funpack-funpack', kwargs={'pk': version.id})
+            # traffic to Filestore URL.
+            # funpack location (return decompressed files from FileStore)
+            location = reverse('frame-funpack-funpack', kwargs={'pk': version.id})
             extension = '.fits'
 
             # In order to build the manifest for mod_zip, we need to get the uncompressed file size. This is

@@ -20,13 +20,15 @@ import os
 import random
 import subprocess
 
+from ocs_archive.input.file import EmptyFile
+from ocs_archive.input.fitsfile import FitsFile
+
 
 class TestFrameGet(ReplicationTestCase):
     def setUp(self):
         user = User.objects.create(username='admin', password='admin', is_superuser=True)
         user.backend = settings.AUTHENTICATION_BACKENDS[0]
         self.client.force_login(user)
-        boto3.client = MagicMock()
         self.frames = FrameFactory.create_batch(5)
         self.frame = self.frames[0]
 
@@ -69,7 +71,10 @@ class TestFramePost(ReplicationTestCase):
         self.addCleanup(archive_fits_patcher.stop)
         self.mock_archive_fits_publish = archive_fits_patcher.start()
         self.header_json = json.load(open(os.path.join(os.path.dirname(__file__), 'frames.json')))
-        f = self.header_json[random.choice(list(self.header_json.keys()))]
+        headers = self.header_json[random.choice(list(self.header_json.keys()))]
+        datafile = FitsFile(EmptyFile('test.fits'), file_metadata=headers)
+        f = datafile.get_header_data().get_archive_frame_data()
+        f['headers'] = headers
         f['basename'] = FrameFactory.basename.fuzz()
         f['area'] = FrameFactory.area.fuzz(as_dict=True)
         f['version_set'] = [
@@ -84,7 +89,10 @@ class TestFramePost(ReplicationTestCase):
     def test_post_frame(self):
         total_frames = len(self.header_json)
         for extension in self.header_json:
-            frame_payload = self.header_json[extension]
+            headers = self.header_json[extension]
+            datafile = FitsFile(EmptyFile('test.fits'), file_metadata=headers)
+            frame_payload = datafile.get_header_data().get_archive_frame_data()
+            frame_payload['headers'] = headers
             frame_payload['basename'] = FrameFactory.basename.fuzz()
             frame_payload['area'] = FrameFactory.area.fuzz(as_dict=True)
             frame_payload['version_set'] = [
@@ -111,7 +119,7 @@ class TestFramePost(ReplicationTestCase):
 
     def test_bad_frame_does_not_post_to_archive_fits(self):
         frame_payload = self.single_frame_payload
-        frame_payload['DATE-OBS'] = 'iamnotadate'
+        frame_payload['observation_date'] = 'iamnotadate'
         response = self.client.post(
             reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
         )
@@ -141,14 +149,6 @@ class TestFramePost(ReplicationTestCase):
             reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
         )
         self.assertContains(response, frame_payload['basename'], status_code=201)
-
-    def test_exptime_way_too_long(self):
-        frame_payload = self.single_frame_payload
-        frame_payload['exposure_time'] = 10.03241524124232134
-        response = self.client.post(
-            reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
-        )
-        self.assertEqual(response.status_code, 400)
 
     def test_post_frame_polygon_serialization(self):
         frame_payload = self.single_frame_payload
@@ -190,8 +190,6 @@ class TestFramePost(ReplicationTestCase):
         response = self.client.get(reverse('frame-detail', args=(response.json()['id'],)))
         self.assertIsNone(response.json()['request_id'])
 
-
-
     def test_post_duplicate_data(self):
         frame = FrameFactory()
         version = frame.version_set.all()[0]
@@ -208,7 +206,6 @@ class TestFramePost(ReplicationTestCase):
 
 class TestFrameFiltering(ReplicationTestCase):
     def setUp(self):
-        boto3.client = MagicMock()
         self.admin_user = User.objects.create_superuser(username='admin', email='a@a.com', password='password')
         self.admin_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         self.normal_user = User.objects.create(username='frodo', password='theone')
@@ -248,9 +245,6 @@ class TestFrameFiltering(ReplicationTestCase):
 
 
 class TestQueryFiltering(ReplicationTestCase):
-    def setUp(self):
-        boto3.client = MagicMock()
-
     def test_start_end(self):
         frame = PublicFrameFactory(observation_date=datetime.datetime(2011, 2, 1, tzinfo=UTC))
         response = self.client.get(reverse('frame-list') + '?start=2011-01-01&end=2011-03-01')
@@ -359,7 +353,6 @@ class TestQueryFiltering(ReplicationTestCase):
 
 class TestZipDownload(ReplicationTestCase):
     def setUp(self):
-        boto3.client = MagicMock()
         self.normal_user = User.objects.create(username='frodo', password='theone')
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
@@ -436,38 +429,28 @@ class TestZipDownload(ReplicationTestCase):
         self.assertEqual(response.status_code, 404)
 
 
-class TestS3ViewSet(ReplicationTestCase):
-    @contextmanager
-    def get_fileobj(self, *args, **kwargs):
-        fileobj = BytesIO(b'test_value')
-        yield fileobj
-
+class TestFunpackViewSet(ReplicationTestCase):
     def setUp(self):
-        self.m = MagicMock()
-        self.m.get_fileobj = self.get_fileobj
         self.frame = FrameFactory(observation_day=datetime.datetime(2020, 11, 18, tzinfo=UTC))
 
-    @patch('archive.frames.views.get_s3_client')
     @patch('archive.frames.views.subprocess')
-    def test_funpack_download(self, mock_subprocess, mock_client):
+    def test_funpack_download(self, mock_subprocess):
         """Test that funpack download endpoint returns correct file content and calls funpack."""
-        mock_client.return_value = self.m
         mock_proc = MagicMock()
         mock_proc.stdout = b'test_value'
         mock_subprocess.run.return_value = mock_proc
-        response = self.client.get(reverse('s3-funpack-funpack', kwargs={'pk': self.frame.version_set.first().id}))
+        response = self.client.get(reverse('frame-funpack-funpack', kwargs={'pk': self.frame.version_set.first().id}))
         mock_subprocess.run.assert_called_with(
-            ['/usr/bin/funpack', '-C', '-S', '-'], input=b'test_value', stdout=mock_subprocess.PIPE
+            ['/usr/bin/funpack', '-C', '-S', '-'], input=b'', stdout=mock_subprocess.PIPE
         )
         self.assertContains(response, b'test_value')
 
-    @patch('archive.frames.views.get_s3_client')
     @patch.object(subprocess, 'run')
-    def test_funpack_download_failure(self, mock_run, mock_client):
+    def test_funpack_download_failure(self, mock_run):
         """Test that funpack download endpoint returns correct response following a failure."""
         mock_run.side_effect = subprocess.CalledProcessError(-9, 'funpack')
 
-        response = self.client.get(reverse('s3-funpack-funpack', kwargs={'pk': self.frame.version_set.first().id}))
+        response = self.client.get(reverse('frame-funpack-funpack', kwargs={'pk': self.frame.version_set.first().id}))
 
         self.assertContains(response,
                             'There was a problem downloading your files. Please try again later or select fewer files.',
@@ -476,7 +459,6 @@ class TestS3ViewSet(ReplicationTestCase):
 
 class TestFrameAggregate(ReplicationTestCase):
     def setUp(self):
-        boto3.client = MagicMock()
         is_public_date = timezone.now() - datetime.timedelta(days=7)
         is_not_public_date = timezone.now() + datetime.timedelta(days=7)
         FrameFactory.create(configuration_type='EXPOSE', telescope_id='1m0a', site_id='bpl', instrument_id='kb46',

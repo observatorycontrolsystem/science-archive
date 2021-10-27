@@ -10,6 +10,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.AlterModelOptions(
+            name='frame',
+            options={'ordering': ['-observation_date']},
+        ),
         migrations.AddField(
             model_name='frame',
             name='configuration_type',

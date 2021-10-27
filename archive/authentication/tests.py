@@ -83,5 +83,5 @@ class TestAuthentication(ReplicationTestCase):
         self.client.force_login(self.admin_user)
         FrameFactory.create(proposal_id='prop1')
         FrameFactory.create(proposal_id='prop2')
-        self.assertEqual(['prop1', 'prop2'], self.admin_user.profile.proposals)
+        self.assertCountEqual(['prop1', 'prop2'], self.admin_user.profile.proposals)
         self.assertFalse(get_mock.called)

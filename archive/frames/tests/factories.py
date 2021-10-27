@@ -130,7 +130,7 @@ class VersionFactory(factory.django.DjangoModelFactory):
     )
     key = factory.fuzzy.FuzzyText(length=32)
     md5 = factory.fuzzy.FuzzyText(length=32)
-    extension = factory.fuzzy.FuzzyText(length=7)
+    extension = factory.fuzzy.FuzzyChoice(['.fits', '.fits.fz', '.pdf'])
     frame = factory.SubFactory('archive.frames.tests.factories.FrameFactory')
 
 

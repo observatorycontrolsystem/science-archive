@@ -43,7 +43,16 @@ class Frame(models.Model):
         null=True,
         help_text="Time of observation in UTC",
     )
+    DATE_OBS = models.DateTimeField(
+        db_index=True,
+        null=True,
+        help_text="Time of observation in UTC",
+    )
     observation_day = models.DateField(
+        null=True,
+        help_text="Observing Night in YYYYMMDD",
+    )
+    DAY_OBS = models.DateField(
         null=True,
         help_text="Observing Night in YYYYMMDD",
     )
@@ -53,7 +62,18 @@ class Frame(models.Model):
         blank=True,
         help_text="Textual proposal id"
     )
+    PROPID = models.CharField(
+        max_length=200,
+        default='',
+        blank=True,
+        help_text="Textual proposal id"
+    )
     instrument_id = models.CharField(
+        max_length=64,
+        default='',
+        help_text="Instrument used"
+    )
+    INSTRUME = models.CharField(
         max_length=64,
         default='',
         help_text="Instrument used"
@@ -65,11 +85,27 @@ class Frame(models.Model):
         blank=True,
         help_text="Target object name"
     )
+    OBJECT = models.CharField(
+        max_length=200,
+        db_index=True,
+        default='',
+        blank=True,
+        help_text="Target object name"
+    )
     reduction_level = models.SmallIntegerField(
         default=0,
         help_text="Reduction level of the frame"
     )
+    RLEVEL = models.SmallIntegerField(
+        default=0,
+        help_text="Reduction level of the frame"
+    )
     site_id = models.CharField(
+        default='',
+        max_length=3,
+        help_text="Originating site code. Usually the 3 character airport code of the nearest airport"
+    )
+    SITEID = models.CharField(
         default='',
         max_length=3,
         help_text="Originating site code. Usually the 3 character airport code of the nearest airport"
@@ -79,11 +115,28 @@ class Frame(models.Model):
         max_length=4,
         help_text="Originating telescope 4 character code. Ex. 1m0a or 0m4b"
     )
+    TELID = models.CharField(
+        default='',
+        max_length=4,
+        help_text="Originating telescope 4 character code. Ex. 1m0a or 0m4b"
+    )
     exposure_time = models.FloatField(
         null=True,
         help_text="Exposure time, in seconds"
     )
+    EXPTIME = models.DecimalField(
+        null=True,
+        max_digits=13,
+        decimal_places=6,
+        help_text="Exposure time, in seconds. FITS header: EXPTIME"
+    )
     primary_filter = models.CharField(
+        default='',
+        blank=True,
+        max_length=100,
+        help_text="Primary Optical Element used. FITS header: FILTER"
+    )
+    FILTER = models.CharField(
         default='',
         blank=True,
         max_length=100,
@@ -94,7 +147,18 @@ class Frame(models.Model):
         null=True,
         help_text="The date the frame becomes public"
     )
+    L1PUBDAT = models.DateTimeField(
+        db_index=True,
+        null=True,
+        help_text="The date the frame becomes public"
+    )
     configuration_type = models.CharField(
+        default='',
+        max_length=20,
+        choices=OBSERVATION_TYPES,
+        help_text="Configuration type of the observation"
+    )
+    OBSTYPE = models.CharField(
         default='',
         max_length=20,
         choices=OBSERVATION_TYPES,
@@ -105,7 +169,18 @@ class Frame(models.Model):
         db_index=True,
         help_text='Unique id associated with the observation'
     )
+    BLKUID = models.PositiveIntegerField(
+        null=True,
+        db_index=True,
+        help_text='Unique id associated with the observation'
+    )
     request_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='Unique id associated with the request this observation is a part of'
+    )
+    REQNUM = models.PositiveIntegerField(
         null=True,
         blank=True,
         db_index=True,
@@ -144,8 +219,8 @@ class Frame(models.Model):
 
     def get_header_dict(self):
         return {
-            archive_settings.OBSERVATION_DATE_KEY: self.observation_date,
-            archive_settings.OBSERVATION_DAY_KEY: self.observation_day,
+            archive_settings.OBSERVATION_DATE_KEY: self.observation_date.isoformat(),
+            archive_settings.OBSERVATION_DAY_KEY: self.observation_day.isoformat(),
             archive_settings.REDUCTION_LEVEL_KEY: self.reduction_level,
             archive_settings.INSTRUMENT_ID_KEY: self.instrument_id,
             archive_settings.EXPOSURE_TIME_KEY: self.exposure_time,

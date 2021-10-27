@@ -20,9 +20,9 @@ class FrameFilter(django_filters.FilterSet):
     SITEID = django_filters.CharFilter(field_name='site_id', lookup_expr='icontains')
     TELID = django_filters.CharFilter(field_name='telescope_id', lookup_expr='icontains')
     FILTER = django_filters.CharFilter(field_name='primary_filter', lookup_expr='icontains')
-    BLKUID = django_filters.NumberFilter(field_name='observation_id', lookup_expr='iexact')
-    REQNUM = django_filters.NumberFilter(field_name='request_id', lookup_expr='iexact')
-    RLEVEL = django_filters.NumberFilter(field_name='reduction_level', lookup_expr='iexact')
+    BLKUID = django_filters.NumberFilter(field_name='observation_id', lookup_expr='exact')
+    REQNUM = django_filters.NumberFilter(field_name='request_id', lookup_expr='exact')
+    RLEVEL = django_filters.NumberFilter(field_name='reduction_level', lookup_expr='exact')
     covers = django_filters.CharFilter(method='covers_filter')
     exclude_OBSTYPE = django_filters.MultipleChoiceFilter(
         field_name='configuration_type',
@@ -48,7 +48,7 @@ class FrameFilter(django_filters.FilterSet):
 
     def public_filter(self, queryset, name, value):
         if not value:
-            return queryset.exclude(L1PUBDAT__lt=timezone.now())
+            return queryset.exclude(public_date__lt=timezone.now())
         return queryset
 
     class Meta:
