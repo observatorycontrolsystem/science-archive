@@ -22,8 +22,9 @@ class ScienceArchiveSchemaGenerator(SchemaGenerator):
 
 
 class ScienceArchiveSchema(AutoSchema):
-    def __init__(self, tags=None, operation_id_base=None, component_name=None):
+    def __init__(self, tags=None, operation_id_base=None, component_name=None, empty_request=False):
         super().__init__(tags=tags, operation_id_base=operation_id_base, component_name=component_name)
+        self.empty_request = empty_request
 
     def get_operation_id(self, path, method):
         """
@@ -62,6 +63,9 @@ class ScienceArchiveSchema(AutoSchema):
             example_request = self.view.get_example_request()
             if example_request is not None:
                 operations['requestBody']['content']['application/json']['example'] = example_request
+
+        if self.empty_request: 
+            operations['requestBody'] = {}
 
         return operations
 

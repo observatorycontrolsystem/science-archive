@@ -1,11 +1,14 @@
+from django.utils.module_loading import import_string
+from django.conf import settings
 from rest_framework.generics import RetrieveAPIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import throttling, status
 
-from archive.authentication.serializers import UserSerializer
+from archive.authentication.serializers import UserSerializer, RevokeTokenResponseSerializer
 from archive.schema import ScienceArchiveSchema
 from archive.doc_examples import EXAMPLE_REQUESTS, EXAMPLE_RESPONSES
 
@@ -39,6 +42,28 @@ class ObtainAuthTokenWithHeaders(ObtainAuthToken):
 
     def get_endpoint_name(self):
         return 'getAuthToken'
+
+
+class RevokeApiTokenApiView(APIView):
+    """View to revoke an API token. 
+    Note that the API token is referenced by the name auth_token.
+    """
+    permission_classes = [IsAuthenticated]
+    schema = ScienceArchiveSchema(tags=['Authentication'], empty_request=True)
+    serializer_class = RevokeTokenResponseSerializer
+
+    def post(self, request):
+        """A simple POST request (empty request body) with user authentication information in the HTTP header will revoke a user's API Token."""
+        request.user.auth_token.delete()
+        Token.objects.create(user=request.user)
+        serializer = self.get_response_serializer({'message': 'API token revoked.'})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def get_response_serializer(self, *args, **kwargs):
+        return RevokeTokenResponseSerializer(*args, **kwargs)
+
+    def get_endpoint_name(self):
+        return 'revokeApiToken'
 
 
 class NoThrottle(throttling.BaseThrottle):
