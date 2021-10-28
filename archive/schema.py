@@ -64,7 +64,7 @@ class ScienceArchiveSchema(AutoSchema):
             if example_request is not None:
                 operations['requestBody']['content']['application/json']['example'] = example_request
 
-        if self.empty_request: 
+        if self.empty_request:
             operations['requestBody'] = {}
 
         return operations

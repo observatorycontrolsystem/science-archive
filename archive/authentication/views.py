@@ -1,5 +1,3 @@
-from django.utils.module_loading import import_string
-from django.conf import settings
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.views import ObtainAuthToken
@@ -45,7 +43,8 @@ class ObtainAuthTokenWithHeaders(ObtainAuthToken):
 
 
 class RevokeApiTokenApiView(APIView):
-    """View to revoke an API token. 
+    """
+    View to revoke an API token.
     Note that the API token is referenced by the name auth_token.
     """
     permission_classes = [IsAuthenticated]
