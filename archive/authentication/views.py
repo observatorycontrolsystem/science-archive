@@ -45,7 +45,7 @@ class ObtainAuthTokenWithHeaders(ObtainAuthToken):
 class RevokeApiTokenApiView(APIView):
     """
     View to revoke an API token.
-    Note that the API token is referenced by the name auth_token.
+    Note that the API token is referenced under the name auth_token.
     """
     permission_classes = [IsAuthenticated]
     schema = ScienceArchiveSchema(tags=['Authentication'], empty_request=True)
@@ -55,11 +55,8 @@ class RevokeApiTokenApiView(APIView):
         """A simple POST request (empty request body) with user authentication information in the HTTP header will revoke a user's API Token."""
         request.user.auth_token.delete()
         Token.objects.create(user=request.user)
-        serializer = self.get_response_serializer({'message': 'API token revoked.'})
+        serializer = RevokeTokenResponseSerializer({'message': 'API token revoked.'})
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def get_response_serializer(self, *args, **kwargs):
-        return RevokeTokenResponseSerializer(*args, **kwargs)
 
     def get_endpoint_name(self):
         return 'revokeApiToken'
