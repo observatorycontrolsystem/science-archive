@@ -4,9 +4,32 @@ from unittest.mock import patch
 from archive.authentication.models import Profile
 from archive.frames.tests.factories import FrameFactory
 from archive.test_helpers import ReplicationTestCase
+from rest_framework.test import APITestCase
+from django.urls import reverse
 import responses
 import json
 
+class TestRevokeTokenAPI(APITestCase):
+    def setUp(self) -> None:
+        super(TestRevokeTokenAPI, self).setUp()
+        self.user = User.objects.create(username='test_revoke_token_user')
+        Profile.objects.create(user=self.user)
+        self.client.force_login(self.user)
+
+    def test_revoke_token(self):
+        initial_token = self.user.auth_token
+        response = self.client.post(reverse('revoke_api_token'))
+        self.assertContains(response, 'API token revoked', status_code=200)
+        self.user.refresh_from_db()
+        self.assertNotEqual(initial_token, self.user.auth_token)
+
+    def test_unauthenticated(self):
+        self.client.logout()
+        initial_token = self.user.auth_token
+        response = self.client.post(reverse('revoke_api_token'))
+        self.assertEqual(response.status_code, 401)
+        self.user.refresh_from_db()
+        self.assertEqual(initial_token, self.user.auth_token)
 
 class TestAuthentication(ReplicationTestCase):
     @patch('requests.get')

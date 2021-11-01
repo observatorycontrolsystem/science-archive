@@ -9,7 +9,7 @@ from django.views.generic import TemplateView
 
 from archive.frames import urls as frame_urls
 from archive.authentication import urls as auth_urls
-from archive.authentication.views import ObtainAuthTokenWithHeaders, HealthCheckView
+from archive.authentication.views import ObtainAuthTokenWithHeaders, HealthCheckView, RevokeApiTokenApiView
 from archive.schema import ScienceArchiveSchemaGenerator
 
 schema_view = get_schema_view(
@@ -32,6 +32,7 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     url(r'^api-token-auth/', ObtainAuthTokenWithHeaders.as_view()),
+    url(r'^revoke_token/', RevokeApiTokenApiView.as_view(), name='revoke_api_token'),
     url(r'^health/', HealthCheckView.as_view()),
     path('openapi/', schema_view.as_view(), name='openapi-schema'),
     path('redoc/', TemplateView.as_view(
