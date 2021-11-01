@@ -3,10 +3,8 @@ from django.utils.functional import cached_property
 from django.contrib.postgres.fields import JSONField
 import hashlib
 import logging
-from django.conf import settings
 from django.contrib.gis.db import models
 
-from ocs_archive.storage.filestore import FileStore
 from ocs_archive.storage.filestorefactory import FileStoreFactory
 from ocs_archive.settings import settings as archive_settings
 

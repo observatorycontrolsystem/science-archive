@@ -1,8 +1,5 @@
-import boto3
-import io
 import logging
 import subprocess
-from functools import lru_cache
 from django.conf import settings
 from django.urls import reverse
 
@@ -11,7 +8,7 @@ from kombu import Exchange
 
 from archive.frames.exceptions import FunpackError
 
-from ocs_archive.input.file import DataFile, EmptyFile
+from ocs_archive.input.file import EmptyFile
 from ocs_archive.input.filefactory import FileFactory
 from ocs_archive.storage.filestorefactory import FileStoreFactory
 from ocs_archive.settings import settings as archive_settings

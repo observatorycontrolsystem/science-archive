@@ -10,8 +10,6 @@ from django.conf import settings
 from django.contrib.gis.geos import Point
 from pytz import UTC
 from rest_framework import status
-from contextlib import contextmanager
-from io import BytesIO
 import boto3
 import responses
 import datetime

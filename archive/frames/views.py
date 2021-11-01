@@ -30,11 +30,8 @@ from pytz import UTC
 import subprocess
 import datetime
 import logging
-import io
 
-from ocs_archive.storage.filestore import FileStore
 from ocs_archive.storage.filestorefactory import FileStoreFactory
-from ocs_archive.settings import settings as archive_settings
 
 logger = logging.getLogger()
 
