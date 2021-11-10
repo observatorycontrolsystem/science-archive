@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='frame',
-            name='primary_filter',
+            name='primary_optical_element',
             field=models.CharField(blank=True, default='', help_text='Primary Optical Element used. FITS header: FILTER', max_length=100),
         ),
         migrations.AddField(

@@ -65,11 +65,15 @@ class FrameSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Frame
+        # TODO: Remove the old field names when we remove the old fields and tell users to migrate
         fields = (
             'id', 'basename', 'area', 'related_frames', 'version_set', 'headers',
             'filename', 'url', 'reduction_level', 'observation_day', 'observation_date', 'proposal_id',
-            'instrument_id', 'target_name', 'site_id', 'telescope_id', 'exposure_time', 'primary_filter',
-            'public_date', 'configuration_type', 'observation_id', 'request_id', 'related_frame_filenames'
+            'instrument_id', 'target_name', 'site_id', 'telescope_id', 'exposure_time', 'primary_optical_element',
+            'public_date', 'configuration_type', 'observation_id', 'request_id', 'related_frame_filenames',
+            'RLEVEL', 'DAY_OBS', 'DATE_OBS', 'PROPID',
+            'INSTRUME', 'OBJECT', 'SITEID', 'TELID', 'EXPTIME', 'FILTER',
+            'L1PUBDAT', 'OBSTYPE', 'BLKUID', 'REQNUM',
         )
         # For when we update django/drf
         # extra_kwargs = {

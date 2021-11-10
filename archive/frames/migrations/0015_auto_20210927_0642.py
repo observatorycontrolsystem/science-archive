@@ -16,7 +16,7 @@ def forward(apps, schema_editor):
         frame.site_id = frame.SITEID
         frame.telescope_id = frame.TELID
         frame.exposure_time = frame.EXPTIME
-        frame.primary_filter = frame.FILTER
+        frame.primary_optical_element = frame.FILTER
         frame.public_date = frame.L1PUBDAT
         frame.configuration_type = frame.OBSTYPE
         frame.observation_id = frame.BLKUID

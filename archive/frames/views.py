@@ -45,7 +45,7 @@ class FrameViewSet(viewsets.ModelViewSet):
         filters.OrderingFilter,
     )
     filter_class = FrameFilter
-    ordering_fields = ('id', 'basename', 'observation_date', 'primary_filter', 'configuration_type',
+    ordering_fields = ('id', 'basename', 'observation_date', 'primary_optical_element', 'configuration_type',
                        'proposal_id', 'instrument_id', 'target_name', 'reduction_level', 'exposure_time')
 
     def get_queryset(self):
@@ -162,12 +162,12 @@ class FrameViewSet(viewsets.ModelViewSet):
         FIELD_MAPPING = {
             'SITEID': 'site_id',
             'TELID': 'telescope_id',
-            'FILTER': 'primary_filter',
+            'FILTER': 'primary_optical_element',
             'INSTRUME': 'instrument_id',
             'OBSTYPE': 'configuration_type',
             'PROPID': 'proposal_id'
         }
-        fields = ('site_id', 'telescope_id', 'primary_filter', 'instrument_id', 'configuration_type', 'proposal_id')
+        fields = ('site_id', 'telescope_id', 'primary_optical_element', 'instrument_id', 'configuration_type', 'proposal_id')
         aggregate_field = request.GET.get('aggregate_field', 'ALL')
         if aggregate_field in FIELD_MAPPING:
             aggregate_field = FIELD_MAPPING[aggregate_field]
@@ -194,7 +194,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             qs = DjangoFilterBackend().filter_queryset(request, qs, view=self)
             sites = self._get_aggregate_values(qs, 'site_id', aggregate_field)
             telescopes = self._get_aggregate_values(qs, 'telescope_id', aggregate_field)
-            filters = self._get_aggregate_values(qs, 'primary_filter', aggregate_field)
+            filters = self._get_aggregate_values(qs, 'primary_optical_element', aggregate_field)
             instruments = self._get_aggregate_values(qs, 'instrument_id', aggregate_field)
             obstypes = self._get_aggregate_values(qs, 'configuration_type', aggregate_field)
             proposals = self._get_aggregate_values(qs.filter(public_date__lte=timezone.now()), 'proposal_id', aggregate_field)

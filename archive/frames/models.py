@@ -128,7 +128,7 @@ class Frame(models.Model):
         decimal_places=6,
         help_text="Exposure time, in seconds. FITS header: EXPTIME"
     )
-    primary_filter = models.CharField(
+    primary_optical_element = models.CharField(
         default='',
         blank=True,
         max_length=100,
@@ -225,7 +225,7 @@ class Frame(models.Model):
             archive_settings.SITE_ID_KEY: self.site_id,
             archive_settings.TELESCOPE_ID_KEY: self.telescope_id,
             archive_settings.OBSERVATION_ID_KEY: self.observation_id,
-            archive_settings.PRIMARY_FILTER_KEY: self.primary_filter,
+            archive_settings.PRIMARY_FILTER_KEY: self.primary_optical_element,
             archive_settings.TARGET_NAME_KEY: self.target_name,
             archive_settings.REQUEST_ID_KEY: self.request_id,
             archive_settings.CONFIGURATION_TYPE_KEY: self.configuration_type,

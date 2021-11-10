@@ -154,7 +154,7 @@ class FrameFactory(factory.django.DjangoModelFactory):
     site_id = factory.fuzzy.FuzzyChoice(SITES)
     telescope_id = factory.fuzzy.FuzzyChoice(TELESCOPES)
     exposure_time = factory.fuzzy.FuzzyFloat(0.0, 10000.0)
-    primary_filter = factory.fuzzy.FuzzyChoice(FILTERS)
+    primary_optical_element = factory.fuzzy.FuzzyChoice(FILTERS)
     public_date = factory.fuzzy.FuzzyDateTime(
         datetime.datetime(2015, 1, 1, tzinfo=UTC),
         datetime.datetime(2025, 1, 1, tzinfo=UTC)

@@ -1,5 +1,6 @@
 import logging
 import subprocess
+from urllib.parse import urlsplit
 from django.conf import settings
 from django.urls import reverse
 
@@ -103,7 +104,9 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
             # traffic to AWS S3.
             # default location (return files as-is from AWS S3 Bucket)
             url = file_store.get_url(path, version.key, expiration=86400)
-            location = url.replace(f'https://{archive_settings.BUCKET}.s3.amazonaws.com', '/s3-native')
+            split_url = urlsplit(url)
+            url_to_replace = split_url.scheme + "://" + split_url.netloc
+            location = url.replace(url_to_replace, '/zip-files')
 
         # The NGINX mod_zip module builds ZIP files using a manifest. Build the manifest
         # line for this frame.

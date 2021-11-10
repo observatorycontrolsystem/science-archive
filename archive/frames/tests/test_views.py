@@ -460,11 +460,11 @@ class TestFrameAggregate(ReplicationTestCase):
         is_public_date = timezone.now() - datetime.timedelta(days=7)
         is_not_public_date = timezone.now() + datetime.timedelta(days=7)
         FrameFactory.create(configuration_type='EXPOSE', telescope_id='1m0a', site_id='bpl', instrument_id='kb46',
-                            proposal_id='prop1', primary_filter='rp', public_date=is_public_date)
+                            proposal_id='prop1', primary_optical_element='rp', public_date=is_public_date)
         FrameFactory.create(configuration_type='BIAS', telescope_id='0m4a', site_id='coj', instrument_id='en05',
-                            proposal_id='prop2', primary_filter='V', public_date=is_not_public_date)
+                            proposal_id='prop2', primary_optical_element='V', public_date=is_not_public_date)
         FrameFactory.create(configuration_type='SKYFLAT', telescope_id='2m0b', site_id='ogg', instrument_id='fl10',
-                            proposal_id='prop3', primary_filter='B', public_date=is_public_date)
+                            proposal_id='prop3', primary_optical_element='B', public_date=is_public_date)
 
     def test_frame_aggregate(self):
         response = self.client.get(reverse('frame-aggregate'))
@@ -494,7 +494,7 @@ class TestFrameAggregate(ReplicationTestCase):
         self.assertEqual(set(response.json()['proposals']), set([]))
 
     def test_frame_aggregate_single_field_filtered(self):
-        response = self.client.get(reverse('frame-aggregate') + '?INSTRUME=en05&aggregate_field=primary_filter')
+        response = self.client.get(reverse('frame-aggregate') + '?INSTRUME=en05&aggregate_field=primary_optical_element')
         self.assertEqual(set(response.json()['obstypes']), set([]))
         self.assertEqual(set(response.json()['telescopes']), set([]))
         self.assertEqual(set(response.json()['sites']), set([]))

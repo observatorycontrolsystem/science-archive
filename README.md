@@ -17,6 +17,7 @@ Optional prerequisites can be skipped for reduced functionality.
 -   System dependencies to install the [psycopg2](https://pypi.org/project/psycopg2/) package
 -   (Optional) RabbitMQ
 -   (Optional) Memcached
+-   (Optional) Nginx with mod-zip plugin serving the archive (needed to support downloading zip files of multiple images at once)
 
 ## Configuration
 
