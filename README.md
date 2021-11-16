@@ -11,7 +11,7 @@ are stored in AWS S3, with certain metadata for each file stored in a database f
 
 Optional prerequisites can be skipped for reduced functionality.
 
--   Python >= 3.6
+-   Python >= 3.7
 -   PostgreSQL with the PostGIS extension installed
 -   An AWS S3 bucket with read/write privileges and versioning enabled
 -   System dependencies to install the [psycopg2](https://pypi.org/project/psycopg2/) package
