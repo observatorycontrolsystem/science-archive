@@ -14,7 +14,6 @@ from archive.frames.exceptions import FunpackError
 from ocs_archive.input.file import EmptyFile
 from ocs_archive.input.filefactory import FileFactory
 from ocs_archive.storage.filestorefactory import FileStoreFactory
-from ocs_archive.settings import settings as archive_settings
 
 logger = logging.getLogger()
 
