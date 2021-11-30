@@ -12,6 +12,7 @@ logger = logging.getLogger()
 
 
 class Frame(models.Model):
+    # TODO: Remove this once we remove the old OBSTYPE field that is using it
     OBSERVATION_TYPES = (
         ('BIAS', 'BIAS'),
         ('DARK', 'DARK'),
@@ -153,7 +154,6 @@ class Frame(models.Model):
     configuration_type = models.CharField(
         default='',
         max_length=20,
-        choices=OBSERVATION_TYPES,
         help_text="Configuration type of the observation"
     )
     OBSTYPE = models.CharField(
