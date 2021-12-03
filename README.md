@@ -83,7 +83,7 @@ After creating the database, migrations must be applied to set up the tables in 
 
 ### **Run the tests**
 
-    (env) python manage.py test
+    (env) python manage.py test --settings=test_settings
 
 ### **Run the science archive**
 

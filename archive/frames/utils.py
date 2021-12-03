@@ -1,7 +1,7 @@
 import logging
 import subprocess
 import requests
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urljoin
 from django.conf import settings
 from django.core.cache import cache
 from django.urls import reverse
@@ -42,7 +42,7 @@ def get_configuration_type_tuples():
         if instrument_data:
             for instrument in instrument_data:
                 for configuration_type in instrument['instrument_type']['configuration_types']:
-                    configuration_types.add(configuration_type)
+                    configuration_types.add(configuration_type['code'])
         else:
             configuration_types = set(settings.CONFIGURATION_TYPES)
         configuration_type_tuples = [(conf_type, conf_type) for conf_type in configuration_types]
@@ -55,13 +55,14 @@ def get_configdb_data():
     instrument_data = cache.get('configdb_instrument_data')
     if not instrument_data:
         if settings.CONFIGDB_URL:
-            url = settings.CONFIGDB_URL + '/instruments/'
+            url = urljoin(settings.CONFIGDB_URL, '/instruments/')
             try:
                 response = requests.get(url)
                 response.raise_for_status()
                 instrument_data = response.json()['results']
                 cache.set('configdb_instrument_data', instrument_data, 3600)
             except (requests.exceptions.RequestException, requests.exceptions.HTTPError) as e:
+                logger.warning(f"Failed to access Configdb at {settings.CONFIGDB_URL}: {repr(e)}")
                 instrument_data = []
 
     return instrument_data

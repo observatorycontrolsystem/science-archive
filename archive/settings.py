@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 """
 
 from lcogt_logging import LCOGTFormatter
-from ocs_archive.settings import get_tuple_from_environment
+from ocs_archive.settings.settings import get_tuple_from_environment
 
 import ast
 import os
