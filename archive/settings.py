@@ -251,10 +251,6 @@ try:
     PAGINATION_DEFAULT_LIMIT = int(os.getenv('PAGINATION_DEFAULT_LIMIT'))
 except (ValueError, TypeError):  # handle non-integer or nonexistant value in the int() method
     PAGINATION_DEFAULT_LIMIT = 100
-try: 
-    PAGINATION_MAX_LIMIT = int(os.getenv('PAGINATION_MAX_LIMIT'))
-except (ValueError, TypeError): 
-    PAGINATION_MAX_LIMIT = 1000
 
 try:
     from .local_settings import *
