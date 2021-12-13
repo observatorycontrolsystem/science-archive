@@ -12,6 +12,7 @@ from archive.frames.permissions import AdminOrReadOnly
 from archive.frames.filters import FrameFilter
 
 from archive.doc_examples import EXAMPLE_RESPONSES, QUERY_PARAMETERS
+from archive.settings import ZIP_DOWNLOAD_FILENAME_BASE
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
@@ -133,7 +134,8 @@ class FrameViewSet(viewsets.ModelViewSet):
             frames = self.get_queryset().filter(pk__in=request_serializer.data['frame_ids'])
             if not frames.exists():
                 return Response(status=status.HTTP_404_NOT_FOUND)
-            filename = 'lcogtdata-{0}-{1}'.format(
+            filename = '{0}-{1}-{2}'.format(
+                ZIP_DOWNLOAD_FILENAME_BASE, 
                 datetime.date.strftime(datetime.date.today(), '%Y%m%d'),
                 frames.count()
             )

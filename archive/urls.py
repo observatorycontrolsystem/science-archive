@@ -11,13 +11,14 @@ from archive.frames import urls as frame_urls
 from archive.authentication import urls as auth_urls
 from archive.authentication.views import ObtainAuthTokenWithHeaders, HealthCheckView, RevokeApiTokenApiView
 from archive.schema import ScienceArchiveSchemaGenerator
+from archive.settings import NAVBAR_TITLE_TEXT, TERMS_OF_SERVICE_URL
 
 schema_view = get_schema_view(
    openapi.Info(
-      title="Science Archive API",
+      title=NAVBAR_TITLE_TEXT,
       default_version='v1',
       description="API documentation for the OCS Science Archive",
-      terms_of_service="https://lco.global/policies/terms/",
+      terms_of_service=TERMS_OF_SERVICE_URL,
       contact=openapi.Contact(email="ocs@lco.global"),
       license=openapi.License(name="GPL 3.0 License"),
    ),

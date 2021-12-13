@@ -1,6 +1,6 @@
 from rest_framework.pagination import LimitOffsetPagination
+from archive.settings import PAGINATION_DEFAULT_LIMIT
 
 
 class LimitedLimitOffsetPagination(LimitOffsetPagination):
-    default_limit = 100
-    max_limit = 1000
+    default_limit = PAGINATION_DEFAULT_LIMIT 

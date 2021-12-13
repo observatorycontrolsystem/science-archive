@@ -209,7 +209,12 @@ REST_FRAMEWORK = {
     },
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',
-    )
+    ),
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'archive.renderers.CustomBrowsableAPIRenderer',
+    ),
+    
 }
 
 OAUTH_CLIENT = {
@@ -234,6 +239,22 @@ QUEUE_BROKER_URL = os.getenv('QUEUE_BROKER_URL', 'memory://localhost')
 PROCESSED_EXCHANGE_ENABLED = ast.literal_eval(os.getenv('PROCESSED_EXCHANGE_ENABLED', 'True'))
 PROCESSED_EXCHANGE_NAME = os.getenv('PROCESSED_EXCHANGE_NAME', 'archived_fits')
 
+# Additional Customization
+ZIP_DOWNLOAD_FILENAME_BASE = os.getenv('ZIP_DOWNLOAD_FILENAME_BASE', 'ocs_archive_data')
+ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES = os.getenv('ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES', 10)
+NAVBAR_TITLE_TEXT = os.getenv('NAVBAR_TITLE_TEXT', 'Science Archive API')
+NAVBAR_TITLE_URL = os.getenv('NAVBAR_TITLE_URL', 'https://archive.lcogt.net')
+TERMS_OF_SERVICE_URL = os.getenv('TERMS_OF_SERVICE_URL', 'https://lco.global/policies/terms/')
+
+# Pagination limits, ensuring the value is an integer
+try: 
+    PAGINATION_DEFAULT_LIMIT = int(os.getenv('PAGINATION_DEFAULT_LIMIT'))
+except (ValueError, TypeError):  # handle non-integer or nonexistant value in the int() method
+    PAGINATION_DEFAULT_LIMIT = 100
+try: 
+    PAGINATION_MAX_LIMIT = int(os.getenv('PAGINATION_MAX_LIMIT'))
+except (ValueError, TypeError): 
+    PAGINATION_MAX_LIMIT = 1000
 
 try:
     from .local_settings import *

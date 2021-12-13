@@ -388,14 +388,16 @@ class TestZipDownload(ReplicationTestCase):
         self.assertNotContains(response, self.not_owned.basename)
 
     def test_public_download_uncompressed_failure(self):
+        max_number_of_frames = settings.ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES
+        above_max_number_of_frames = max_number_of_frames + 2
         response = self.client.post(
             reverse('frame-zip'),
-            data=json.dumps({'frame_ids': [num for num in range(1, 20)], 'uncompress': 'true'}),
+            data=json.dumps({'frame_ids': [num for num in range(1, above_max_number_of_frames)], 'uncompress': 'true'}),
             content_type='application/json'
         )
 
         self.assertContains(response,
-                            'A maximum of 10 frames can be downloaded with the uncompress flag. Please '
+                            f'A maximum of {max_number_of_frames} frames can be downloaded with the uncompress flag. Please '
                             'try again with fewer frame_ids.',
                             status_code=status.HTTP_400_BAD_REQUEST)
 
