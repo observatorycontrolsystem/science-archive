@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 """
 
 from lcogt_logging import LCOGTFormatter
+from ocs_archive.settings.settings import get_tuple_from_environment
 
 import ast
 import os
@@ -238,6 +239,10 @@ if os.getenv('CACHE_LOC', None) is not None:
 QUEUE_BROKER_URL = os.getenv('QUEUE_BROKER_URL', 'memory://localhost')
 PROCESSED_EXCHANGE_ENABLED = ast.literal_eval(os.getenv('PROCESSED_EXCHANGE_ENABLED', 'True'))
 PROCESSED_EXCHANGE_NAME = os.getenv('PROCESSED_EXCHANGE_NAME', 'archived_fits')
+
+# Settings for available configuration_types: use configdb if available, otherwise fall back on direct setting
+CONFIGDB_URL = os.getenv('CONFIGDB_URL', '')
+CONFIGURATION_TYPES = get_tuple_from_environment('CONFIGURATION_TYPE', 'BIAS,DARK,EXPOSE,SPECTRUM,LAMPFLAT,SKYFLAT,STANDARD,TRAILED,GUIDE,EXPERIMENTAL,CATALOG')
 
 # Additional Customization
 ZIP_DOWNLOAD_FILENAME_BASE = os.getenv('ZIP_DOWNLOAD_FILENAME_BASE', 'ocs_archive_data')

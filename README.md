@@ -11,7 +11,7 @@ are stored in AWS S3, with certain metadata for each file stored in a database f
 
 Optional prerequisites can be skipped for reduced functionality.
 
--   Python >= 3.6
+-   Python >= 3.7
 -   PostgreSQL with the PostGIS extension installed
 -   An AWS S3 bucket with read/write privileges and versioning enabled
 -   System dependencies to install the [psycopg2](https://pypi.org/project/psycopg2/) package
@@ -51,6 +51,8 @@ This project is configured using environment variables.
 |                       | `OAUTH_CLIENT_SECRET`        | Oauth client secret                                                                                                                                                                                                                  | _empty string_                  |
 |                       | `OAUTH_TOKEN_URL`            | Observation portal Oauth token URL                                                                                                                                                                                                   | `http://localhost/o/token/`     |
 |                       | `OAUTH_PROFILE_URL`          | Observation portal profile URL                                                                                                                                                                                                       | `http://localhost/api/profile/` |
+| Configuration Types   | `CONFIGURATION_TYPES`        | Comma delimited list of configuration types to use for validation and forms. Only used if no `CONFIGDB_URL` is set.                                                                                                                                                                                                       | `BIAS,DARK,EXPOSE,SPECTRUM,LAMPFLAT,SKYFLAT` |
+|                       | `CONFIGDB_URL`               | Configuration Database URL. If set, it is used to retrieve available configuration_types.                                                                                                                                                                                                        | _empty string_ |
 | Appearance Settings   | `NAVBAR_TITLE_TEXT`          | Name that appears in the navbar of the browsable api                                                                                                                                                                                 | `Science Archive API`           |
 |                       | `NAVBAR_TITLE_URL`           | Hyperlink for the NAVBAR_TITLE_TEXT                                                                                                                                                                                                  | `https://archive.lco.global`    |
 |                       | `PAGINATION_DEFAULT_LIMIT`   | Numeric value indicating the page size for results ([more info here](https://www.django-rest-framework.org/api-guide/pagination/#configuration_1))                                                                                   | `100`                           |
@@ -89,7 +91,7 @@ After creating the database, migrations must be applied to set up the tables in 
 
 ### **Run the tests**
 
-    (env) python manage.py test
+    (env) python manage.py test --settings=test_settings
 
 ### **Run the science archive**
 

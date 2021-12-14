@@ -1,11 +1,13 @@
 from archive.frames.tests.factories import FrameFactory, VersionFactory, PublicFrameFactory
 from archive.frames.models import Frame
+from archive.frames.utils import get_configuration_type_tuples
 from archive.authentication.models import Profile
 from django.contrib.auth.models import User
 from unittest.mock import MagicMock, patch
 from django.utils import timezone
 from django.urls import reverse
 from archive.test_helpers import ReplicationTestCase
+from django.test import override_settings
 from django.conf import settings
 from django.contrib.gis.geos import Point
 from pytz import UTC
@@ -508,3 +510,53 @@ class TestFrameAggregate(ReplicationTestCase):
         response = self.client.get(reverse('frame-aggregate') + '?INSTRUME=en05&aggregate_field=iaminvalid')
         self.assertEqual(response.status_code, 400)
         self.assertIn('Invalid aggregate_field', str(response.content))
+
+
+class TestUtils(ReplicationTestCase):
+    @override_settings(CONFIGURATION_TYPES=('TEST1', 'TEST2'), CONFIGDB_URL='')
+    def test_use_environment_variable_for_config_types(self):
+        configuration_type_tuples = get_configuration_type_tuples()
+        self.assertEqual(len(configuration_type_tuples), 2)
+        self.assertTrue(('TEST1', 'TEST1') in configuration_type_tuples)
+        self.assertTrue(('TEST2', 'TEST2') in configuration_type_tuples)
+
+    @override_settings(CONFIGURATION_TYPES=('TEST1',), CONFIGDB_URL='invalid_url')
+    def test_invalid_configdb_url_falls_back_to_environment_config_types(self):
+        configuration_type_tuples = get_configuration_type_tuples()
+        self.assertEqual(len(configuration_type_tuples), 1)
+        self.assertTrue(('TEST1', 'TEST1') in configuration_type_tuples)
+
+    @responses.activate
+    @override_settings(CONFIGURATION_TYPES=('TEST1', 'TEST2'), CONFIGDB_URL='http://test-configdb')
+    def test_configdb_url_is_used_if_specified(self):
+        response_data = {
+            'results': [
+                {
+                    'instrument_type': {
+                        'configuration_types': [
+                            {'code': 'CT1'},
+                            {'code': 'CT2'}
+                        ]
+                    }
+                },
+                {
+                    'instrument_type': {
+                        'configuration_types': [
+                            {'code': 'CT3'}
+                        ]
+                    }
+                }
+            ]
+        }
+        responses.add(
+            responses.GET,
+            'http://test-configdb/instruments/',
+            body=json.dumps(response_data),
+            status=200,
+            content_type='application/json'
+        )
+        configuration_type_tuples = get_configuration_type_tuples()
+        self.assertEqual(len(configuration_type_tuples), 3)
+        self.assertTrue(('CT1', 'CT1') in configuration_type_tuples)
+        self.assertTrue(('CT2', 'CT2') in configuration_type_tuples)
+        self.assertTrue(('CT3', 'CT3') in configuration_type_tuples)
