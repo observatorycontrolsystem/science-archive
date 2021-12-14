@@ -2,6 +2,7 @@ from django.conf.urls import url, include
 from django.contrib import admin
 from django.urls import path
 from django.http import HttpResponse
+from django.conf import settings
 from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 from drf_yasg import openapi
@@ -14,10 +15,10 @@ from archive.schema import ScienceArchiveSchemaGenerator
 
 schema_view = get_schema_view(
    openapi.Info(
-      title="Science Archive API",
+      title=settings.NAVBAR_TITLE_TEXT,
       default_version='v1',
       description="API documentation for the OCS Science Archive",
-      terms_of_service="https://lco.global/policies/terms/",
+      terms_of_service=settings.TERMS_OF_SERVICE_URL,
       contact=openapi.Contact(email="ocs@lco.global"),
       license=openapi.License(name="GPL 3.0 License"),
    ),

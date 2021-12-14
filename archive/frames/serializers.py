@@ -4,6 +4,7 @@ from archive.frames.models import Frame, Version, Headers
 from archive.frames.utils import get_configuration_type_tuples
 from django.contrib.gis.geos import GEOSGeometry
 from django.db import transaction
+from django.conf import settings
 
 
 class ZipSerializer(serializers.Serializer):
@@ -19,8 +20,8 @@ class ZipSerializer(serializers.Serializer):
     def validate(self, data):
         selected_frames_count = len(data.get('frame_ids', []))
         uncompress = data.get('uncompress', False)
-        if uncompress and selected_frames_count > 10:
-            raise serializers.ValidationError('A maximum of 10 frames can be downloaded with the uncompress flag. '
+        if uncompress and selected_frames_count > settings.ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES:
+            raise serializers.ValidationError(f'A maximum of {settings.ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES} frames can be downloaded with the uncompress flag. '
                                               'Please try again with fewer frame_ids.')
         return data
 

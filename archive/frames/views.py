@@ -25,6 +25,7 @@ from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from dateutil.parser import parse
 from django.utils import timezone
+from django.conf import settings
 from hashlib import blake2s
 from pytz import UTC
 import subprocess
@@ -133,7 +134,8 @@ class FrameViewSet(viewsets.ModelViewSet):
             frames = self.get_queryset().filter(pk__in=request_serializer.data['frame_ids'])
             if not frames.exists():
                 return Response(status=status.HTTP_404_NOT_FOUND)
-            filename = 'lcogtdata-{0}-{1}'.format(
+            filename = '{0}-{1}-{2}'.format(
+                settings.ZIP_DOWNLOAD_FILENAME_BASE, 
                 datetime.date.strftime(datetime.date.today(), '%Y%m%d'),
                 frames.count()
             )

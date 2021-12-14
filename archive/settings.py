@@ -210,7 +210,12 @@ REST_FRAMEWORK = {
     },
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',
-    )
+    ),
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'archive.renderers.CustomBrowsableAPIRenderer',
+    ),
+    
 }
 
 OAUTH_CLIENT = {
@@ -238,6 +243,16 @@ PROCESSED_EXCHANGE_NAME = os.getenv('PROCESSED_EXCHANGE_NAME', 'archived_fits')
 # Settings for available configuration_types: use configdb if available, otherwise fall back on direct setting
 CONFIGDB_URL = os.getenv('CONFIGDB_URL', '')
 CONFIGURATION_TYPES = get_tuple_from_environment('CONFIGURATION_TYPE', 'BIAS,DARK,EXPOSE,SPECTRUM,LAMPFLAT,SKYFLAT,STANDARD,TRAILED,GUIDE,EXPERIMENTAL,CATALOG')
+
+# Additional Customization
+ZIP_DOWNLOAD_FILENAME_BASE = os.getenv('ZIP_DOWNLOAD_FILENAME_BASE', 'ocs_archive_data')
+ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES = int(os.getenv('ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES', 10))
+NAVBAR_TITLE_TEXT = os.getenv('NAVBAR_TITLE_TEXT', 'Science Archive API')
+NAVBAR_TITLE_URL = os.getenv('NAVBAR_TITLE_URL', 'https://archive.lco.global')
+TERMS_OF_SERVICE_URL = os.getenv('TERMS_OF_SERVICE_URL', 'https://lco.global/policies/terms/')
+DOCUMENTATION_URL = os.getenv('DOCUMENTATION_URL', 'https://observatorycontrolsystem.github.io/api/science_archive/')
+PAGINATION_DEFAULT_LIMIT = int(os.getenv('PAGINATION_DEFAULT_LIMIT', 100))
+PAGINATION_MAX_LIMIT = int(os.getenv('PAGINATION_MAX_LIMIT', 1000))
 
 try:
     from .local_settings import *
