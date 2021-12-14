@@ -1,7 +1,7 @@
 from rest_framework.pagination import LimitOffsetPagination
-from archive.settings import PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT
+from django.conf import settings
 
 
 class LimitedLimitOffsetPagination(LimitOffsetPagination):
-    default_limit = PAGINATION_DEFAULT_LIMIT 
-    max_limit = PAGINATION_MAX_LIMIT 
+    default_limit = settings.PAGINATION_DEFAULT_LIMIT 
+    max_limit = settings.PAGINATION_MAX_LIMIT 
