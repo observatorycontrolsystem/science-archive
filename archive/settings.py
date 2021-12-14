@@ -237,7 +237,7 @@ PROCESSED_EXCHANGE_NAME = os.getenv('PROCESSED_EXCHANGE_NAME', 'archived_fits')
 
 # Settings for available configuration_types: use configdb if available, otherwise fall back on direct setting
 CONFIGDB_URL = os.getenv('CONFIGDB_URL', '')
-CONFIGURATION_TYPES = get_tuple_from_environment('CONFIGURATION_TYPE', 'BIAS,DARK,EXPOSE,SPECTRUM,LAMPFLAT,SKYFLAT')
+CONFIGURATION_TYPES = get_tuple_from_environment('CONFIGURATION_TYPE', 'BIAS,DARK,EXPOSE,SPECTRUM,LAMPFLAT,SKYFLAT,STANDARD,TRAILED,GUIDE,EXPERIMENTAL,CATALOG')
 
 try:
     from .local_settings import *
