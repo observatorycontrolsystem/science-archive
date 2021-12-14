@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='frame',
             name='configuration_type',
-            field=models.CharField(choices=[('BIAS', 'BIAS'), ('DARK', 'DARK'), ('EXPERIMENTAL', 'EXPERIMENTAL'), ('EXPOSE', 'EXPOSE'), ('SKYFLAT', 'SKYFLAT'), ('STANDARD', 'STANDARD'), ('TRAILED', 'TRAILED'), ('GUIDE', 'GUIDE'), ('SPECTRUM', 'SPECTRUM'), ('ARC', 'ARC'), ('LAMPFLAT', 'LAMPFLAT'), ('DOMEFLAT', 'DOMEFLAT'), ('CATALOG', 'CATALOG'), ('BPM', 'BPM'), ('TARGET', 'TARGET'), ('TEMPLATE', 'TEMPLATE'), ('OBJECT', 'OBJECT'), ('TRACE', 'TRACE'), ('DOUBLE', 'DOUBLE')], default='', help_text='Configuration type of the observation', max_length=20),
+            field=models.CharField(default='', help_text='Configuration type of the observation', max_length=20),
         ),
         migrations.AddField(
             model_name='frame',

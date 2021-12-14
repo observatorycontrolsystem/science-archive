@@ -1,7 +1,9 @@
 import logging
 import subprocess
-from urllib.parse import urlsplit
+import requests
+from urllib.parse import urlsplit, urljoin
 from django.conf import settings
+from django.core.cache import cache
 from django.urls import reverse
 
 from kombu.connection import Connection
@@ -30,6 +32,40 @@ def archived_queue_payload(dictionary, frame):
     new_dictionary['filename'] = frame.filename
     new_dictionary['frameid'] = frame.id
     return new_dictionary
+
+
+def get_configuration_type_tuples():
+    configuration_type_tuples = cache.get('configuration_type_tuples')
+    if not configuration_type_tuples:
+        configuration_types = set()
+        instrument_data = get_configdb_data()
+        if instrument_data:
+            for instrument in instrument_data:
+                for configuration_type in instrument['instrument_type']['configuration_types']:
+                    configuration_types.add(configuration_type['code'])
+        else:
+            configuration_types = set(settings.CONFIGURATION_TYPES)
+        configuration_type_tuples = [(conf_type, conf_type) for conf_type in configuration_types]
+        cache.set('configuration_type_tuples', configuration_type_tuples, 3600)
+
+    return configuration_type_tuples
+
+
+def get_configdb_data():
+    instrument_data = cache.get('configdb_instrument_data')
+    if not instrument_data:
+        if settings.CONFIGDB_URL:
+            url = urljoin(settings.CONFIGDB_URL, '/instruments/')
+            try:
+                response = requests.get(url)
+                response.raise_for_status()
+                instrument_data = response.json()['results']
+                cache.set('configdb_instrument_data', instrument_data, 3600)
+            except (requests.exceptions.RequestException, requests.exceptions.HTTPError) as e:
+                logger.warning(f"Failed to access Configdb at {settings.CONFIGDB_URL}: {repr(e)}")
+                instrument_data = []
+
+    return instrument_data
 
 
 def post_to_archived_queue(payload):

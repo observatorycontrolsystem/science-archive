@@ -51,6 +51,8 @@ This project is configured using environment variables.
 |                       | `OAUTH_CLIENT_SECRET`        | Oauth client secret                                                                                                                                                                                                                  | _empty string_                  |
 |                       | `OAUTH_TOKEN_URL`            | Observation portal Oauth token URL                                                                                                                                                                                                   | `http://localhost/o/token/`     |
 |                       | `OAUTH_PROFILE_URL`          | Observation portal profile URL                                                                                                                                                                                                       | `http://localhost/api/profile/` |
+| Configuration Types   | `CONFIGURATION_TYPES`        | Comma delimited list of configuration types to use for validation and forms. Only used if no `CONFIGDB_URL` is set.                                                                                                                                                                                                       | `BIAS,DARK,EXPOSE,SPECTRUM,LAMPFLAT,SKYFLAT` |
+|                       | `CONFIGDB_URL`               | Configuration Database URL. If set, it is used to retrieve available configuration_types.                                                                                                                                                                                                        | _empty string_ |
 
 ## Local Development
 
@@ -81,7 +83,7 @@ After creating the database, migrations must be applied to set up the tables in 
 
 ### **Run the tests**
 
-    (env) python manage.py test
+    (env) python manage.py test --settings=test_settings
 
 ### **Run the science archive**
 
