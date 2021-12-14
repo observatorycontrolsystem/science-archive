@@ -247,6 +247,7 @@ NAVBAR_TITLE_URL = os.getenv('NAVBAR_TITLE_URL', 'https://archive.lcogt.net')
 TERMS_OF_SERVICE_URL = os.getenv('TERMS_OF_SERVICE_URL', 'https://lco.global/policies/terms/')
 DOCUMENTATION_URL = os.getenv('DOCUMENTATION_URL', 'https://observatorycontrolsystem.github.io/api/science_archive/')
 PAGINATION_DEFAULT_LIMIT = int(os.getenv('PAGINATION_DEFAULT_LIMIT', 100))
+PAGINATION_MAX_LIMIT = int(os.getenv('PAGINATION_MAX_LIMIT', 1000))
 
 try:
     from .local_settings import *
