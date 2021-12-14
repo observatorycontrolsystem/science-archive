@@ -245,12 +245,7 @@ ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES = os.getenv('ZIP_DOWNLOAD_MAX_UNCOMPRESSED_F
 NAVBAR_TITLE_TEXT = os.getenv('NAVBAR_TITLE_TEXT', 'Science Archive API')
 NAVBAR_TITLE_URL = os.getenv('NAVBAR_TITLE_URL', 'https://archive.lcogt.net')
 TERMS_OF_SERVICE_URL = os.getenv('TERMS_OF_SERVICE_URL', 'https://lco.global/policies/terms/')
-
-# Pagination limits, ensuring the value is an integer
-try: 
-    PAGINATION_DEFAULT_LIMIT = int(os.getenv('PAGINATION_DEFAULT_LIMIT'))
-except (ValueError, TypeError):  # handle non-integer or nonexistant value in the int() method
-    PAGINATION_DEFAULT_LIMIT = 100
+PAGINATION_DEFAULT_LIMIT = int(os.getenv('PAGINATION_DEFAULT_LIMIT', 100))
 
 try:
     from .local_settings import *
