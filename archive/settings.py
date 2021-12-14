@@ -241,10 +241,11 @@ PROCESSED_EXCHANGE_NAME = os.getenv('PROCESSED_EXCHANGE_NAME', 'archived_fits')
 
 # Additional Customization
 ZIP_DOWNLOAD_FILENAME_BASE = os.getenv('ZIP_DOWNLOAD_FILENAME_BASE', 'ocs_archive_data')
-ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES = os.getenv('ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES', 10)
+ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES = int(os.getenv('ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES', 10))
 NAVBAR_TITLE_TEXT = os.getenv('NAVBAR_TITLE_TEXT', 'Science Archive API')
 NAVBAR_TITLE_URL = os.getenv('NAVBAR_TITLE_URL', 'https://archive.lcogt.net')
 TERMS_OF_SERVICE_URL = os.getenv('TERMS_OF_SERVICE_URL', 'https://lco.global/policies/terms/')
+DOCUMENTATION_URL = os.getenv('DOCUMENTATION_URL', 'https://observatorycontrolsystem.github.io/api/science_archive/')
 PAGINATION_DEFAULT_LIMIT = int(os.getenv('PAGINATION_DEFAULT_LIMIT', 100))
 
 try:

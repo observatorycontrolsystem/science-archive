@@ -57,6 +57,7 @@ This project is configured using environment variables.
 | More customization    | `ZIP_DOWNLOAD_FILENAME_BASE` | Initial part of the zip download filename                                                                                                                                                                                            | `ocs_archive_data`              |
 |                       | `ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES`     | Maximum number of files that users can bundle in a single uncompressed zipped download                                                                                                                                  | `10`                            |
 |                       | `TERMS_OF_SERVICE_URL`       | URL pointing to a terms of service for users                                                                                                                                                                                         | `https://lco.global/policies/terms/` |
+|                       | `DOCUMENTATION_URL`          | URL pointing to user-facing documentation                                                                                                                                                                                            | `https://observatorycontrolsystem.github.io/api/science_archive/` |
 
 ## Local Development
 
