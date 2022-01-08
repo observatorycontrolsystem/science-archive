@@ -1,7 +1,7 @@
-from rest_framework.renderers import BrowsableAPIRenderer, JSONRenderer
+from rest_framework.renderers import BrowsableAPIRenderer
 from django.conf import settings
 
-# This overrides the default browsable api renderer so that we can pass custom values 
+# This overrides the default browsable api renderer so that we can pass custom values
 # into the template (eg. users might want to configure the title text)
 class CustomBrowsableAPIRenderer(BrowsableAPIRenderer):
     def get_context(self, *args, **kwargs):

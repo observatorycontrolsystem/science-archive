@@ -135,7 +135,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             if not frames.exists():
                 return Response(status=status.HTTP_404_NOT_FOUND)
             filename = '{0}-{1}-{2}'.format(
-                settings.ZIP_DOWNLOAD_FILENAME_BASE, 
+                settings.ZIP_DOWNLOAD_FILENAME_BASE,
                 datetime.date.strftime(datetime.date.today(), '%Y%m%d'),
                 frames.count()
             )
