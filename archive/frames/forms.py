@@ -4,8 +4,7 @@ from archive.frames.models import Frame
 from archive.frames.utils import get_configuration_type_tuples
 
 class FrameForm(forms.ModelForm):
-    ''' Form adds in choices for configuration type from Configdb or env variable
-    '''
+    ''' Form adds in choices for configuration type from Configdb or env variable '''
     class Meta:
         model = Frame
         fields = '__all__'

@@ -3,5 +3,5 @@ from django.conf import settings
 
 
 class LimitedLimitOffsetPagination(LimitOffsetPagination):
-    default_limit = settings.PAGINATION_DEFAULT_LIMIT 
-    max_limit = settings.PAGINATION_MAX_LIMIT 
+    default_limit = settings.PAGINATION_DEFAULT_LIMIT
+    max_limit = settings.PAGINATION_MAX_LIMIT
