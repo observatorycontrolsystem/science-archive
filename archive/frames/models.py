@@ -31,51 +31,95 @@ class Frame(models.Model):
         ('TRACE', 'TRACE'),
         ('DOUBLE', 'DOUBLE')
     )
+
     basename = models.CharField(max_length=1000, db_index=True, unique=True)
     area = models.PolygonField(geography=True, spatial_index=True, null=True, blank=True)
     related_frames = models.ManyToManyField('self', blank=True)
+    observation_date = models.DateTimeField(
+        db_index=True,
+        null=True,
+        help_text="Time of observation in UTC",
+    )
     DATE_OBS = models.DateTimeField(
         db_index=True,
         null=True,
-        help_text="Time of observation in UTC. FITS header: DATE-OBS",
-        verbose_name="DATE-OBS"
+        help_text="Time of observation in UTC",
+    )
+    observation_day = models.DateField(
+        null=True,
+        help_text="Observing Night in YYYYMMDD",
     )
     DAY_OBS = models.DateField(
         null=True,
-        help_text="Observing Night in YYYYMMDD. FITS header: DAY-OBS",
-        verbose_name="DAY-OBS"
+        help_text="Observing Night in YYYYMMDD",
+    )
+    proposal_id = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        help_text="Textual proposal id"
     )
     PROPID = models.CharField(
         max_length=200,
         default='',
         blank=True,
-        help_text="Textual proposal id. FITS header: PROPID"
+        help_text="Textual proposal id"
+    )
+    instrument_id = models.CharField(
+        max_length=64,
+        null=True,
+        help_text="Instrument used"
     )
     INSTRUME = models.CharField(
         max_length=64,
         default='',
-        help_text="Instrument used. FITS header: INSTRUME"
+        help_text="Instrument used"
+    )
+    target_name = models.CharField(
+        max_length=200,
+        db_index=True,
+        null=True,
+        blank=True,
+        help_text="Target object name"
     )
     OBJECT = models.CharField(
         max_length=200,
         db_index=True,
         default='',
         blank=True,
-        help_text="Target object name. FITS header: OBJECT"
+        help_text="Target object name"
+    )
+    reduction_level = models.SmallIntegerField(
+        null=True,
+        help_text="Reduction level of the frame"
     )
     RLEVEL = models.SmallIntegerField(
         default=0,
         help_text="Reduction level of the frame"
     )
+    site_id = models.CharField(
+        null=True,
+        max_length=3,
+        help_text="Originating site code. Usually the 3 character airport code of the nearest airport"
+    )
     SITEID = models.CharField(
         default='',
         max_length=3,
-        help_text="Originating site. FITS header: SITEID"
+        help_text="Originating site code. Usually the 3 character airport code of the nearest airport"
+    )
+    telescope_id = models.CharField(
+        null=True,
+        max_length=4,
+        help_text="Originating telescope 4 character code. Ex. 1m0a or 0m4b"
     )
     TELID = models.CharField(
         default='',
         max_length=4,
-        help_text="Originating telescope. FITS header: TELID"
+        help_text="Originating telescope 4 character code. Ex. 1m0a or 0m4b"
+    )
+    exposure_time = models.FloatField(
+        null=True,
+        help_text="Exposure time, in seconds"
     )
     EXPTIME = models.DecimalField(
         null=True,
@@ -83,33 +127,60 @@ class Frame(models.Model):
         decimal_places=6,
         help_text="Exposure time, in seconds. FITS header: EXPTIME"
     )
+    primary_optical_element = models.CharField(
+        null=True,
+        blank=True,
+        max_length=100,
+        help_text="Primary Optical Element used. FITS header: FILTER"
+    )
     FILTER = models.CharField(
         default='',
         blank=True,
         max_length=100,
-        help_text="Filter used. FITS header: FILTER"
+        help_text="Primary Optical Element used. FITS header: FILTER"
+    )
+    public_date = models.DateTimeField(
+        db_index=True,
+        null=True,
+        help_text="The date the frame becomes public"
     )
     L1PUBDAT = models.DateTimeField(
         db_index=True,
         null=True,
-        help_text="The date the frame becomes public. FITS header: L1PUBDAT"
+        help_text="The date the frame becomes public"
+    )
+    configuration_type = models.CharField(
+        null=True,
+        max_length=20,
+        help_text="Configuration type of the observation"
     )
     OBSTYPE = models.CharField(
         default='',
         max_length=20,
         choices=OBSERVATION_TYPES,
-        help_text="Type of observation. FITS header: OBSTYPE"
+        help_text="Configuration type of the observation"
+    )
+    observation_id = models.PositiveIntegerField(
+        null=True,
+        db_index=True,
+        help_text='Unique id associated with the observation'
     )
     BLKUID = models.PositiveIntegerField(
         null=True,
         db_index=True,
-        help_text='Block id from the pond. FITS header: BLKUID'
+        help_text='Unique id associated with the observation'
+    )
+    request_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='Unique id associated with the request this observation is a part of'
     )
     REQNUM = models.PositiveIntegerField(
         null=True,
         blank=True,
         db_index=True,
-        help_text='Request id number, FITS header: REQNUM'
+        help_text='Unique id associated with the request this observation is a part of'
     )
     modified = models.DateTimeField(auto_now=True)
     created = models.DateTimeField(auto_now_add=True)
