@@ -55,7 +55,7 @@ class Frame(models.Model):
     )
     proposal_id = models.CharField(
         max_length=200,
-        null=True,
+        default='',
         blank=True,
         help_text="Textual proposal id"
     )
@@ -67,7 +67,7 @@ class Frame(models.Model):
     )
     instrument_id = models.CharField(
         max_length=64,
-        null=True,
+        default='',
         help_text="Instrument used"
     )
     INSTRUME = models.CharField(
@@ -78,7 +78,7 @@ class Frame(models.Model):
     target_name = models.CharField(
         max_length=200,
         db_index=True,
-        null=True,
+        default='',
         blank=True,
         help_text="Target object name"
     )
@@ -90,7 +90,7 @@ class Frame(models.Model):
         help_text="Target object name"
     )
     reduction_level = models.SmallIntegerField(
-        null=True,
+        default=0,
         help_text="Reduction level of the frame"
     )
     RLEVEL = models.SmallIntegerField(
@@ -98,7 +98,7 @@ class Frame(models.Model):
         help_text="Reduction level of the frame"
     )
     site_id = models.CharField(
-        null=True,
+        default='',
         max_length=3,
         help_text="Originating site code. Usually the 3 character airport code of the nearest airport"
     )
@@ -108,7 +108,7 @@ class Frame(models.Model):
         help_text="Originating site code. Usually the 3 character airport code of the nearest airport"
     )
     telescope_id = models.CharField(
-        null=True,
+        default='',
         max_length=4,
         help_text="Originating telescope 4 character code. Ex. 1m0a or 0m4b"
     )
@@ -128,7 +128,7 @@ class Frame(models.Model):
         help_text="Exposure time, in seconds. FITS header: EXPTIME"
     )
     primary_optical_element = models.CharField(
-        null=True,
+        default='',
         blank=True,
         max_length=100,
         help_text="Primary Optical Element used. FITS header: FILTER"
@@ -150,7 +150,7 @@ class Frame(models.Model):
         help_text="The date the frame becomes public"
     )
     configuration_type = models.CharField(
-        null=True,
+        default='',
         max_length=20,
         help_text="Configuration type of the observation"
     )
