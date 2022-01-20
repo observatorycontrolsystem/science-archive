@@ -34,6 +34,7 @@ class Frame(models.Model):
         ('TRACE', 'TRACE'),
         ('DOUBLE', 'DOUBLE')
     )
+
     basename = models.CharField(max_length=1000, db_index=True, unique=True)
     area = models.PolygonField(geography=True, spatial_index=True, null=True, blank=True)
     related_frames = models.ManyToManyField('self', blank=True)
