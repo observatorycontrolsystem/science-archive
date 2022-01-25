@@ -150,9 +150,10 @@ class FrameViewSet(viewsets.ModelViewSet):
     @staticmethod
     def _get_aggregate_values(query_set, field, aggregate_field):
         if aggregate_field in ('ALL', field):
-            return [i[0] for i in query_set.values_list(field).distinct() if i[0]]
+            return [i for i in query_set.order_by().values_list(field, flat=True).distinct() if i]
         else:
             return []
+
 
     @action(detail=False)
     def aggregate(self, request):

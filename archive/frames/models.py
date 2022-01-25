@@ -219,7 +219,7 @@ class Frame(models.Model):
     def get_header_dict(self):
         return {
             archive_settings.OBSERVATION_DATE_KEY: self.observation_date.isoformat(),
-            archive_settings.OBSERVATION_DAY_KEY: self.observation_day.isoformat(),
+            archive_settings.OBSERVATION_DAY_KEY: self.observation_day.strftime("%Y%m%d"),
             archive_settings.REDUCTION_LEVEL_KEY: self.reduction_level,
             archive_settings.INSTRUMENT_ID_KEY: self.instrument_id,
             archive_settings.EXPOSURE_TIME_KEY: self.exposure_time,
