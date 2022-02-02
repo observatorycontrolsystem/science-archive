@@ -1,3 +1,8 @@
+2.0.0
+2022-02-02
+
+First version with refactored ocs_archive base library, and renamed fields.
+
 1.78
 2021-07-19
 Add configurable endpoint_url for s3

@@ -1,9 +1,12 @@
-from datetime import datetime, timedelta
+from datetime import timedelta, date
 
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from archive.frames.models import Frame
+
+
+DELETE_BATCH = 1000
 
 
 class Command(BaseCommand):
@@ -12,9 +15,9 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--days-old', type=int, required=False,
                             help='Frames with observation_date older than days-old will be deleted')
-        parser.add_argument('--start', type=datetime.date.fromisoformat, required=False,
+        parser.add_argument('--start', type=date.fromisoformat, required=False,
                             help='Frames newer than start isoformat date will be deleted. Acts on observation_day. Must be specified along with end')
-        parser.add_argument('--end', type=datetime.date.fromisoformat, required=False,
+        parser.add_argument('--end', type=date.fromisoformat, required=False,
                             help='Frames older than end isoformat date will be deleted. Acts on observation_day. Must be specified along with start')
         parser.add_argument('--reduction-level', type=int, required=False,
                             help='Only frames with the specified reduction level will be deleted')
@@ -40,7 +43,7 @@ class Command(BaseCommand):
                             help='Include these instrument codes in the query')
 
     def handle(self, *args, **options):
-        frames = Frame.objects.all()
+        frames = Frame.objects.all().using('default')
         if options['days_old'] and (options['start'] and options['end']):
             raise CommandError("Cannot specify both --days-old days and --start and --end isoformat dates, exiting.")
         if options['days_old']:
@@ -72,4 +75,8 @@ class Command(BaseCommand):
         if options['exclude_instruments']:
             frames = frames.exclude(instrument_id__in=options['exclude_instruments'])
 
-        frames.delete()
+        while frames.count() > 0:
+            pks_to_delete = frames.values_list('pk', flat=True)[:DELETE_BATCH]
+            delete_results = Frame.objects.filter(pk__in=pks_to_delete).delete()
+            for key, val in delete_results[1].items():
+                print(f"Deleted {val} instances of {key}")

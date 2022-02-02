@@ -3,7 +3,9 @@ from django.utils.functional import cached_property
 from django.contrib.postgres.fields import JSONField
 import hashlib
 import logging
+import json
 from django.contrib.gis.db import models
+from django.forms.models import model_to_dict
 
 from ocs_archive.storage.filestorefactory import FileStoreFactory
 from ocs_archive.settings import settings as archive_settings
@@ -226,13 +228,23 @@ class Frame(models.Model):
             archive_settings.SITE_ID_KEY: self.site_id,
             archive_settings.TELESCOPE_ID_KEY: self.telescope_id,
             archive_settings.OBSERVATION_ID_KEY: self.observation_id,
-            archive_settings.PRIMARY_FILTER_KEY: self.primary_optical_element,
+            archive_settings.PRIMARY_OPTICAL_ELEMENT_KEY: self.primary_optical_element,
             archive_settings.TARGET_NAME_KEY: self.target_name,
             archive_settings.REQUEST_ID_KEY: self.request_id,
             archive_settings.CONFIGURATION_TYPE_KEY: self.configuration_type,
             archive_settings.PROPOSAL_ID_KEY: self.proposal_id,
             archive_settings.PUBLIC_DATE_KEY: self.public_date,
         }
+
+    def as_dict(self):
+        ret_dict = model_to_dict(self, exclude=('related_frames', 'area'))
+        ret_dict['version_set'] = [v.as_dict() for v in self.version_set.all()]
+        ret_dict['url'] = self.url
+        ret_dict['filename'] = self.filename
+        if self.area:
+            ret_dict['area'] = json.loads(self.area.geojson)
+        ret_dict['related_frames'] = [rf.id for rf in self.related_frames.all()]
+        return ret_dict
 
 class Headers(models.Model):
     data = JSONField(default=dict)
@@ -266,6 +278,12 @@ class Version(models.Model):
         path = get_file_store_path(self.frame.filename, self.frame.get_header_dict())
         file_store = FileStoreFactory.get_file_store_class()()
         file_store.delete_file(path, self.key)
+
+    def as_dict(self):
+        ret_dict = model_to_dict(self, exclude=('frame',))
+        ret_dict['url'] = self.url
+        ret_dict['created'] = self.created
+        return ret_dict
 
     def __str__(self):
         return '{0}:{1}'.format(self.created, self.key)
