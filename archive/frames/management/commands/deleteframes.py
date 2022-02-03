@@ -4,7 +4,8 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from archive.frames.models import Frame
-
+import logging
+logger = logging.getLogger()
 
 DELETE_BATCH = 1000
 
@@ -47,6 +48,7 @@ class Command(BaseCommand):
         if options['days_old'] and (options['start'] and options['end']):
             raise CommandError("Cannot specify both --days-old days and --start and --end isoformat dates, exiting.")
         if options['days_old']:
+            logger.warning(f"Filtering by {options['days_old']} days old")
             frames = frames.filter(observation_date__lt=timezone.now() - timedelta(days=options['days_old']))
         elif options['start'] and options['end']:
             frames = frames.filter(observation_day__lt=options['end'], observation_day__gt=options['start'])
@@ -63,6 +65,7 @@ class Command(BaseCommand):
         if options['telescope']:
             frames = frames.filter(telescope_id__iexact=options['telescope'])
         if options['include_types']:
+            logger.warning(f"Filtering by include types {','.join(options['include_types'])}")
             frames = frames.filter(configuration_type__in=options['include_types'])
         if options['include_proposals']:
             frames = frames.filter(proposal_id__in=options['include_proposals'])
@@ -73,10 +76,13 @@ class Command(BaseCommand):
         if options['exclude_proposals']:
             frames = frames.exclude(proposal_id__in=options['exclude_proposals'])
         if options['exclude_instruments']:
+            logger.warning(f"Filtering by exclude instruments {','.join(options['exclude_instruments'])}")
             frames = frames.exclude(instrument_id__in=options['exclude_instruments'])
+
+        logger.warning(frames.query)
 
         while frames.count() > 0:
             pks_to_delete = frames.values_list('pk', flat=True)[:DELETE_BATCH]
             delete_results = Frame.objects.filter(pk__in=pks_to_delete).delete()
             for key, val in delete_results[1].items():
-                print(f"Deleted {val} instances of {key}")
+                logger.info(f"Deleted {val} instances of {key}")
