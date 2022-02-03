@@ -84,6 +84,35 @@ class FrameSerializer(serializers.ModelSerializer):
         return frame
 
     def create_or_update_frame(self, data):
+        #TODO: Remove this part setting the new fields in the later branch
+        if 'DAY_OBS' in data:
+            data['observation_day'] = data['DAY_OBS']
+        if 'DATE_OBS' in data:
+            data['observation_date'] = data['DATE_OBS']
+        if 'L1PUBDAT' in data:
+            data['public_date'] = data['L1PUBDAT']
+        if 'RLEVEL' in data:
+            data['reduction_level'] = data['RLEVEL']
+        if 'INSTRUME' in data:
+            data['instrument_id'] = data['INSTRUME']
+        if 'OBJECT' in data:
+            data['target_name'] = data['OBJECT']
+        if 'SITEID' in data:
+            data['site_id'] = data['SITEID']
+        if 'TELID' in data:
+            data['telescope_id'] = data['TELID']
+        if 'EXPTIME' in data:
+            data['exposure_time'] = data['EXPTIME']
+        if 'FILTER' in data:
+            data['primary_optical_element'] = data['FILTER']
+        if 'PROPID' in data:
+            data['proposal_id'] = data['PROPID']
+        if 'OBSTYPE' in data:
+            data['configuration_type'] = data['OBSTYPE']
+        if 'BLKUID' in data:
+            data['observation_id'] = data['BLKUID']
+        if 'REQNUM' in data:
+            data['request_id'] = data['REQNUM']
         frame, _ = Frame.objects.update_or_create(defaults=data, basename=data['basename'])
         return frame
 
