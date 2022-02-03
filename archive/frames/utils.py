@@ -16,7 +16,7 @@ logger = logging.getLogger()
 
 @lru_cache(maxsize=1)
 def get_s3_client():
-    config = boto3.session.Config(signature_version='s3v4')
+    config = boto3.session.Config(signature_version='s3v4', s3={'addressing_style': 'virtual'})
     return boto3.client('s3', endpoint_url=settings.S3_ENDPOINT_URL, config=config)
 
 
