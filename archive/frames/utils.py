@@ -28,7 +28,11 @@ def get_file_store_path(filename, file_metadata):
 
 
 def archived_queue_payload(dictionary, frame):
-    new_dictionary = dictionary.copy()
+    new_dictionary = dictionary.get('headers').copy()
+    new_dictionary['area'] = dictionary.get('area')
+    new_dictionary['basename'] = dictionary.get('basename')
+    new_dictionary['version_set'] = dictionary.get('version_set')
+    new_dictionary['location'] = dictionary.get('location')
     new_dictionary['filename'] = frame.filename
     new_dictionary['frameid'] = frame.id
     return new_dictionary
