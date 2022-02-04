@@ -189,8 +189,6 @@ STATIC_URL = '/static/'
 MEDIA_ROOT = '/media/'
 MEDIA_URL = '/media/'
 
-S3_ENDPOINT_URL = os.getenv('S3_ENDPOINT_URL', 'http://s3.us-west-2.amazonaws.com')
-
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
