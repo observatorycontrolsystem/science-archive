@@ -50,7 +50,7 @@ class TestAuthentication(ReplicationTestCase):
     def test_oauth_backend_success(self):
         responses.add(
             responses.POST,
-            settings.OAUTH_CLIENT['TOKEN_URL'],
+            settings.OCS_AUTHENTICATION['OAUTH_TOKEN_URL'],
             body=json.dumps({'access_token': 'test_access', 'refresh_token': 'test_refresh'}),
             status=200,
             content_type='application/json'
@@ -69,7 +69,7 @@ class TestAuthentication(ReplicationTestCase):
     def test_oauth_backend_failure(self):
         responses.add(
             responses.POST,
-            settings.OAUTH_CLIENT['TOKEN_URL'],
+            settings.OCS_AUTHENTICATION['OAUTH_TOKEN_URL'],
             body=json.dumps({'non_field_errors': 'Unable to log in with provided credentials'}),
             status=400,
             content_type='application/json'
@@ -81,7 +81,7 @@ class TestAuthentication(ReplicationTestCase):
     def test_proposals(self):
         responses.add(
             responses.GET,
-            settings.OAUTH_CLIENT['PROFILE_URL'],
+            settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
             body=json.dumps({'proposals': [{'id': 'TestProposal'}]}),
             status=200,
             content_type='application/json'
@@ -92,7 +92,7 @@ class TestAuthentication(ReplicationTestCase):
     def test_proposals_bad_token(self):
         responses.add(
             responses.GET,
-            settings.OAUTH_CLIENT['PROFILE_URL'],
+            settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
             body=json.dumps({'error': 'Bad credentials'}),
             status=401,
             content_type='application/json'

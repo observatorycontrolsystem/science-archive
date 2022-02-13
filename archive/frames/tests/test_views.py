@@ -226,7 +226,7 @@ class TestFrameFiltering(ReplicationTestCase):
     def test_proposal_user(self):
         responses.add(
             responses.GET,
-            settings.OAUTH_CLIENT['PROFILE_URL'],
+            settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
             body=json.dumps({'proposals': [{'id': 'prop1'}]}),
             status=200,
             content_type='application/json'
@@ -286,7 +286,7 @@ class TestQueryFiltering(ReplicationTestCase):
         user.backend = settings.AUTHENTICATION_BACKENDS[0]
         responses.add(
             responses.GET,
-            settings.OAUTH_CLIENT['PROFILE_URL'],
+            settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
             body=json.dumps({'proposals': [{'id': 'prop1'}]}),
             status=200,
             content_type='application/json'
@@ -407,7 +407,7 @@ class TestZipDownload(ReplicationTestCase):
     def test_proposal_download(self):
         responses.add(
             responses.GET,
-            settings.OAUTH_CLIENT['PROFILE_URL'],
+            settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
             body=json.dumps({'proposals': [{'id': 'prop1'}]}),
             status=200,
             content_type='application/json'

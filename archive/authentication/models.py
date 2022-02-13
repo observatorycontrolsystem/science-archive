@@ -5,6 +5,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.core.cache import cache
 from rest_framework.authtoken.models import Token
+from ocs_authentication.auth_profile.models import AuthProfile
 import requests
 import logging
 
@@ -31,9 +32,10 @@ class Profile(models.Model):
                 ]
             else:
                 proposals = []
+                authprofile = AuthProfile.objects.get(user=self.user)
                 response = requests.get(
-                    settings.OAUTH_CLIENT['PROFILE_URL'],
-                    headers={'Authorization': 'Bearer {}'.format(self.access_token)}
+                    settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
+                    headers={'Authorization': 'Token {}'.format(authprofile.api_token)}
                 )
                 if response.status_code == 200:
                     proposals = [proposal['id'] for proposal in response.json()['proposals']]
