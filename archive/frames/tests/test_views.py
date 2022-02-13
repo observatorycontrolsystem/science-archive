@@ -22,6 +22,7 @@ import subprocess
 
 from ocs_archive.input.file import EmptyFile
 from ocs_archive.input.fitsfile import FitsFile
+from ocs_authentication.auth_profile.models import AuthProfile
 
 
 class TestFrameGet(ReplicationTestCase):
@@ -211,6 +212,7 @@ class TestFrameFiltering(ReplicationTestCase):
         self.normal_user = User.objects.create(username='frodo', password='theone')
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
+        AuthProfile.objects.create(user=self.normal_user)
         self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=UTC))
         self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
         self.not_owned = FrameFactory(proposal_id='notyours', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
@@ -283,6 +285,7 @@ class TestQueryFiltering(ReplicationTestCase):
     def test_filters_public(self):
         user = User.objects.create(username='frodo', password='theone')
         Profile.objects.create(user=user)
+        AuthProfile.objects.create(user=user)
         user.backend = settings.AUTHENTICATION_BACKENDS[0]
         responses.add(
             responses.GET,
@@ -356,6 +359,7 @@ class TestZipDownload(ReplicationTestCase):
         self.normal_user = User.objects.create(username='frodo', password='theone')
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
+        AuthProfile.objects.create(user=self.normal_user)
         self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=UTC))
         self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
         self.not_owned = FrameFactory(proposal_id='notyours', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
