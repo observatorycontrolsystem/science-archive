@@ -74,9 +74,6 @@ class FrameSerializer(serializers.ModelSerializer):
             'filename', 'url', 'reduction_level', 'observation_day', 'observation_date', 'proposal_id',
             'instrument_id', 'target_name', 'site_id', 'telescope_id', 'exposure_time', 'primary_optical_element',
             'public_date', 'configuration_type', 'observation_id', 'request_id', 'related_frame_filenames',
-            'RLEVEL', 'DAY_OBS', 'DATE_OBS', 'PROPID',
-            'INSTRUME', 'OBJECT', 'SITEID', 'TELID', 'EXPTIME', 'FILTER',
-            'L1PUBDAT', 'OBSTYPE', 'BLKUID', 'REQNUM',
         )
         # For when we update django/drf
         # extra_kwargs = {
@@ -96,35 +93,6 @@ class FrameSerializer(serializers.ModelSerializer):
         return frame
 
     def create_or_update_frame(self, data):
-        #TODO: Remove this part setting the old fields at the same time as removing the old fields
-        if 'observation_day' in data:
-            data['DAY_OBS'] = data['observation_day']
-        if 'observation_date' in data:
-            data['DATE_OBS'] = data['observation_date']
-        if 'public_date' in data:
-            data['L1PUBDAT'] = data['public_date']
-        if 'reduction_level' in data:
-            data['RLEVEL'] = data['reduction_level']
-        if 'instrument_id' in data:
-            data['INSTRUME'] = data['instrument_id']
-        if 'target_name' in data:
-            data['OBJECT'] = data['target_name']
-        if 'site_id' in data:
-            data['SITEID'] = data['site_id']
-        if 'telescope_id' in data:
-            data['TELID'] = data['telescope_id']
-        if 'exposure_time' in data:
-            data['EXPTIME'] = data['exposure_time']
-        if 'primary_optical_element' in data:
-            data['FILTER'] = data['primary_optical_element']
-        if 'proposal_id' in data:
-            data['PROPID'] = data['proposal_id']
-        if 'configuration_type' in data:
-            data['OBSTYPE'] = data['configuration_type']
-        if 'observation_id' in data:
-            data['BLKUID'] = data['observation_id']
-        if 'request_id' in data:
-            data['REQNUM'] = data['request_id']
         frame, _ = Frame.objects.update_or_create(defaults=data, basename=data['basename'])
         return frame
 
