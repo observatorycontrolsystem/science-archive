@@ -135,6 +135,22 @@ class Frame(models.Model):
         ret_dict['version_set'] = [v.as_dict() for v in self.version_set.all()]
         ret_dict['url'] = self.url
         ret_dict['filename'] = self.filename
+        # TODO: Remove these old model field names once users have migrated their code
+        ret_dict['DATE_OBS'] = ret_dict['observation_date']
+        ret_dict['DAY_OBS'] = ret_dict['observation_day']
+        ret_dict['PROPID'] = ret_dict['proposal_id']
+        ret_dict['INSTRUME'] = ret_dict['instrument_id']
+        ret_dict['OBJECT'] = ret_dict['target_name']
+        ret_dict['RLEVEL'] = ret_dict['reduction_level']
+        ret_dict['SITEID'] = ret_dict['site_id']
+        ret_dict['TELID'] = ret_dict['telescope_id']
+        ret_dict['EXPTIME'] = ret_dict['exposure_time']
+        ret_dict['FILTER'] = ret_dict['primary_optical_element']
+        ret_dict['L1PUBDAT'] = ret_dict['public_date']
+        ret_dict['OBSTYPE'] = ret_dict['configuration_type']
+        ret_dict['BLKUID'] = ret_dict['observation_id']
+        ret_dict['REQNUM'] = ret_dict['request_id']
+
         if self.area:
             ret_dict['area'] = json.loads(self.area.geojson)
         ret_dict['related_frames'] = [rf.id for rf in self.related_frames.all()]
