@@ -13,7 +13,7 @@ drf-yasg>=1.20,<1.21
 python3-memcached>=1.51,<2.0
 uritemplate==3.0.1
 kombu>=4.6,<4.7
-ocs_archive==0.2.7
+ocs_archive==0.2.8
 setuptools-scm==6.0.1
 requests>2.0,<3.0
 responses
