@@ -5,15 +5,19 @@ from archive.authentication.models import Profile
 from archive.frames.tests.factories import FrameFactory
 from archive.test_helpers import ReplicationTestCase
 from rest_framework.test import APITestCase
+from ocs_authentication.auth_profile.models import AuthProfile
 from django.urls import reverse
 import responses
 import json
+
+
 
 class TestRevokeTokenAPI(APITestCase):
     def setUp(self) -> None:
         super(TestRevokeTokenAPI, self).setUp()
         self.user = User.objects.create(username='test_revoke_token_user')
         Profile.objects.create(user=self.user)
+        AuthProfile.objects.create(user=self.user)
         self.client.force_login(self.user)
 
     def test_revoke_token(self):
@@ -38,7 +42,9 @@ class TestAuthentication(ReplicationTestCase):
         self.admin_user = User.objects.create_superuser('admin', 'admin@lcgot.net', 'password')
         self.normal_user = User.objects.create(username='frodo')
         Profile.objects.create(user=self.normal_user)
+        AuthProfile.objects.create(user=self.normal_user)
         Profile.objects.create(user=self.admin_user)
+        AuthProfile.objects.create(user=self.admin_user)
 
     @patch('requests.get')
     @patch('requests.post')
@@ -47,41 +53,10 @@ class TestAuthentication(ReplicationTestCase):
         self.assertFalse(get_mock.called)
 
     @responses.activate
-    def test_oauth_backend_success(self):
-        responses.add(
-            responses.POST,
-            settings.OAUTH_CLIENT['TOKEN_URL'],
-            body=json.dumps({'access_token': 'test_access', 'refresh_token': 'test_refresh'}),
-            status=200,
-            content_type='application/json'
-        )
-        self.assertTrue(self.client.login(username='testuser', password='password'))
-        u = User.objects.get(username='testuser')
-        self.assertEqual(u.profile.access_token, 'test_access')
-        self.assertEqual(u.profile.refresh_token, 'test_refresh')
-        self.assertTrue(u.auth_token)
-
-        # Test relog
-        self.client.logout()
-        self.assertTrue(self.client.login(username='testuser', password='password'))
-
-    @responses.activate
-    def test_oauth_backend_failure(self):
-        responses.add(
-            responses.POST,
-            settings.OAUTH_CLIENT['TOKEN_URL'],
-            body=json.dumps({'non_field_errors': 'Unable to log in with provided credentials'}),
-            status=400,
-            content_type='application/json'
-        )
-        self.assertFalse(self.client.login(username='testuser', password='password'))
-        self.assertFalse(User.objects.filter(username='testuser').exists())
-
-    @responses.activate
     def test_proposals(self):
         responses.add(
             responses.GET,
-            settings.OAUTH_CLIENT['PROFILE_URL'],
+            settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
             body=json.dumps({'proposals': [{'id': 'TestProposal'}]}),
             status=200,
             content_type='application/json'
@@ -92,7 +67,7 @@ class TestAuthentication(ReplicationTestCase):
     def test_proposals_bad_token(self):
         responses.add(
             responses.GET,
-            settings.OAUTH_CLIENT['PROFILE_URL'],
+            settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
             body=json.dumps({'error': 'Bad credentials'}),
             status=401,
             content_type='application/json'
