@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework.schemas.utils import is_list_view
 from setuptools_scm import get_version
 from setuptools_scm.version import ScmVersion
-
+from django.conf import settings
 
 def version_scheme(version: ScmVersion) -> str:
     """Simply return the string representation of the version object tag, which is the latest git tag.
@@ -15,7 +15,7 @@ def version_scheme(version: ScmVersion) -> str:
 class ScienceArchiveSchemaGenerator(SchemaGenerator):
     def get_schema(self, *args, **kwargs):
         schema = super().get_schema(*args, **kwargs)
-        schema['info']['title'] = 'Science Archive API'
+        schema['info']['title'] = settings.NAVBAR_TITLE_TEXT
         schema['info']['description'] = 'API documentation for the OCS Science Archive'
         schema['info']['version'] = get_version(version_scheme=version_scheme, local_scheme='no-local-version')
         return schema

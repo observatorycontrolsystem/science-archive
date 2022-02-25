@@ -1,11 +1,13 @@
 from archive.frames.tests.factories import FrameFactory, VersionFactory, PublicFrameFactory
 from archive.frames.models import Frame
+from archive.frames.utils import get_configuration_type_tuples
 from archive.authentication.models import Profile
 from django.contrib.auth.models import User
 from unittest.mock import MagicMock, patch
 from django.utils import timezone
 from django.urls import reverse
 from archive.test_helpers import ReplicationTestCase
+from django.test import override_settings
 from django.conf import settings
 from django.contrib.gis.geos import Point
 from pytz import UTC
@@ -18,13 +20,15 @@ import os
 import random
 import subprocess
 
+from ocs_archive.input.file import EmptyFile
+from ocs_archive.input.fitsfile import FitsFile
+
 
 class TestFrameGet(ReplicationTestCase):
     def setUp(self):
         user = User.objects.create(username='admin', password='admin', is_superuser=True)
         user.backend = settings.AUTHENTICATION_BACKENDS[0]
         self.client.force_login(user)
-        boto3.client = MagicMock()
         self.frames = FrameFactory.create_batch(5)
         self.frame = self.frames[0]
 
@@ -67,7 +71,10 @@ class TestFramePost(ReplicationTestCase):
         self.addCleanup(archive_fits_patcher.stop)
         self.mock_archive_fits_publish = archive_fits_patcher.start()
         self.header_json = json.load(open(os.path.join(os.path.dirname(__file__), 'frames.json')))
-        f = self.header_json[random.choice(list(self.header_json.keys()))]
+        headers = self.header_json[random.choice(list(self.header_json.keys()))]
+        datafile = FitsFile(EmptyFile('test.fits'), file_metadata=headers)
+        f = datafile.get_header_data().get_archive_frame_data()
+        f['headers'] = headers
         f['basename'] = FrameFactory.basename.fuzz()
         f['area'] = FrameFactory.area.fuzz(as_dict=True)
         f['version_set'] = [
@@ -82,7 +89,10 @@ class TestFramePost(ReplicationTestCase):
     def test_post_frame(self):
         total_frames = len(self.header_json)
         for extension in self.header_json:
-            frame_payload = self.header_json[extension]
+            headers = self.header_json[extension]
+            datafile = FitsFile(EmptyFile('test.fits'), file_metadata=headers)
+            frame_payload = datafile.get_header_data().get_archive_frame_data()
+            frame_payload['headers'] = headers
             frame_payload['basename'] = FrameFactory.basename.fuzz()
             frame_payload['area'] = FrameFactory.area.fuzz(as_dict=True)
             frame_payload['version_set'] = [
@@ -109,7 +119,7 @@ class TestFramePost(ReplicationTestCase):
 
     def test_bad_frame_does_not_post_to_archive_fits(self):
         frame_payload = self.single_frame_payload
-        frame_payload['DATE-OBS'] = 'iamnotadate'
+        frame_payload['observation_date'] = 'iamnotadate'
         response = self.client.post(
             reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
         )
@@ -134,19 +144,11 @@ class TestFramePost(ReplicationTestCase):
 
     def test_long_exptime(self):
         frame_payload = self.single_frame_payload
-        frame_payload['EXPTIME'] = 10.032415
+        frame_payload['exposure_time'] = 10.032415
         response = self.client.post(
             reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
         )
         self.assertContains(response, frame_payload['basename'], status_code=201)
-
-    def test_exptime_way_too_long(self):
-        frame_payload = self.single_frame_payload
-        frame_payload['EXPTIME'] = 10.03241524124232134
-        response = self.client.post(
-            reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
-        )
-        self.assertEqual(response.status_code, 400)
 
     def test_post_frame_polygon_serialization(self):
         frame_payload = self.single_frame_payload
@@ -179,16 +181,14 @@ class TestFramePost(ReplicationTestCase):
 
     def test_post_non_required_data(self):
         frame_payload = self.single_frame_payload
-        del frame_payload['REQNUM']
+        del frame_payload['request_id']
         response = self.client.post(
             reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
         )
         self.assertEqual(response.status_code, 201)
 
         response = self.client.get(reverse('frame-detail', args=(response.json()['id'],)))
-        self.assertIsNone(response.json()['REQNUM'])
-
-
+        self.assertIsNone(response.json()['request_id'])
 
     def test_post_duplicate_data(self):
         frame = FrameFactory()
@@ -206,15 +206,14 @@ class TestFramePost(ReplicationTestCase):
 
 class TestFrameFiltering(ReplicationTestCase):
     def setUp(self):
-        boto3.client = MagicMock()
         self.admin_user = User.objects.create_superuser(username='admin', email='a@a.com', password='password')
         self.admin_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         self.normal_user = User.objects.create(username='frodo', password='theone')
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
-        self.public_frame = FrameFactory(PROPID='public', L1PUBDAT=datetime.datetime(2000, 1, 1, tzinfo=UTC))
-        self.proposal_frame = FrameFactory(PROPID='prop1', L1PUBDAT=datetime.datetime(2099, 1, 1, tzinfo=UTC))
-        self.not_owned = FrameFactory(PROPID='notyours', L1PUBDAT=datetime.datetime(2099, 1, 1, tzinfo=UTC))
+        self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=UTC))
+        self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
+        self.not_owned = FrameFactory(proposal_id='notyours', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
 
     def test_admin_view_all(self):
         self.client.login(username='admin', password='password')
@@ -246,11 +245,8 @@ class TestFrameFiltering(ReplicationTestCase):
 
 
 class TestQueryFiltering(ReplicationTestCase):
-    def setUp(self):
-        boto3.client = MagicMock()
-
     def test_start_end(self):
-        frame = PublicFrameFactory(DATE_OBS=datetime.datetime(2011, 2, 1, tzinfo=UTC))
+        frame = PublicFrameFactory(observation_date=datetime.datetime(2011, 2, 1, tzinfo=UTC))
         response = self.client.get(reverse('frame-list') + '?start=2011-01-01&end=2011-03-01')
         self.assertContains(response, frame.basename)
         response = self.client.get(reverse('frame-list') + '?start=2012-01-01&end=2012-03-01')
@@ -266,7 +262,7 @@ class TestQueryFiltering(ReplicationTestCase):
         self.assertNotContains(response, frame.basename)
 
     def test_object(self):
-        frame = PublicFrameFactory(OBJECT='planet9')
+        frame = PublicFrameFactory(target_name='planet9')
         response = self.client.get(reverse('frame-list') + '?OBJECT=planet')
         self.assertContains(response, frame.basename)
         response = self.client.get(reverse('frame-list') + '?OBJECT=planet9')
@@ -275,7 +271,7 @@ class TestQueryFiltering(ReplicationTestCase):
         self.assertNotContains(response, frame.basename)
 
     def test_exptime(self):
-        frame = PublicFrameFactory(EXPTIME=300)
+        frame = PublicFrameFactory(exposure_time=300)
         response = self.client.get(reverse('frame-list') + '?EXPTIME=300')
         self.assertContains(response, frame.basename)
         response = self.client.get(reverse('frame-list') + '?EXPTIME=200')
@@ -296,7 +292,7 @@ class TestQueryFiltering(ReplicationTestCase):
             content_type='application/json'
         )
         self.client.force_login(user)
-        proposal_frame = FrameFactory(L1PUBDAT=datetime.datetime(2999, 1, 1, tzinfo=UTC), PROPID='prop1')
+        proposal_frame = FrameFactory(public_date=datetime.datetime(2999, 1, 1, tzinfo=UTC), proposal_id='prop1')
         public_frame = PublicFrameFactory()
 
         for false_string in ['false', 'False', '0']:
@@ -347,7 +343,7 @@ class TestQueryFiltering(ReplicationTestCase):
         self.assertContains(response, frame.basename)
 
     def test_rlevel(self):
-        frame = PublicFrameFactory(RLEVEL=10)
+        frame = PublicFrameFactory(reduction_level=10)
         response = self.client.get(reverse('frame-list') + '?RLEVEL=10')
         self.assertContains(response, frame.basename)
 
@@ -357,13 +353,12 @@ class TestQueryFiltering(ReplicationTestCase):
 
 class TestZipDownload(ReplicationTestCase):
     def setUp(self):
-        boto3.client = MagicMock()
         self.normal_user = User.objects.create(username='frodo', password='theone')
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
-        self.public_frame = FrameFactory(PROPID='public', L1PUBDAT=datetime.datetime(2000, 1, 1, tzinfo=UTC))
-        self.proposal_frame = FrameFactory(PROPID='prop1', L1PUBDAT=datetime.datetime(2099, 1, 1, tzinfo=UTC))
-        self.not_owned = FrameFactory(PROPID='notyours', L1PUBDAT=datetime.datetime(2099, 1, 1, tzinfo=UTC))
+        self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=UTC))
+        self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
+        self.not_owned = FrameFactory(proposal_id='notyours', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
 
     def test_public_download(self):
         response = self.client.post(
@@ -395,14 +390,16 @@ class TestZipDownload(ReplicationTestCase):
         self.assertNotContains(response, self.not_owned.basename)
 
     def test_public_download_uncompressed_failure(self):
+        max_number_of_frames = settings.ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES
+        above_max_number_of_frames = max_number_of_frames + 2
         response = self.client.post(
             reverse('frame-zip'),
-            data=json.dumps({'frame_ids': [num for num in range(1, 20)], 'uncompress': 'true'}),
+            data=json.dumps({'frame_ids': [num for num in range(1, above_max_number_of_frames)], 'uncompress': 'true'}),
             content_type='application/json'
         )
 
         self.assertContains(response,
-                            'A maximum of 10 frames can be downloaded with the uncompress flag. Please '
+                            f'A maximum of {max_number_of_frames} frames can be downloaded with the uncompress flag. Please '
                             'try again with fewer frame_ids.',
                             status_code=status.HTTP_400_BAD_REQUEST)
 
@@ -434,36 +431,28 @@ class TestZipDownload(ReplicationTestCase):
         self.assertEqual(response.status_code, 404)
 
 
-class TestS3ViewSet(ReplicationTestCase):
-    def download_fileobj_side_effect(self, *args, Fileobj=None, **kwargs):
-        Fileobj.write(b'test_value')
-
+class TestFunpackViewSet(ReplicationTestCase):
     def setUp(self):
-        self.m = MagicMock()
-        self.m.download_fileobj.side_effect = self.download_fileobj_side_effect
-        self.frame = FrameFactory(DAY_OBS=datetime.datetime(2020, 11, 18, tzinfo=UTC))
+        self.frame = FrameFactory(observation_day=datetime.datetime(2020, 11, 18, tzinfo=UTC))
 
-    @patch('archive.frames.views.get_s3_client')
     @patch('archive.frames.views.subprocess')
-    def test_funpack_download(self, mock_subprocess, mock_client):
+    def test_funpack_download(self, mock_subprocess):
         """Test that funpack download endpoint returns correct file content and calls funpack."""
-        mock_client.return_value = self.m
         mock_proc = MagicMock()
         mock_proc.stdout = b'test_value'
         mock_subprocess.run.return_value = mock_proc
-        response = self.client.get(reverse('s3-funpack-funpack', kwargs={'pk': self.frame.version_set.first().id}))
+        response = self.client.get(reverse('frame-funpack-funpack', kwargs={'pk': self.frame.version_set.first().id}))
         mock_subprocess.run.assert_called_with(
-            ['/usr/bin/funpack', '-C', '-S', '-'], input=b'test_value', stdout=mock_subprocess.PIPE
+            ['/usr/bin/funpack', '-C', '-S', '-'], input=b'', stdout=mock_subprocess.PIPE
         )
         self.assertContains(response, b'test_value')
 
-    @patch('archive.frames.views.get_s3_client')
     @patch.object(subprocess, 'run')
-    def test_funpack_download_failure(self, mock_run, mock_client):
+    def test_funpack_download_failure(self, mock_run):
         """Test that funpack download endpoint returns correct response following a failure."""
         mock_run.side_effect = subprocess.CalledProcessError(-9, 'funpack')
 
-        response = self.client.get(reverse('s3-funpack-funpack', kwargs={'pk': self.frame.version_set.first().id}))
+        response = self.client.get(reverse('frame-funpack-funpack', kwargs={'pk': self.frame.version_set.first().id}))
 
         self.assertContains(response,
                             'There was a problem downloading your files. Please try again later or select fewer files.',
@@ -472,15 +461,14 @@ class TestS3ViewSet(ReplicationTestCase):
 
 class TestFrameAggregate(ReplicationTestCase):
     def setUp(self):
-        boto3.client = MagicMock()
         is_public_date = timezone.now() - datetime.timedelta(days=7)
         is_not_public_date = timezone.now() + datetime.timedelta(days=7)
-        FrameFactory.create(OBSTYPE='EXPOSE', TELID='1m0a', SITEID='bpl', INSTRUME='kb46', PROPID='prop1', FILTER='rp',
-                            L1PUBDAT=is_public_date)
-        FrameFactory.create(OBSTYPE='BIAS', TELID='0m4a', SITEID='coj', INSTRUME='en05', PROPID='prop2', FILTER='V',
-                            L1PUBDAT=is_not_public_date)
-        FrameFactory.create(OBSTYPE='SKYFLAT', TELID='2m0b', SITEID='ogg', INSTRUME='fl10', PROPID='prop3', FILTER='B',
-                            L1PUBDAT=is_public_date)
+        FrameFactory.create(configuration_type='EXPOSE', telescope_id='1m0a', site_id='bpl', instrument_id='kb46',
+                            proposal_id='prop1', primary_optical_element='rp', public_date=is_public_date)
+        FrameFactory.create(configuration_type='BIAS', telescope_id='0m4a', site_id='coj', instrument_id='en05',
+                            proposal_id='prop2', primary_optical_element='V', public_date=is_not_public_date)
+        FrameFactory.create(configuration_type='SKYFLAT', telescope_id='2m0b', site_id='ogg', instrument_id='fl10',
+                            proposal_id='prop3', primary_optical_element='B', public_date=is_public_date)
 
     def test_frame_aggregate(self):
         response = self.client.get(reverse('frame-aggregate'))
@@ -501,7 +489,7 @@ class TestFrameAggregate(ReplicationTestCase):
         self.assertEqual(set(response.json()['proposals']), set(['prop3']))
 
     def test_frame_aggregate_single_field(self):
-        response = self.client.get(reverse('frame-aggregate') + '?aggregate_field=SITEID')
+        response = self.client.get(reverse('frame-aggregate') + '?aggregate_field=site_id')
         self.assertEqual(set(response.json()['obstypes']), set([]))
         self.assertEqual(set(response.json()['telescopes']), set([]))
         self.assertEqual(set(response.json()['sites']), set(['bpl', 'coj', 'ogg']))
@@ -510,7 +498,7 @@ class TestFrameAggregate(ReplicationTestCase):
         self.assertEqual(set(response.json()['proposals']), set([]))
 
     def test_frame_aggregate_single_field_filtered(self):
-        response = self.client.get(reverse('frame-aggregate') + '?INSTRUME=en05&aggregate_field=FILTER')
+        response = self.client.get(reverse('frame-aggregate') + '?INSTRUME=en05&aggregate_field=primary_optical_element')
         self.assertEqual(set(response.json()['obstypes']), set([]))
         self.assertEqual(set(response.json()['telescopes']), set([]))
         self.assertEqual(set(response.json()['sites']), set([]))
@@ -522,3 +510,53 @@ class TestFrameAggregate(ReplicationTestCase):
         response = self.client.get(reverse('frame-aggregate') + '?INSTRUME=en05&aggregate_field=iaminvalid')
         self.assertEqual(response.status_code, 400)
         self.assertIn('Invalid aggregate_field', str(response.content))
+
+
+class TestUtils(ReplicationTestCase):
+    @override_settings(CONFIGURATION_TYPES=('TEST1', 'TEST2'), CONFIGDB_URL='')
+    def test_use_environment_variable_for_config_types(self):
+        configuration_type_tuples = get_configuration_type_tuples()
+        self.assertEqual(len(configuration_type_tuples), 2)
+        self.assertTrue(('TEST1', 'TEST1') in configuration_type_tuples)
+        self.assertTrue(('TEST2', 'TEST2') in configuration_type_tuples)
+
+    @override_settings(CONFIGURATION_TYPES=('TEST1',), CONFIGDB_URL='invalid_url')
+    def test_invalid_configdb_url_falls_back_to_environment_config_types(self):
+        configuration_type_tuples = get_configuration_type_tuples()
+        self.assertEqual(len(configuration_type_tuples), 1)
+        self.assertTrue(('TEST1', 'TEST1') in configuration_type_tuples)
+
+    @responses.activate
+    @override_settings(CONFIGURATION_TYPES=('TEST1', 'TEST2'), CONFIGDB_URL='http://test-configdb')
+    def test_configdb_url_is_used_if_specified(self):
+        response_data = {
+            'results': [
+                {
+                    'instrument_type': {
+                        'configuration_types': [
+                            {'code': 'CT1'},
+                            {'code': 'CT2'}
+                        ]
+                    }
+                },
+                {
+                    'instrument_type': {
+                        'configuration_types': [
+                            {'code': 'CT3'}
+                        ]
+                    }
+                }
+            ]
+        }
+        responses.add(
+            responses.GET,
+            'http://test-configdb/instruments/',
+            body=json.dumps(response_data),
+            status=200,
+            content_type='application/json'
+        )
+        configuration_type_tuples = get_configuration_type_tuples()
+        self.assertEqual(len(configuration_type_tuples), 3)
+        self.assertTrue(('CT1', 'CT1') in configuration_type_tuples)
+        self.assertTrue(('CT2', 'CT2') in configuration_type_tuples)
+        self.assertTrue(('CT3', 'CT3') in configuration_type_tuples)

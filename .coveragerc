@@ -4,6 +4,6 @@ source = archive
 [report]
 omit =
     */migrations/*
+    */management/*
     *wsgi.py
     *apps.py
-

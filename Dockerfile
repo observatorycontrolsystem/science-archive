@@ -1,11 +1,11 @@
-FROM python:3.6-slim AS app
+FROM python:3.7-slim AS app
 
 # Set working directory
 WORKDIR /app
 
 # Install operating system dependencies
 RUN apt-get -y update \
-        && apt-get -y install gdal-bin libcfitsio-bin libpq-dev python-dev gcc make \
+        && apt-get -y install gdal-bin libcfitsio-bin libpq-dev python-dev gcc make htop \
         && apt-get -y clean
 
 # Install Python dependencies

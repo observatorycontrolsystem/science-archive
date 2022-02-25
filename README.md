@@ -11,12 +11,13 @@ are stored in AWS S3, with certain metadata for each file stored in a database f
 
 Optional prerequisites can be skipped for reduced functionality.
 
--   Python >= 3.6
+-   Python >= 3.7
 -   PostgreSQL with the PostGIS extension installed
 -   An AWS S3 bucket with read/write privileges and versioning enabled
 -   System dependencies to install the [psycopg2](https://pypi.org/project/psycopg2/) package
 -   (Optional) RabbitMQ
 -   (Optional) Memcached
+-   (Optional) Nginx with mod-zip plugin serving the archive (needed to support downloading zip files of multiple images at once)
 
 ## Configuration
 
@@ -40,7 +41,6 @@ This project is configured using environment variables.
 | AWS                   | `AWS_ACCESS_KEY_ID`          | AWS Access Key Id                                                                                                                                                                                                                    | _empty string_                  |
 |                       | `AWS_SECRET_ACCESS_KEY`      | AWS Secret Access Key                                                                                                                                                                                                                | _empty string_                  |
 |                       | `AWS_DEFAULT_REGION`         | AWS Default Region                                                                                                                                                                                                                   | `us-west-2`                     |
-|                       | `AWS_BUCKET`                 | AWS S3 Bucket Name                                                                                                                                                                                                                   | `lcogtarchivetest`              |
 |                       | `S3_ENDPOINT_URL`            | Endpoint url for connecting to s3. This can be modified to connect to a local instance of s3.                                                                                                                                        | `http://s3.us-west-2.amazonaws.com`              |
 | Post-processing       | `PROCESSED_EXCHANGE_ENABLED` | Enable post-processing. When `True`, details of a newly ingested image are sent to a RabbitMQ exchange. This is useful for e.g. data pipelines that need to know whenever there is a new image available. Set to `False` to disable. | `True`                          |
 |                       | `QUEUE_BROKER_URL`           | RabbitMQ Broker                                                                                                                                                                                                                      | `memory://localhost`            |
@@ -50,6 +50,16 @@ This project is configured using environment variables.
 |                       | `OAUTH_CLIENT_SECRET`        | Oauth client secret                                                                                                                                                                                                                  | _empty string_                  |
 |                       | `OAUTH_TOKEN_URL`            | Observation portal Oauth token URL                                                                                                                                                                                                   | `http://localhost/o/token/`     |
 |                       | `OAUTH_PROFILE_URL`          | Observation portal profile URL                                                                                                                                                                                                       | `http://localhost/api/profile/` |
+| Configuration Types   | `CONFIGURATION_TYPES`        | Comma delimited list of configuration types to use for validation and forms. Only used if no `CONFIGDB_URL` is set.                                                                                                                                                                                                       | `BIAS,DARK,EXPOSE,SPECTRUM,LAMPFLAT,SKYFLAT` |
+|                       | `CONFIGDB_URL`               | Configuration Database URL. If set, it is used to retrieve available configuration_types.                                                                                                                                                                                                        | _empty string_ |
+| Appearance Settings   | `NAVBAR_TITLE_TEXT`          | Name that appears in the navbar of the browsable api                                                                                                                                                                                 | `Science Archive API`           |
+|                       | `NAVBAR_TITLE_URL`           | Hyperlink for the NAVBAR_TITLE_TEXT                                                                                                                                                                                                  | `https://archive.lco.global`    |
+|                       | `PAGINATION_DEFAULT_LIMIT`   | Numeric value indicating the page size for results ([more info here](https://www.django-rest-framework.org/api-guide/pagination/#configuration_1))                                                                                   | `100`                           |
+|                       | `PAGINATION_MAX_LIMIT`       | Numeric value indicating the maximum allowable limit that can be requested by the client. ([more info here](https://www.django-rest-framework.org/api-guide/pagination/#configuration_1))                                            | `1000`                          |
+| More customization    | `ZIP_DOWNLOAD_FILENAME_BASE` | Initial part of the zip download filename                                                                                                                                                                                            | `ocs_archive_data`              |
+|                       | `ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES`     | Maximum number of files that users can bundle in a single uncompressed zipped download                                                                                                                                  | `10`                            |
+|                       | `TERMS_OF_SERVICE_URL`       | URL pointing to a terms of service for users of the observatory                                                                                                                                                                      | `https://lco.global/policies/terms/` |
+|                       | `DOCUMENTATION_URL`          | URL pointing to user-facing documentation                                                                                                                                                                                            | `https://observatorycontrolsystem.github.io/api/science_archive/` |
 
 ## Local Development
 
@@ -80,7 +90,7 @@ After creating the database, migrations must be applied to set up the tables in 
 
 ### **Run the tests**
 
-    (env) python manage.py test
+    (env) python manage.py test --settings=test_settings
 
 ### **Run the science archive**
 

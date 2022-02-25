@@ -1,9 +1,9 @@
-import boto3
-import io
 import logging
 import subprocess
-from functools import lru_cache
+import requests
+from urllib.parse import urlsplit, urljoin
 from django.conf import settings
+from django.core.cache import cache
 from django.urls import reverse
 
 from kombu.connection import Connection
@@ -11,36 +11,64 @@ from kombu import Exchange
 
 from archive.frames.exceptions import FunpackError
 
+from ocs_archive.input.file import EmptyFile
+from ocs_archive.input.filefactory import FileFactory
+from ocs_archive.storage.filestorefactory import FileStoreFactory
+
 logger = logging.getLogger()
 
 
-@lru_cache(maxsize=1)
-def get_s3_client():
-    config = boto3.session.Config(signature_version='s3v4')
-    return boto3.client('s3', endpoint_url=settings.S3_ENDPOINT_URL, config=config)
-
-
-def remove_dashes_from_keys(dictionary):
-    new_dictionary = {}
-    for k in dictionary:
-        new_key = k.replace('-', '_')
-        new_dictionary[new_key] = dictionary[k]
-    return new_dictionary
-
-
-def fits_keywords_only(dictionary):
-    new_dictionary = {}
-    for k in dictionary:
-        if k[0].isupper():
-            new_dictionary[k] = dictionary[k]
-    return new_dictionary
+def get_file_store_path(filename, file_metadata):
+    # The file store path can depend on specific info in the filename, which is only available within
+    # specific DataFile subclasses based on extension, so this EmptyFile with the filename is needed
+    # to be able to build the correct file store path
+    empty_file = EmptyFile(filename)
+    data_file = FileFactory.get_datafile_class_for_extension(empty_file.extension)(empty_file, file_metadata, {}, {})
+    return data_file.get_filestore_path()
 
 
 def archived_queue_payload(dictionary, frame):
-    new_dictionary = dictionary.copy()
+    new_dictionary = dictionary.get('headers').copy()
+    new_dictionary['area'] = dictionary.get('area')
+    new_dictionary['basename'] = dictionary.get('basename')
+    new_dictionary['version_set'] = dictionary.get('version_set')
     new_dictionary['filename'] = frame.filename
     new_dictionary['frameid'] = frame.id
     return new_dictionary
+
+
+def get_configuration_type_tuples():
+    configuration_type_tuples = cache.get('configuration_type_tuples')
+    if not configuration_type_tuples:
+        configuration_types = set()
+        instrument_data = get_configdb_data()
+        if instrument_data:
+            for instrument in instrument_data:
+                for configuration_type in instrument['instrument_type']['configuration_types']:
+                    configuration_types.add(configuration_type['code'])
+        else:
+            configuration_types = set(settings.CONFIGURATION_TYPES)
+        configuration_type_tuples = [(conf_type, conf_type) for conf_type in configuration_types]
+        cache.set('configuration_type_tuples', configuration_type_tuples, 3600)
+
+    return configuration_type_tuples
+
+
+def get_configdb_data():
+    instrument_data = cache.get('configdb_instrument_data')
+    if not instrument_data:
+        if settings.CONFIGDB_URL:
+            url = urljoin(settings.CONFIGDB_URL, '/instruments/')
+            try:
+                response = requests.get(url)
+                response.raise_for_status()
+                instrument_data = response.json()['results']
+                cache.set('configdb_instrument_data', instrument_data, 3600)
+            except (requests.exceptions.RequestException, requests.exceptions.HTTPError) as e:
+                logger.warning(f"Failed to access Configdb at {settings.CONFIGDB_URL}: {repr(e)}")
+                instrument_data = []
+
+    return instrument_data
 
 
 def post_to_archived_queue(payload):
@@ -73,13 +101,13 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
     '''
     logger.info(msg=f'Building nginx zip text for frames {frames} with uncompress flag {uncompress}')
 
-    client = get_s3_client()
+    file_store = FileStoreFactory.get_file_store_class()()
     ret = []
 
     for frame in frames:
         # retrieve the database record for the Version we will fetch
         version = frame.version_set.first()
-
+        path = get_file_store_path(frame.filename, frame.get_header_dict())
         extension = version.extension
         size = version.size
         # if the user requested that we uncompress the files, then redirect .fits.fz
@@ -90,21 +118,14 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
             # The NGINX mod_zip module requires that the files which are used to build the
             # ZIP file must be loaded from an internal NGINX location. Replace the leading
             # portion of the generated URL with an internal NGINX location which proxies all
-            # traffic to AWS S3.
-            # funpack location (return decompressed files from AWS S3 Bucket)
-            location = reverse('s3-funpack-funpack', kwargs={'pk': version.id})
+            # traffic to Filestore URL.
+            # funpack location (return decompressed files from FileStore)
+            location = reverse('frame-funpack-funpack', kwargs={'pk': version.id})
             extension = '.fits'
 
             # In order to build the manifest for mod_zip, we need to get the uncompressed file size. This is
             # inefficient, but simple.
-
-            with io.BytesIO() as fileobj:
-                # download from AWS S3 into an in-memory object
-                client.download_fileobj(Bucket=version.data_params['Bucket'],
-                                        Key=version.data_params['Key'],
-                                        Fileobj=fileobj)
-                fileobj.seek(0)
-
+            with file_store.get_fileobj(path) as fileobj:
                 cmd = ['/usr/bin/funpack', '-C', '-S', '-', ]
                 try:
                     proc = subprocess.run(cmd, input=fileobj.getvalue(), stdout=subprocess.PIPE)
@@ -120,12 +141,10 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
             # portion of the generated URL with an internal NGINX location which proxies all
             # traffic to AWS S3.
             # default location (return files as-is from AWS S3 Bucket)
-            params = {
-                'Key': version.s3_daydir_key,
-                'Bucket': settings.BUCKET,
-            }
-            url = client.generate_presigned_url('get_object', Params=params, ExpiresIn=86400)
-            location = url.replace(f'https://{settings.BUCKET}.s3.amazonaws.com', '/s3-native')
+            url = file_store.get_url(path, version.key, expiration=86400)
+            split_url = urlsplit(url)
+            url_to_replace = split_url.scheme + "://" + split_url.netloc
+            location = url.replace(url_to_replace, '/zip-files')
 
         # The NGINX mod_zip module builds ZIP files using a manifest. Build the manifest
         # line for this frame.

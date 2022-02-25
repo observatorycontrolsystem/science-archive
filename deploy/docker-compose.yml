@@ -34,7 +34,7 @@ services:
           - AWS_ACCESS_KEY_ID={minio_access_key}
           - AWS_SECRET_ACCESS_KEY={minio_secret}
           - AWS_DEFAULT_REGION={minio-region}
-          - AWS_BUCKET={ocs-example-bucket}
+          - BUCKET={ocs-example-bucket}
           - S3_ENDPOINT_URL={AWS_S3_base_url}
           - OAUTH_CLIENT_ID={observation_portal_application_client_id}
           - OAUTH_CLIENT_SECRET={observation_portal_application_client_secret}

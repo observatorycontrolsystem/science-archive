@@ -130,7 +130,7 @@ class VersionFactory(factory.django.DjangoModelFactory):
     )
     key = factory.fuzzy.FuzzyText(length=32)
     md5 = factory.fuzzy.FuzzyText(length=32)
-    extension = factory.fuzzy.FuzzyText(length=7)
+    extension = factory.fuzzy.FuzzyChoice(['.fits', '.fits.fz', '.pdf'])
     frame = factory.SubFactory('archive.frames.tests.factories.FrameFactory')
 
 
@@ -140,28 +140,28 @@ class FrameFactory(factory.django.DjangoModelFactory):
 
     basename = FuzzyBasename()
     area = FuzzyArea()
-    DATE_OBS = factory.fuzzy.FuzzyDateTime(
+    observation_date = factory.fuzzy.FuzzyDateTime(
         datetime.datetime(2015, 1, 1, tzinfo=UTC),
         timezone.now()
     )
-    DAY_OBS = factory.fuzzy.FuzzyDate(
+    observation_day = factory.fuzzy.FuzzyDate(
         datetime.date(2015, 1, 1),
         timezone.now().date()
     )
-    PROPID = factory.fuzzy.FuzzyChoice(PROPOSALS)
-    INSTRUME = factory.fuzzy.FuzzyChoice(INSTRUMENTS)
-    OBJECT = factory.fuzzy.FuzzyText(length=10)
-    SITEID = factory.fuzzy.FuzzyChoice(SITES)
-    TELID = factory.fuzzy.FuzzyChoice(TELESCOPES)
-    EXPTIME = factory.fuzzy.FuzzyFloat(0.0, 10000.0)
-    FILTER = factory.fuzzy.FuzzyChoice(FILTERS)
-    L1PUBDAT = factory.fuzzy.FuzzyDateTime(
+    proposal_id = factory.fuzzy.FuzzyChoice(PROPOSALS)
+    instrument_id = factory.fuzzy.FuzzyChoice(INSTRUMENTS)
+    target_name = factory.fuzzy.FuzzyText(length=10)
+    site_id = factory.fuzzy.FuzzyChoice(SITES)
+    telescope_id = factory.fuzzy.FuzzyChoice(TELESCOPES)
+    exposure_time = factory.fuzzy.FuzzyFloat(0.0, 10000.0)
+    primary_optical_element = factory.fuzzy.FuzzyChoice(FILTERS)
+    public_date = factory.fuzzy.FuzzyDateTime(
         datetime.datetime(2015, 1, 1, tzinfo=UTC),
         datetime.datetime(2025, 1, 1, tzinfo=UTC)
     )
-    OBSTYPE = factory.fuzzy.FuzzyChoice(OBSERVATION_TYPES)
-    BLKUID = factory.fuzzy.FuzzyInteger(9000000)
-    REQNUM = factory.fuzzy.FuzzyInteger(9000000)
+    configuration_type = factory.fuzzy.FuzzyChoice(OBSERVATION_TYPES)
+    observation_id = factory.fuzzy.FuzzyInteger(9000000)
+    request_id = factory.fuzzy.FuzzyInteger(9000000)
     headers = factory.RelatedFactory(HeaderFactory, 'frame')
 
     @factory.post_generation
@@ -185,4 +185,4 @@ class FrameFactory(factory.django.DjangoModelFactory):
 
 
 class PublicFrameFactory(FrameFactory):
-    L1PUBDAT = datetime.datetime(2000, 1, 1, tzinfo=UTC)
+    public_date = datetime.datetime(2000, 1, 1, tzinfo=UTC)

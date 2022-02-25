@@ -1,8 +1,10 @@
 import json
 from rest_framework import serializers
 from archive.frames.models import Frame, Version, Headers
+from archive.frames.utils import get_configuration_type_tuples
 from django.contrib.gis.geos import GEOSGeometry
 from django.db import transaction
+from django.conf import settings
 
 
 class ZipSerializer(serializers.Serializer):
@@ -18,8 +20,8 @@ class ZipSerializer(serializers.Serializer):
     def validate(self, data):
         selected_frames_count = len(data.get('frame_ids', []))
         uncompress = data.get('uncompress', False)
-        if uncompress and selected_frames_count > 10:
-            raise serializers.ValidationError('A maximum of 10 frames can be downloaded with the uncompress flag. '
+        if uncompress and selected_frames_count > settings.ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES:
+            raise serializers.ValidationError(f'A maximum of {settings.ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES} frames can be downloaded with the uncompress flag. '
                                               'Please try again with fewer frame_ids.')
         return data
 
@@ -45,7 +47,7 @@ class PolygonField(serializers.Field):
     def to_internal_value(self, data):
         try:
             return GEOSGeometry(json.dumps(data))
-        except:
+        except Exception:
             raise serializers.ValidationError('Invalid polygon: {0}'.format(data))
 
 
@@ -55,35 +57,74 @@ class FrameSerializer(serializers.ModelSerializer):
     url = serializers.CharField(read_only=True, help_text='File download URL associated with most recent version')
     filename = serializers.CharField(read_only=True, help_text='Full filename')
     area = PolygonField(allow_null=True, help_text='GeoJSON area that this frame covers')
-    DAY_OBS = serializers.DateField(input_formats=['iso-8601', '%Y%m%d'], help_text='Observation day in %Y%m%d format')
-    related_frames = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=Frame.objects.exclude(DATE_OBS=None),
-        required=False,
+    observation_day = serializers.DateField(input_formats=['iso-8601', '%Y%m%d'], help_text='Observation day in %Y%m%d format')
+    headers = serializers.JSONField(required=True, write_only=True)
+    configuration_type = serializers.ChoiceField(choices=get_configuration_type_tuples())
+    related_frame_filenames = serializers.ListField(
+        child=serializers.CharField(), required=True, write_only=True,
         style={'base_template': 'input.html'},
         help_text='Set of related frames for this file'
     )
 
     class Meta:
         model = Frame
+        # TODO: Remove the old field names when we remove the old fields and tell users to migrate
         fields = (
-            'id', 'basename', 'area', 'related_frames', 'version_set',
-            'filename', 'url', 'RLEVEL', 'DAY_OBS', 'DATE_OBS', 'PROPID',
+            'id', 'basename', 'area', 'related_frames', 'version_set', 'headers',
+            'filename', 'url', 'reduction_level', 'observation_day', 'observation_date', 'proposal_id',
+            'instrument_id', 'target_name', 'site_id', 'telescope_id', 'exposure_time', 'primary_optical_element',
+            'public_date', 'configuration_type', 'observation_id', 'request_id', 'related_frame_filenames',
+            'RLEVEL', 'DAY_OBS', 'DATE_OBS', 'PROPID',
             'INSTRUME', 'OBJECT', 'SITEID', 'TELID', 'EXPTIME', 'FILTER',
             'L1PUBDAT', 'OBSTYPE', 'BLKUID', 'REQNUM',
         )
+        # For when we update django/drf
+        # extra_kwargs = {
+        #     'headers': {'write_only': True},
+        #     'related_frame_filenames': {'write_only': True}
+        # }
 
     def create(self, validated_data):
         version_data = validated_data.pop('version_set')
-        header_data = validated_data.pop('header')
+        header_data = validated_data.pop('headers')
+        related_frames = validated_data.pop('related_frame_filenames')
         with transaction.atomic():
             frame = self.create_or_update_frame(validated_data)
             self.create_or_update_versions(frame, version_data)
             self.create_or_update_header(frame, header_data)
-            self.create_related_frames(frame, header_data)
+            self.create_related_frames(frame, related_frames)
         return frame
 
     def create_or_update_frame(self, data):
+        #TODO: Remove this part setting the old fields at the same time as removing the old fields
+        if 'observation_day' in data:
+            data['DAY_OBS'] = data['observation_day']
+        if 'observation_date' in data:
+            data['DATE_OBS'] = data['observation_date']
+        if 'public_date' in data:
+            data['L1PUBDAT'] = data['public_date']
+        if 'reduction_level' in data:
+            data['RLEVEL'] = data['reduction_level']
+        if 'instrument_id' in data:
+            data['INSTRUME'] = data['instrument_id']
+        if 'target_name' in data:
+            data['OBJECT'] = data['target_name']
+        if 'site_id' in data:
+            data['SITEID'] = data['site_id']
+        if 'telescope_id' in data:
+            data['TELID'] = data['telescope_id']
+        if 'exposure_time' in data:
+            data['EXPTIME'] = data['exposure_time']
+        if 'primary_optical_element' in data:
+            data['FILTER'] = data['primary_optical_element']
+        if 'proposal_id' in data:
+            data['PROPID'] = data['proposal_id']
+        if 'configuration_type' in data:
+            data['OBSTYPE'] = data['configuration_type']
+        if 'observation_id' in data:
+            data['BLKUID'] = data['observation_id']
+        if 'request_id' in data:
+            data['REQNUM'] = data['request_id']
         frame, _ = Frame.objects.update_or_create(defaults=data, basename=data['basename'])
         return frame
 
@@ -95,13 +136,7 @@ class FrameSerializer(serializers.ModelSerializer):
         Headers.objects.update_or_create(defaults={'data': data}, frame=frame)
 
     def create_related_frames(self, frame, data):
-        related_frame_keys = [
-            'L1IDBIAS', 'L1IDDARK', 'L1IDFLAT', 'L1IDSHUT',
-            'L1IDMASK', 'L1IDFRNG', 'L1IDCAT', 'TARFILE',
-            'ORIGNAME', 'L1IDARC', 'L1IDTMPL', 'L1IDTRAC',
-        ]
-        for key in related_frame_keys:
-            related_frame = data.get(key)
+        for related_frame in data:
             if related_frame and related_frame != frame.basename:
                 rf, _ = Frame.objects.get_or_create(basename=related_frame)
                 frame.related_frames.add(rf)

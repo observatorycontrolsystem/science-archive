@@ -5,11 +5,12 @@ from archive.frames.serializers import (
     AggregateSerializer, FrameSerializer, ZipSerializer, VersionSerializer, HeadersSerializer
 )
 from archive.frames.utils import (
-    remove_dashes_from_keys, fits_keywords_only, build_nginx_zip_text, post_to_archived_queue,
-    archived_queue_payload, get_s3_client
+    build_nginx_zip_text, post_to_archived_queue,
+    archived_queue_payload, get_file_store_path
 )
 from archive.frames.permissions import AdminOrReadOnly
 from archive.frames.filters import FrameFilter
+
 from archive.doc_examples import EXAMPLE_RESPONSES, QUERY_PARAMETERS
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -24,12 +25,14 @@ from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from dateutil.parser import parse
 from django.utils import timezone
+from django.conf import settings
 from hashlib import blake2s
 from pytz import UTC
 import subprocess
 import datetime
 import logging
-import io
+
+from ocs_archive.storage.filestorefactory import FileStoreFactory
 
 logger = logging.getLogger()
 
@@ -43,8 +46,8 @@ class FrameViewSet(viewsets.ModelViewSet):
         filters.OrderingFilter,
     )
     filter_class = FrameFilter
-    ordering_fields = ('id', 'basename', 'DATE_OBS', 'FILTER', 'OBSTYPE',
-                       'PROPID', 'INSTRUME', 'OBJECT', 'RLEVEL', 'EXPTIME')
+    ordering_fields = ('id', 'basename', 'observation_date', 'primary_optical_element', 'configuration_type',
+                       'proposal_id', 'instrument_id', 'target_name', 'reduction_level', 'exposure_time')
 
     def get_queryset(self):
         """
@@ -55,7 +58,7 @@ class FrameViewSet(viewsets.ModelViewSet):
         Non authenticated see all frames with a PUBDAT in the past
         """
         queryset = (
-            Frame.objects.exclude(DATE_OBS=None)
+            Frame.objects.exclude(observation_date=None)
             .prefetch_related('version_set')
             .prefetch_related(Prefetch('related_frames', queryset=Frame.objects.all().only('id')))
         )
@@ -63,11 +66,17 @@ class FrameViewSet(viewsets.ModelViewSet):
             return queryset
         elif self.request.user.is_authenticated:
             return queryset.filter(
-                Q(PROPID__in=self.request.user.profile.proposals) |
-                Q(L1PUBDAT__lt=datetime.datetime.now(datetime.timezone.utc))
+                Q(proposal_id__in=self.request.user.profile.proposals) |
+                Q(public_date__lt=datetime.datetime.now(datetime.timezone.utc))
             )
         else:
-            return queryset.filter(L1PUBDAT__lt=datetime.datetime.now(datetime.timezone.utc))
+            return queryset.filter(public_date__lt=datetime.datetime.now(datetime.timezone.utc))
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        json_models = [model.as_dict() for model in page]
+        return self.get_paginated_response(json_models)
 
     def create(self, request):
         basename = request.data.get('basename')
@@ -77,14 +86,13 @@ class FrameViewSet(viewsets.ModelViewSet):
             extension = ''
         logger_tags = {'tags': {
             'filename': '{}{}'.format(basename, extension),
-            'request_num': request.data.get('REQNUM')
+            'request_id': request.data.get('request_id')
         }}
         logger.info('Got request to process frame', extra=logger_tags)
 
-        data = remove_dashes_from_keys(request.data)
-        frame_serializer = FrameSerializer(data=data)
+        frame_serializer = FrameSerializer(data=request.data)
         if frame_serializer.is_valid():
-            frame = frame_serializer.save(header=fits_keywords_only(data))
+            frame = frame_serializer.save()
             logger_tags['tags']['id'] = frame.id
             logger.info('Created frame', extra=logger_tags)
             try:
@@ -132,7 +140,8 @@ class FrameViewSet(viewsets.ModelViewSet):
             frames = self.get_queryset().filter(pk__in=request_serializer.data['frame_ids'])
             if not frames.exists():
                 return Response(status=status.HTTP_404_NOT_FOUND)
-            filename = 'lcogtdata-{0}-{1}'.format(
+            filename = '{0}-{1}-{2}'.format(
+                settings.ZIP_DOWNLOAD_FILENAME_BASE,
                 datetime.date.strftime(datetime.date.today(), '%Y%m%d'),
                 frames.count()
             )
@@ -147,9 +156,10 @@ class FrameViewSet(viewsets.ModelViewSet):
     @staticmethod
     def _get_aggregate_values(query_set, field, aggregate_field):
         if aggregate_field in ('ALL', field):
-            return [i[0] for i in query_set.values_list(field).distinct() if i[0]]
+            return [i for i in query_set.order_by().values_list(field, flat=True).distinct() if i]
         else:
             return []
+
 
     @action(detail=False)
     def aggregate(self, request):
@@ -157,31 +167,46 @@ class FrameViewSet(viewsets.ModelViewSet):
         Aggregate field values based on start/end time.
         Returns the unique values shared across all FITS files for site, telescope, instrument, filter, proposal, and obstype.
         """
-        fields = ('SITEID', 'TELID', 'FILTER', 'INSTRUME', 'OBSTYPE', 'PROPID')
+        # TODO: This should be removed after a while, it is just here for temporary API compatibility
+        FIELD_MAPPING = {
+            'SITEID': 'site_id',
+            'TELID': 'telescope_id',
+            'FILTER': 'primary_optical_element',
+            'INSTRUME': 'instrument_id',
+            'OBSTYPE': 'configuration_type',
+            'PROPID': 'proposal_id'
+        }
+        fields = ('site_id', 'telescope_id', 'primary_optical_element', 'instrument_id', 'configuration_type', 'proposal_id')
         aggregate_field = request.GET.get('aggregate_field', 'ALL')
+        if aggregate_field in FIELD_MAPPING:
+            aggregate_field = FIELD_MAPPING[aggregate_field]
         if aggregate_field != 'ALL' and aggregate_field not in fields:
             return Response(
                 'Invalid aggregate_field. Valid fields are {}'.format(', '.join(fields)),
                 status=status.HTTP_400_BAD_REQUEST
             )
         query_filters = {}
+        for k in FIELD_MAPPING.keys():
+            if k in request.GET:
+                query_filters[FIELD_MAPPING[k]] = request.GET[k]
         for k in fields:
-            if request.GET.get(k):
+            if k in request.GET:
                 query_filters[k] = request.GET[k]
         if 'start' in request.GET:
-            query_filters['DATE_OBS__gte'] = parse(request.GET['start']).replace(tzinfo=UTC, second=0, microsecond=0)
+            query_filters['observation_date__gte'] = parse(request.GET['start']).replace(tzinfo=UTC, second=0, microsecond=0)
         if 'end' in request.GET:
-            query_filters['DATE_OBS__lte'] = parse(request.GET['end']).replace(tzinfo=UTC, second=0, microsecond=0)
+            query_filters['observation_date__lte'] = parse(request.GET['end']).replace(tzinfo=UTC, second=0, microsecond=0)
         cache_hash = blake2s(repr(frozenset(list(query_filters.items()) + [aggregate_field])).encode()).hexdigest()
         response_dict = cache.get(cache_hash)
         if not response_dict:
-            qs = Frame.objects.order_by().filter(**query_filters)
-            sites = self._get_aggregate_values(qs, 'SITEID', aggregate_field)
-            telescopes = self._get_aggregate_values(qs, 'TELID', aggregate_field)
-            filters = self._get_aggregate_values(qs, 'FILTER', aggregate_field)
-            instruments = self._get_aggregate_values(qs, 'INSTRUME', aggregate_field)
-            obstypes = self._get_aggregate_values(qs, 'OBSTYPE', aggregate_field)
-            proposals = self._get_aggregate_values(qs.filter(L1PUBDAT__lte=timezone.now()), 'PROPID', aggregate_field)
+            qs = Frame.objects.all()
+            qs = DjangoFilterBackend().filter_queryset(request, qs, view=self)
+            sites = self._get_aggregate_values(qs, 'site_id', aggregate_field)
+            telescopes = self._get_aggregate_values(qs, 'telescope_id', aggregate_field)
+            filters = self._get_aggregate_values(qs, 'primary_optical_element', aggregate_field)
+            instruments = self._get_aggregate_values(qs, 'instrument_id', aggregate_field)
+            obstypes = self._get_aggregate_values(qs, 'configuration_type', aggregate_field)
+            proposals = self._get_aggregate_values(qs.filter(public_date__lte=timezone.now()), 'proposal_id', aggregate_field)
             response_dict = {
                 'sites': sites,
                 'telescopes': telescopes,
@@ -203,7 +228,7 @@ class FrameViewSet(viewsets.ModelViewSet):
         response_serializers = {'aggregate':  AggregateSerializer,
                                 'headers': HeadersSerializer,
                                 'related': FrameSerializer}
-        
+
         return response_serializers.get(self.action, self.serializer_class)(*args, **kwargs)
 
     def get_example_response(self):
@@ -237,7 +262,7 @@ class VersionViewSet(viewsets.ReadOnlyModelViewSet):
     filter_fields = ('md5',)
 
 
-class S3ViewSet(viewsets.ViewSet):
+class FunpackViewSet(viewsets.ViewSet):
     schema = ScienceArchiveSchema(tags=['Frames'])
 
     @action(detail=True)
@@ -254,15 +279,10 @@ class S3ViewSet(viewsets.ViewSet):
         logger.info(msg='Downloading file via funpack endpoint')
 
         version = get_object_or_404(Version, pk=pk)
-        client = get_s3_client()
+        file_store = FileStoreFactory.get_file_store_class()()
+        path = get_file_store_path(version.frame.filename, version.frame.get_header_dict())
 
-        with io.BytesIO() as fileobj:
-            # download from AWS S3 into an in-memory object
-            client.download_fileobj(Bucket=version.data_params['Bucket'],
-                                    Key=version.data_params['Key'],
-                                    Fileobj=fileobj)
-            fileobj.seek(0)
-
+        with file_store.get_fileobj(path) as fileobj:
             # FITS unpack
             cmd = ['/usr/bin/funpack', '-C', '-S', '-', ]
             try:
@@ -274,7 +294,7 @@ class S3ViewSet(viewsets.ViewSet):
 
             # return it to the client
             return HttpResponse(bytes(proc.stdout), content_type='application/octet-stream')
-    
+
     def get_example_response(self):
         example_responses = {'funpack': Response(EXAMPLE_RESPONSES['frames']['funpack'],
                                                  status=status.HTTP_200_OK, content_type='application/octet-stream')}
