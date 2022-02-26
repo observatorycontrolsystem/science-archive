@@ -411,7 +411,7 @@ class TestZipDownload(ReplicationTestCase):
         self.assertContains(response, self.public_frame.basename)
         self.assertContains(response, self.proposal_frame.basename)
         self.assertNotContains(response, self.not_owned.basename)
-    
+
     @responses.activate
     def test_zip_download_with_api_token(self):
         responses.add(
