@@ -4,6 +4,7 @@ from archive.authentication.models import Profile
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.urls import reverse
+from ocs_authentication.auth_profile.models import AuthProfile
 import json
 import responses
 
@@ -15,12 +16,13 @@ class TestUserView(ReplicationTestCase):
         self.normal_user = User.objects.create(username='frodo')
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile.objects.create(user=self.normal_user)
+        AuthProfile.objects.create(user=self.normal_user)
 
     @responses.activate
     def test_user_view(self):
         responses.add(
             responses.GET,
-            settings.OAUTH_CLIENT['PROFILE_URL'],
+            settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
             body=json.dumps({'proposals': [{'id': 'TestProposal'}]}),
             status=200,
             content_type='application/json'
