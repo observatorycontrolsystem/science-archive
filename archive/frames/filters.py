@@ -1,4 +1,5 @@
 from archive.frames.models import Frame
+from archive.frames.utils import get_configuration_type_tuples
 from django.contrib.gis.geos import GEOSGeometry
 from django.utils import timezone
 from django_filters import rest_framework as django_filters
@@ -30,13 +31,13 @@ class FrameFilter(django_filters.FilterSet):
     covers = django_filters.CharFilter(method='covers_filter')
     exclude_OBSTYPE = django_filters.MultipleChoiceFilter(
         field_name='configuration_type',
-        choices=Frame.OBSERVATION_TYPES,
+        choices=get_configuration_type_tuples(),
         label='Exclude Configuration Types',
         exclude=True
     )
     exclude_configuration_type = django_filters.MultipleChoiceFilter(
         field_name='configuration_type',
-        choices=Frame.OBSERVATION_TYPES,
+        choices=get_configuration_type_tuples(),
         label='Exclude Configuration Types',
         exclude=True
     )

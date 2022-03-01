@@ -73,11 +73,16 @@ class FrameViewSet(viewsets.ModelViewSet):
         else:
             return queryset.filter(public_date__lt=datetime.datetime.now(datetime.timezone.utc))
 
+    # These two method overrides just force the use of the as_dict method for serialization for list and detail endpoints
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
         json_models = [model.as_dict() for model in page]
         return self.get_paginated_response(json_models)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        return Response(instance.as_dict())
 
     def create(self, request):
         basename = request.data.get('basename')
