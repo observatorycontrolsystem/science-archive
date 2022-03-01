@@ -93,6 +93,7 @@ class Frame(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        index_together = ["observation_date", "public_date", "site_id", "telescope_id", "instrument_id", "configuration_type", "primary_optical_element", "proposal_id"]
         ordering = ['-observation_date']
 
     def __str__(self):
