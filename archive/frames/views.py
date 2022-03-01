@@ -33,6 +33,7 @@ import datetime
 import logging
 
 from ocs_archive.storage.filestorefactory import FileStoreFactory
+from ocs_authentication.auth_profile.models import AuthProfile
 
 logger = logging.getLogger()
 
@@ -72,11 +73,16 @@ class FrameViewSet(viewsets.ModelViewSet):
         else:
             return queryset.filter(public_date__lt=datetime.datetime.now(datetime.timezone.utc))
 
+    # These two method overrides just force the use of the as_dict method for serialization for list and detail endpoints
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
         json_models = [model.as_dict() for model in page]
         return self.get_paginated_response(json_models)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        return Response(instance.as_dict())
 
     def create(self, request):
         basename = request.data.get('basename')
@@ -133,7 +139,11 @@ class FrameViewSet(viewsets.ModelViewSet):
         Return a zip archive of files matching the frame IDs specified in the request
         """
         if request.data.get('auth_token'):  # Needed for hacky ajax file download nonsense
-            token = get_object_or_404(Token, key=request.data['auth_token'])
+            # Need to try the AuthProfile token first, and then the auth token, and if neither exists then return 403
+            try:
+                token = AuthProfile.objects.get(api_token=request.data['auth_token'])
+            except AuthProfile.DoesNotExist:
+                token = get_object_or_404(Token, key=request.data['auth_token'])
             request.user = token.user
         request_serializer = self.get_request_serializer(data=request.data)
         if request_serializer.is_valid():
@@ -154,12 +164,13 @@ class FrameViewSet(viewsets.ModelViewSet):
         return Response(request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @staticmethod
-    def _get_aggregate_values(query_set, field, aggregate_field):
-        if aggregate_field in ('ALL', field):
-            return [i for i in query_set.order_by().values_list(field, flat=True).distinct() if i]
-        else:
+    def _get_aggregate_values(query_set, query_filters, field, aggregate_field):
+        if aggregate_field not in ('ALL', field):
             return []
-
+        elif field in query_filters:
+            return [query_filters[field]]
+        else:
+            return [i for i in query_set.order_by().values_list(field, flat=True).distinct() if i]
 
     @action(detail=False)
     def aggregate(self, request):
@@ -193,20 +204,20 @@ class FrameViewSet(viewsets.ModelViewSet):
             if k in request.GET:
                 query_filters[k] = request.GET[k]
         if 'start' in request.GET:
-            query_filters['observation_date__gte'] = parse(request.GET['start']).replace(tzinfo=UTC, second=0, microsecond=0)
+            query_filters['start'] = parse(request.GET['start']).replace(tzinfo=UTC, second=0, microsecond=0)
         if 'end' in request.GET:
-            query_filters['observation_date__lte'] = parse(request.GET['end']).replace(tzinfo=UTC, second=0, microsecond=0)
+            query_filters['end'] = parse(request.GET['end']).replace(tzinfo=UTC, second=0, microsecond=0)
         cache_hash = blake2s(repr(frozenset(list(query_filters.items()) + [aggregate_field])).encode()).hexdigest()
         response_dict = cache.get(cache_hash)
         if not response_dict:
             qs = Frame.objects.all()
             qs = DjangoFilterBackend().filter_queryset(request, qs, view=self)
-            sites = self._get_aggregate_values(qs, 'site_id', aggregate_field)
-            telescopes = self._get_aggregate_values(qs, 'telescope_id', aggregate_field)
-            filters = self._get_aggregate_values(qs, 'primary_optical_element', aggregate_field)
-            instruments = self._get_aggregate_values(qs, 'instrument_id', aggregate_field)
-            obstypes = self._get_aggregate_values(qs, 'configuration_type', aggregate_field)
-            proposals = self._get_aggregate_values(qs.filter(public_date__lte=timezone.now()), 'proposal_id', aggregate_field)
+            sites = self._get_aggregate_values(qs, query_filters, 'site_id', aggregate_field)
+            telescopes = self._get_aggregate_values(qs, query_filters, 'telescope_id', aggregate_field)
+            filters = self._get_aggregate_values(qs, query_filters, 'primary_optical_element', aggregate_field)
+            instruments = self._get_aggregate_values(qs, query_filters, 'instrument_id', aggregate_field)
+            obstypes = self._get_aggregate_values(qs, query_filters, 'configuration_type', aggregate_field)
+            proposals = self._get_aggregate_values(qs.filter(public_date__lte=timezone.now()), query_filters, 'proposal_id', aggregate_field)
             response_dict = {
                 'sites': sites,
                 'telescopes': telescopes,
