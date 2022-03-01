@@ -33,6 +33,7 @@ import datetime
 import logging
 
 from ocs_archive.storage.filestorefactory import FileStoreFactory
+from ocs_authentication.auth_profile.models import AuthProfile
 
 logger = logging.getLogger()
 
@@ -72,11 +73,16 @@ class FrameViewSet(viewsets.ModelViewSet):
         else:
             return queryset.filter(public_date__lt=datetime.datetime.now(datetime.timezone.utc))
 
+    # These two method overrides just force the use of the as_dict method for serialization for list and detail endpoints
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
         json_models = [model.as_dict() for model in page]
         return self.get_paginated_response(json_models)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        return Response(instance.as_dict())
 
     def create(self, request):
         basename = request.data.get('basename')
@@ -133,7 +139,11 @@ class FrameViewSet(viewsets.ModelViewSet):
         Return a zip archive of files matching the frame IDs specified in the request
         """
         if request.data.get('auth_token'):  # Needed for hacky ajax file download nonsense
-            token = get_object_or_404(Token, key=request.data['auth_token'])
+            # Need to try the AuthProfile token first, and then the auth token, and if neither exists then return 403
+            try:
+                token = AuthProfile.objects.get(api_token=request.data['auth_token'])
+            except AuthProfile.DoesNotExist:
+                token = get_object_or_404(Token, key=request.data['auth_token'])
             request.user = token.user
         request_serializer = self.get_request_serializer(data=request.data)
         if request_serializer.is_valid():
