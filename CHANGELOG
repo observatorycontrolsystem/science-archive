@@ -1,3 +1,9 @@
+2.2.0
+2022-03-01
+
+Update to remove the old DB fields (but leave them in the serialized response for now)
+Also adds an index_together to speed up the aggregate endpoint
+
 2.1.0
 2022-02-24
 
