@@ -33,6 +33,7 @@ import datetime
 import logging
 
 from ocs_archive.storage.filestorefactory import FileStoreFactory
+from ocs_authentication.auth_profile.models import AuthProfile
 
 logger = logging.getLogger()
 
@@ -138,7 +139,11 @@ class FrameViewSet(viewsets.ModelViewSet):
         Return a zip archive of files matching the frame IDs specified in the request
         """
         if request.data.get('auth_token'):  # Needed for hacky ajax file download nonsense
-            token = get_object_or_404(Token, key=request.data['auth_token'])
+            # Need to try the AuthProfile token first, and then the auth token, and if neither exists then return 403
+            try:
+                token = AuthProfile.objects.get(api_token=request.data['auth_token'])
+            except AuthProfile.DoesNotExist:
+                token = get_object_or_404(Token, key=request.data['auth_token'])
             request.user = token.user
         request_serializer = self.get_request_serializer(data=request.data)
         if request_serializer.is_valid():

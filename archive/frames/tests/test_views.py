@@ -2,6 +2,7 @@ from archive.frames.tests.factories import FrameFactory, VersionFactory, PublicF
 from archive.frames.models import Frame
 from archive.frames.utils import get_configuration_type_tuples
 from archive.authentication.models import Profile
+from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from unittest.mock import MagicMock, patch
 from django.utils import timezone
@@ -359,7 +360,7 @@ class TestZipDownload(ReplicationTestCase):
         self.normal_user = User.objects.create(username='frodo', password='theone')
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
-        AuthProfile.objects.create(user=self.normal_user)
+        self.auth_profile = AuthProfile.objects.create(user=self.normal_user, api_token='myApiToken')
         self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=UTC))
         self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
         self.not_owned = FrameFactory(proposal_id='notyours', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
@@ -372,6 +373,67 @@ class TestZipDownload(ReplicationTestCase):
         )
         self.assertContains(response, self.public_frame.basename)
         self.assertNotContains(response, self.proposal_frame.basename)
+        self.assertNotContains(response, self.not_owned.basename)
+
+    def test_zip_download_with_bad_token(self):
+        data = json.dumps({
+            'frame_ids': [frame.id for frame in Frame.objects.all()],
+            'uncompress': 'false',
+            'auth_token': "this-is-fake"
+        })
+        response = self.client.post(
+            reverse('frame-zip'),
+            data=data,
+            content_type='application/json'
+        )
+        print(response.content)
+        self.assertEqual(response.status_code, 404)
+
+    @responses.activate
+    def test_zip_download_with_authprofile_token(self):
+        responses.add(
+            responses.GET,
+            settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
+            body=json.dumps({'proposals': [{'id': 'prop1'}]}),
+            status=200,
+            content_type='application/json'
+        )
+        data = json.dumps({
+            'frame_ids': [frame.id for frame in Frame.objects.all()],
+            'uncompress': 'false',
+            'auth_token': self.auth_profile.api_token
+        })
+        response = self.client.post(
+            reverse('frame-zip'),
+            data=data,
+            content_type='application/json'
+        )
+        self.assertContains(response, self.public_frame.basename)
+        self.assertContains(response, self.proposal_frame.basename)
+        self.assertNotContains(response, self.not_owned.basename)
+
+    @responses.activate
+    def test_zip_download_with_api_token(self):
+        responses.add(
+            responses.GET,
+            settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
+            body=json.dumps({'proposals': [{'id': 'prop1'}]}),
+            status=200,
+            content_type='application/json'
+        )
+        token, _ = Token.objects.get_or_create(user=self.normal_user)
+        data = json.dumps({
+            'frame_ids': [frame.id for frame in Frame.objects.all()],
+            'uncompress': 'false',
+            'auth_token': token.key
+        })
+        response = self.client.post(
+            reverse('frame-zip'),
+            data=data,
+            content_type='application/json'
+        )
+        self.assertContains(response, self.public_frame.basename)
+        self.assertContains(response, self.proposal_frame.basename)
         self.assertNotContains(response, self.not_owned.basename)
 
     @patch('archive.frames.utils.subprocess')
