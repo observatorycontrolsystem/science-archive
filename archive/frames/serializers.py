@@ -95,7 +95,7 @@ class FrameSerializer(serializers.ModelSerializer):
 
     def create_or_update_frame(self, data):
         all_proposals = cache.get('proposal_set')
-        if data['proposal_id'] not in all_proposals:
+        if all_proposals and data['proposal_id'] not in all_proposals:
             all_proposals.append(data['proposal_id'])
             cache.set('proposal_set', all_proposals)
         frame, _ = Frame.objects.update_or_create(defaults=data, basename=data['basename'])
