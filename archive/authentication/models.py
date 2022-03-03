@@ -14,6 +14,19 @@ from archive.frames.models import Frame
 logger = logging.getLogger()
 
 
+def get_all_proposals():
+    proposals = cache.get('proposal_set')
+    if not proposals:
+        proposals = [
+            i[0] for i in Frame.objects.all()
+                                        .order_by().values_list('proposal_id')
+                                        .distinct() if i[0]
+        ]
+        # Cache indefinately since we will expand it as new frames come in
+        cache.set('proposal_set', proposals)
+    return proposals
+
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     access_token = models.CharField(max_length=255, default='')
@@ -21,16 +34,12 @@ class Profile(models.Model):
 
     @property
     def proposals(self):
-        cache_key = '{0}_proposals'.format(self.user.id)
-        cached_proposals = cache.get(cache_key)
-        if not cached_proposals:
-            if self.user.is_superuser:
-                proposals = [
-                    i[0] for i in Frame.objects.all()
-                                               .order_by().values_list('proposal_id')
-                                               .distinct() if i[0]
-                ]
-            else:
+        if self.user.is_superuser:
+            proposals = get_all_proposals()
+        else:
+            cache_key = '{0}_proposals'.format(self.user.id)
+            proposals = cache.get(cache_key)
+            if not proposals:
                 proposals = []
                 authprofile = AuthProfile.objects.get(user=self.user)
                 response = requests.get(
@@ -40,15 +49,12 @@ class Profile(models.Model):
                 if response.status_code == 200:
                     proposals = [proposal['id'] for proposal in response.json()['proposals']]
                 else:
-                    # TODO implement getting new token via refresh token
-                    # As of this writing tokens never expire in Odin
                     logger.warning(
-                        'User auth token was invalid!',
+                        'User api token was invalid!',
                         extra={'tags': {'username': self.user.username}}
                     )
-            cache.set(cache_key, proposals, 3600)
-            return proposals
-        return cached_proposals
+                cache.set(cache_key, proposals, 3600)
+        return proposals
 
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
