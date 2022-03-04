@@ -22,7 +22,7 @@ def get_all_proposals():
                                         .order_by().values_list('proposal_id')
                                         .distinct() if i[0]
         ]
-        # Cache indefinately since we will expand it as new frames come in
+        # Cache indefinitely since we will expand it as new frames come in
         cache.set('proposal_set', proposals)
     return proposals
 
