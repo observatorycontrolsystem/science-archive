@@ -32,11 +32,18 @@ class Profile(models.Model):
                 ]
             else:
                 proposals = []
-                authprofile = AuthProfile.objects.get(user=self.user)
-                response = requests.get(
-                    settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
-                    headers={'Authorization': 'Token {}'.format(authprofile.api_token)}
-                )
+                # TODO: Remove the bearer token fallback once we have deprecated their use
+                try:
+                    authprofile = AuthProfile.objects.get(user=self.user)
+                    response = requests.get(
+                        settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
+                        headers={'Authorization': 'Token {}'.format(authprofile.api_token)}
+                    )
+                except AuthProfile.DoesNotExist:
+                    response = requests.get(
+                        settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
+                        headers={'Authorization': 'Bearer {}'.format(self.access_token)}
+                    )
                 if response.status_code == 200:
                     proposals = [proposal['id'] for proposal in response.json()['proposals']]
                 else:
