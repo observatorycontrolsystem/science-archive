@@ -15,7 +15,7 @@ class TestUserView(ReplicationTestCase):
     def setUp(self, post_mock, get_mock):
         self.normal_user = User.objects.create(username='frodo')
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
-        Profile.objects.create(user=self.normal_user)
+        Profile.objects.get_or_create(user=self.normal_user)
         AuthProfile.objects.create(user=self.normal_user)
 
     @responses.activate
