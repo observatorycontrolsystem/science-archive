@@ -154,7 +154,7 @@ class Frame(models.Model):
 
         if self.area:
             ret_dict['area'] = json.loads(self.area.geojson)
-        ret_dict['related_frames'] = [rf.id for rf in self.related_frames.all()]
+        ret_dict['related_frames'] = list(self.related_frames.all().values_list('id', flat=True))
         return ret_dict
 
 class Headers(models.Model):
