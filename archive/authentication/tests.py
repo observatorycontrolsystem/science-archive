@@ -16,7 +16,7 @@ class TestRevokeTokenAPI(APITestCase):
     def setUp(self) -> None:
         super(TestRevokeTokenAPI, self).setUp()
         self.user = User.objects.create(username='test_revoke_token_user')
-        Profile.objects.create(user=self.user)
+        Profile.objects.get_or_create(user=self.user)
         AuthProfile.objects.create(user=self.user)
         self.client.force_login(self.user)
 
@@ -41,9 +41,9 @@ class TestAuthentication(ReplicationTestCase):
     def setUp(self, post_mock, get_mock):
         self.admin_user = User.objects.create_superuser('admin', 'admin@lcgot.net', 'password')
         self.normal_user = User.objects.create(username='frodo')
-        Profile.objects.create(user=self.normal_user)
+        Profile.objects.get_or_create(user=self.normal_user)
         AuthProfile.objects.create(user=self.normal_user)
-        Profile.objects.create(user=self.admin_user)
+        Profile.objects.get_or_create(user=self.admin_user)
         AuthProfile.objects.create(user=self.admin_user)
 
     @patch('requests.get')

@@ -1,3 +1,8 @@
+2.2.1
+2022-03-07
+
+Add bearer token fallback on getting proposals in profile for old accounts that don't have an authprofile
+
 2.2.0
 2022-03-01
 

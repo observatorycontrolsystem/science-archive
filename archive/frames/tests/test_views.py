@@ -212,7 +212,7 @@ class TestFrameFiltering(ReplicationTestCase):
         self.admin_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         self.normal_user = User.objects.create(username='frodo', password='theone')
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
-        Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
+        Profile.objects.update_or_create(user=self.normal_user, defaults={'access_token': 'test', 'refresh_token': 'test'})
         AuthProfile.objects.create(user=self.normal_user)
         self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=UTC))
         self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
@@ -285,7 +285,7 @@ class TestQueryFiltering(ReplicationTestCase):
     @responses.activate
     def test_filters_public(self):
         user = User.objects.create(username='frodo', password='theone')
-        Profile.objects.create(user=user)
+        Profile.objects.get_or_create(user=user)
         AuthProfile.objects.create(user=user)
         user.backend = settings.AUTHENTICATION_BACKENDS[0]
         responses.add(
@@ -359,7 +359,7 @@ class TestZipDownload(ReplicationTestCase):
     def setUp(self):
         self.normal_user = User.objects.create(username='frodo', password='theone')
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
-        Profile(user=self.normal_user, access_token='test', refresh_token='test').save()
+        Profile.objects.update_or_create(user=self.normal_user, defaults={'access_token': 'test', 'refresh_token': 'test'})
         self.auth_profile = AuthProfile.objects.create(user=self.normal_user, api_token='myApiToken')
         self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=UTC))
         self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
