@@ -5,6 +5,7 @@ from archive.frames.utils import get_configuration_type_tuples
 from django.contrib.gis.geos import GEOSGeometry
 from django.db import transaction
 from django.conf import settings
+from django.core.cache import cache
 
 
 class ZipSerializer(serializers.Serializer):
@@ -93,6 +94,10 @@ class FrameSerializer(serializers.ModelSerializer):
         return frame
 
     def create_or_update_frame(self, data):
+        all_proposals = cache.get('proposal_set', [])
+        if all_proposals and data['proposal_id'] not in all_proposals:
+            all_proposals.append(data['proposal_id'])
+            cache.set('proposal_set', all_proposals)
         frame, _ = Frame.objects.update_or_create(defaults=data, basename=data['basename'])
         return frame
 
