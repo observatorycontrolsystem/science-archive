@@ -164,11 +164,22 @@ class FrameViewSet(viewsets.ModelViewSet):
         return Response(request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @staticmethod
+    def _get_all_values(query_set, field):
+        all_values = cache.get(f'{field}_set', [])
+        if not all_values:
+            all_values = [i for i in query_set.order_by().values_list(field, flat=True).distinct() if i]
+            cache.set(f'{field}_set', all_values, None)
+        return all_values
+
+    @staticmethod
     def _get_aggregate_values(query_set, query_filters, field, aggregate_field):
         if aggregate_field not in ('ALL', field):
             return []
         elif field in query_filters:
             return [query_filters[field]]
+        elif not query_filters:
+            # If query filters is empty, then we are just getting ALL the values of the field, so we can get that form the cache
+            return FrameViewSet._get_all_values(query_set, field)
         else:
             return [i for i in query_set.order_by().values_list(field, flat=True).distinct() if i]
 
