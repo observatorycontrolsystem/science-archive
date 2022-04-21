@@ -15,7 +15,7 @@ logger = logging.getLogger()
 
 
 def get_all_proposals():
-    proposals = cache.get('proposal_set')
+    proposals = cache.get('proposal_id_set')
     if not proposals:
         proposals = [
             i[0] for i in Frame.objects.all()
@@ -23,7 +23,7 @@ def get_all_proposals():
                                         .distinct() if i[0]
         ]
         # Cache indefinitely since we will expand it as new frames come in
-        cache.set('proposal_set', proposals)
+        cache.set('proposal_id_set', proposals, None)
     return proposals
 
 
