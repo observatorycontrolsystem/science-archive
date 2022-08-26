@@ -4,7 +4,7 @@ django-filter>=2.2,<2.5
 djangorestframework>=3.12,<3.13
 pyyaml>=5.4,<5.5
 boto3>=1.7,<1.8
-astropy>=5.0,<5.2
+astropy>=4.0,<5.2
 django-crispy-forms>=1.14,<2
 markdown>=3.0,<3.1
 gunicorn[gevent]==20.1.0
