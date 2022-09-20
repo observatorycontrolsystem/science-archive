@@ -28,6 +28,10 @@ from django.utils import timezone
 from django.conf import settings
 from hashlib import blake2s
 from pytz import UTC
+from django.contrib.postgres.aggregates import ArrayAgg
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+
 import subprocess
 import datetime
 import logging
@@ -163,81 +167,61 @@ class FrameViewSet(viewsets.ModelViewSet):
             return response
         return Response(request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @staticmethod
-    def _get_all_values(query_set, field):
-        all_values = cache.get(f'{field}_set', [])
-        if not all_values:
-            all_values = [i for i in query_set.order_by().values_list(field, flat=True).distinct() if i]
-            cache.set(f'{field}_set', all_values, None)
-        return all_values
-
-    @staticmethod
-    def _get_aggregate_values(query_set, query_filters, field, aggregate_field):
-        if aggregate_field not in ('ALL', field):
-            return []
-        elif field in query_filters:
-            return [query_filters[field]]
-        elif not query_filters:
-            # If query filters is empty, then we are just getting ALL the values of the field, so we can get that form the cache
-            return FrameViewSet._get_all_values(query_set, field)
-        else:
-            return [i for i in query_set.order_by().values_list(field, flat=True).distinct() if i]
 
     @action(detail=False)
+    @method_decorator(cache_page(30))
     def aggregate(self, request):
         """
         Aggregate field values based on start/end time.
         Returns the unique values shared across all FITS files for site, telescope, instrument, filter, proposal, and obstype.
         """
-        # TODO: This should be removed after a while, it is just here for temporary API compatibility
-        FIELD_MAPPING = {
-            'SITEID': 'site_id',
-            'TELID': 'telescope_id',
-            'FILTER': 'primary_optical_element',
-            'INSTRUME': 'instrument_id',
-            'OBSTYPE': 'configuration_type',
-            'PROPID': 'proposal_id'
-        }
-        fields = ('site_id', 'telescope_id', 'primary_optical_element', 'instrument_id', 'configuration_type', 'proposal_id')
-        aggregate_field = request.GET.get('aggregate_field', 'ALL')
-        if aggregate_field in FIELD_MAPPING:
-            aggregate_field = FIELD_MAPPING[aggregate_field]
-        if aggregate_field != 'ALL' and aggregate_field not in fields:
-            return Response(
-                'Invalid aggregate_field. Valid fields are {}'.format(', '.join(fields)),
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        query_filters = {}
-        for k in FIELD_MAPPING.keys():
-            if k in request.GET:
-                query_filters[FIELD_MAPPING[k]] = request.GET[k]
-        for k in fields:
-            if k in request.GET:
-                query_filters[k] = request.GET[k]
-        if 'start' in request.GET:
-            query_filters['start'] = parse(request.GET['start']).replace(tzinfo=UTC, second=0, microsecond=0)
-        if 'end' in request.GET:
-            query_filters['end'] = parse(request.GET['end']).replace(tzinfo=UTC, second=0, microsecond=0)
-        cache_hash = blake2s(repr(frozenset(list(query_filters.items()) + [aggregate_field])).encode()).hexdigest()
-        response_dict = cache.get(cache_hash)
-        if not response_dict:
-            qs = Frame.objects.all()
-            qs = DjangoFilterBackend().filter_queryset(request, qs, view=self)
-            sites = self._get_aggregate_values(qs, query_filters, 'site_id', aggregate_field)
-            telescopes = self._get_aggregate_values(qs, query_filters, 'telescope_id', aggregate_field)
-            filters = self._get_aggregate_values(qs, query_filters, 'primary_optical_element', aggregate_field)
-            instruments = self._get_aggregate_values(qs, query_filters, 'instrument_id', aggregate_field)
-            obstypes = self._get_aggregate_values(qs, query_filters, 'configuration_type', aggregate_field)
-            proposals = self._get_aggregate_values(qs.filter(public_date__lte=timezone.now()), query_filters, 'proposal_id', aggregate_field)
-            response_dict = {
-                'sites': sites,
-                'telescopes': telescopes,
-                'filters': filters,
-                'instruments': instruments,
-                'obstypes': obstypes,
-                'proposals': proposals
-            }
-            cache.set(cache_hash, response_dict, 60 * 60)
+        frames = Frame.objects.all()
+
+        if start := request.query_params.get("start"):
+            frames = frames.filter(observation_date__gte=start)
+
+        if end := request.query_params.get("end"):
+            frames = frames.filter(observation_date__lt=end)
+
+        if not request.query_params.get("public"):
+            frames = frames.filter(public_date__gte=timezone.now())
+
+        if site_id := request.query_params.get("site_id"):
+            frames = frames.filter(site_id=site_id)
+
+        if telescope_id := request.query_params.get("telescope_id"):
+            frames = frames.filter(telescope_id=telescope_id)
+
+        if primary_optical_element := request.query_params.get("primary_optical_element"):
+            frames = frames.filter(primary_optical_element=primary_optical_element)
+
+        if instrument_id := request.query_params.get("instrument_id"):
+            frames = frames.filter(instrument_id=instrument_id)
+
+        if configuration_type := request.query_params.get("configuration_type"):
+            frames = frames.filter(configuration_type=configuration_type)
+
+        if proposal_id := request.query_params.get("proposal_id"):
+            frames = frames.filter(proposal_id=proposal_id)
+
+        frames = frames.distinct(
+            "proposal_id",
+            "site_id",
+            "telescope_id",
+            "instrument_id",
+            "configuration_type"
+            "primary_optical_element",
+        )
+
+        response_dict = frames.aggregate(
+          sites=ArrayAgg("site_id", distinct=True),
+          telescopes=ArrayAgg("telescope_id", distinct=True),
+          filters=ArrayAgg("primary_optical_element", distinct=True),
+          instruments=ArrayAgg("instrument_id", distinct=True),
+          obstype=ArrayAgg("configuration_type", distinct=True),
+          proposals=ArrayAgg("proposal_id", distinct=True),
+        )
+
         response_serializer = self.get_response_serializer(response_dict)
         return Response(response_serializer.data)
 
