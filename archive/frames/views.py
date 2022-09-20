@@ -28,9 +28,10 @@ from django.utils import timezone
 from django.conf import settings
 from hashlib import blake2s
 from pytz import UTC
-from django.contrib.postgres.aggregates import ArrayAgg
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
+from django.db import connections
+from django.db.models.functions import Now
 
 import subprocess
 import datetime
@@ -177,49 +178,70 @@ class FrameViewSet(viewsets.ModelViewSet):
         """
         frames = Frame.objects.all()
 
-        if start := request.query_params.get("start"):
+        start = request.query_params.get("start")
+        if start:
             frames = frames.filter(observation_date__gte=start)
 
-        if end := request.query_params.get("end"):
+        end = request.query_params.get("end")
+        if end:
             frames = frames.filter(observation_date__lt=end)
 
         if not request.query_params.get("public"):
-            frames = frames.filter(public_date__gte=timezone.now())
+            frames = frames.filter(public_date__gte=Now())
 
-        if site_id := request.query_params.get("site_id"):
+        site_id = request.query_params.get("site_id")
+        if site_id:
             frames = frames.filter(site_id=site_id)
 
-        if telescope_id := request.query_params.get("telescope_id"):
+        telescope_id = request.query_params.get("telescope_id")
+        if telescope_id:
             frames = frames.filter(telescope_id=telescope_id)
 
-        if primary_optical_element := request.query_params.get("primary_optical_element"):
+        primary_optical_element = request.query_params.get("primary_optical_element")
+        if primary_optical_element:
             frames = frames.filter(primary_optical_element=primary_optical_element)
 
-        if instrument_id := request.query_params.get("instrument_id"):
+        instrument_id = request.query_params.get("instrument_id")
+        if instrument_id:
             frames = frames.filter(instrument_id=instrument_id)
 
-        if configuration_type := request.query_params.get("configuration_type"):
+        configuration_type = request.query_params.get("configuration_type")
+        if configuration_type:
             frames = frames.filter(configuration_type=configuration_type)
 
-        if proposal_id := request.query_params.get("proposal_id"):
+        proposal_id = request.query_params.get("proposal_id")
+        if proposal_id:
             frames = frames.filter(proposal_id=proposal_id)
 
-        frames = frames.distinct(
+        frames = frames.values_list(
             "proposal_id",
             "site_id",
             "telescope_id",
             "instrument_id",
-            "configuration_type"
+            "configuration_type",
             "primary_optical_element",
-        )
+        ).distinct().order_by()
 
-        response_dict = frames.aggregate(
-          sites=ArrayAgg("site_id", distinct=True),
-          telescopes=ArrayAgg("telescope_id", distinct=True),
-          filters=ArrayAgg("primary_optical_element", distinct=True),
-          instruments=ArrayAgg("instrument_id", distinct=True),
-          obstype=ArrayAgg("configuration_type", distinct=True),
-          proposals=ArrayAgg("proposal_id", distinct=True),
+        with connections["replica"].cursor() as cursor:
+            cursor.execute(f"""
+              SELECT
+                array_agg(DISTINCT site_id),
+                array_agg(DISTINCT telescope_id),
+                array_agg(DISTINCT primary_optical_element),
+                array_agg(DISTINCT instrument_id),
+                array_agg(DISTINCT configuration_type),
+                array_agg(DISTINCT proposal_id)
+              FROM ({frames.query}) as t;
+            """)
+            row = cursor.fetchone()
+
+        response_dict = dict(
+          sites=row[0],
+          telescopes=row[1],
+          filters=row[2],
+          instruments=row[3],
+          obstypes=row[4],
+          proposals=row[5],
         )
 
         response_serializer = self.get_response_serializer(response_dict)
