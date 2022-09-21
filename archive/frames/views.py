@@ -24,15 +24,12 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from dateutil.parser import parse
-from django.utils import timezone
 from django.conf import settings
-from hashlib import blake2s
 from pytz import UTC
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
 from django.db import connections, OperationalError
 from django.db.models.functions import Now
-from django.views.decorators.vary import vary_on_headers
+from django.utils.cache import patch_response_headers
+from hashlib import blake2b
 
 import subprocess
 import datetime
@@ -171,8 +168,6 @@ class FrameViewSet(viewsets.ModelViewSet):
 
 
     @action(detail=False)
-    @method_decorator(cache_page(60))
-    @method_decorator(vary_on_headers("Authorization", "Cookie"))
     def aggregate(self, request):
         """
         Aggregate field values based on start/end time.
@@ -181,68 +176,127 @@ class FrameViewSet(viewsets.ModelViewSet):
         Aggregation with filters is done on a best effort basis. If it takes too long, the filters are effectively ignored,
         returning a (most likely cached) response of all distict values.
         """
+        start = request.query_params.get("start")
+        end = request.query_params.get("end")
+        public = request.query_params.get("public", False)
+        site_id = request.query_params.get("site_id")
+        telescope_id = request.query_params.get("telescope_id")
+        primary_optical_element = request.query_params.get("primary_optical_element")
+        instrument_id = request.query_params.get("instrument_id")
+        configuration_type = request.query_params.get("configuration_type")
+        proposal_id = request.query_params.get("proposal_id")
+
+        if start:
+            start = parse(start).replace(tzinfo=UTC, second=0, microsecond=0)
+
+        if end:
+            end = parse(end).replace(tzinfo=UTC, second=0, microsecond=0)
+
+        cache_key_elms = [
+            start,
+            end,
+            public,
+            site_id,
+            telescope_id,
+            primary_optical_element,
+            instrument_id,
+            configuration_type,
+            proposal_id,
+        ]
+
+        # unauthenticated users share the cache space
+        # authenticated users each get their own cache
+        if request.user.is_authenticated:
+            cache_key_elms.append(request.user.id)
+
+        cache_key = blake2b("|".join(map(str, cache_key_elms)).encode("utf-8")).hexdigest()
+
+        response_dict = cache.get(cache_key)
+
+        if response_dict:
+            response_serializer = self.get_response_serializer(response_dict)
+            return Response(response_serializer.data)
+
         frames = Frame.objects.all()
 
-        start = request.query_params.get("start")
         if start:
-            frames = frames.filter(observation_date__gte=parse(start).replace(tzinfo=UTC, second=0, microsecond=0))
+            frames = frames.filter(observation_date__gte=start)
 
-        end = request.query_params.get("end")
         if end:
-            frames = frames.filter(observation_date__lt=parse(end).replace(tzinfo=UTC, second=0, microsecond=0))
+            frames = frames.filter(observation_date__lt=end)
 
-        public = request.query_params.get("public")
         if not public:
-            frames = frames.filter(public_date__gte=Now())
+            logger.info("excluding public data")
+            frames = frames.exclude(public_date__lt=Now())
 
-        site_id = request.query_params.get("site_id")
         if site_id:
             frames = frames.filter(site_id=site_id)
 
-        telescope_id = request.query_params.get("telescope_id")
         if telescope_id:
             frames = frames.filter(telescope_id=telescope_id)
 
-        primary_optical_element = request.query_params.get("primary_optical_element")
         if primary_optical_element:
             frames = frames.filter(primary_optical_element=primary_optical_element)
 
-        instrument_id = request.query_params.get("instrument_id")
         if instrument_id:
             frames = frames.filter(instrument_id=instrument_id)
 
-        configuration_type = request.query_params.get("configuration_type")
         if configuration_type:
             frames = frames.filter(configuration_type=configuration_type)
 
-        proposal_id = request.query_params.get("proposal_id")
         if proposal_id:
             frames = frames.filter(proposal_id=proposal_id)
 
-        if request.user.is_authenticated and not request.user.is_superuser and not public:
-            frames = frames.filter(proposal_id__in=request.user.profile.proposals)
+        # Limit non-authenticated users to only public data always to avoid
+        # leaking stuff. Probably don't have sensitive info in the aggregates,
+        # but why not. It'll at least help with limiting the query scan.
+        if not request.user.is_authenticated:
+            logger.info("limiting unauthenticated user to only public data")
+            frames = frames.exclude(public_date__gte=Now())
+        elif not request.user.is_superuser:
+            user_proposals = request.user.profile.proposals or []
+
+            # Authenticated users can only view their non-public data
+            if user_proposals:
+                logger.info("limiting authenticated user to only their data")
+                frames = frames.filter(
+                    public_date__gte=Now(),
+                    proposal_id__in=user_proposals
+                )
+            else:
+                logger.info("no proposals found for user; limiting to public only")
+                frames = frames.exclude(public_date__gte=Now())
 
         try:
             # If a superuser is making this request, don't limit the query time.
-            # Also means it won't hit the cache.
+            # Also means they won't hit the cache.
             if request.user.is_authenticated and request.user.is_superuser:
                 timeout = 0
             else:
-                timeout = 1000
+                timeout = 500
             response_dict = self._agg_sql(frames, timeout)
         except OperationalError:
+            logger.info("filtered aggregation timed out")
+
             # If we timeout, return a long-lived cached copy of every single
-            # possible value for every field.
-            cache_key = "all_aggregates"
-            response_dict = cache.get(cache_key)
+            # possible value for every publicly visible field.
+            all_cache_key = "all_public_aggregates"
+            response_dict = cache.get(all_cache_key)
             if not response_dict:
-                response_dict = self._agg_sql(Frame.objects.all())
+                frames = Frame.objects.all().exclude(public_date__gte=Now())
+                response_dict = self._agg_sql(frames, 0)
 
                 # cache for an hour
-                cache.set(cache_key, response_dict, 60 * 60)
+                cache.set(all_cache_key, response_dict, 60 * 60)
+
+        # cache the specific response 30 secs
+        cache.set(cache_key, response_dict, 30)
 
         response_serializer = self.get_response_serializer(response_dict)
-        return Response(response_serializer.data)
+        response =  Response(response_serializer.data)
+        patch_response_headers(response, 30)
+
+        return response
 
     def _agg_sql(self, frames, timeout=0):
         frames = frames.values_list(
@@ -256,27 +310,28 @@ class FrameViewSet(viewsets.ModelViewSet):
 
         with connections["replica"].cursor() as cursor:
             distinct_sql, params = frames.query.sql_with_params()
-            cursor.execute(f"""
-                SET LOCAL statement_timeout TO {timeout};
-                SELECT
-                  array_agg(DISTINCT site_id),
-                  array_agg(DISTINCT telescope_id),
-                  array_agg(DISTINCT primary_optical_element),
-                  array_agg(DISTINCT instrument_id),
-                  array_agg(DISTINCT configuration_type),
-                  array_agg(DISTINCT proposal_id)
-                FROM ({distinct_sql}) as t;
-                """,
-                params)
+            query_sql = f"""
+              SET LOCAL statement_timeout TO {timeout};
+              SELECT
+                array_agg(DISTINCT site_id) FILTER (WHERE site_id <> ''),
+                array_agg(DISTINCT telescope_id) FILTER (WHERE telescope_id <> ''),
+                array_agg(DISTINCT primary_optical_element) FILTER (WHERE primary_optical_element <> ''),
+                array_agg(DISTINCT instrument_id) FILTER (WHERE instrument_id <> ''),
+                array_agg(DISTINCT configuration_type) FILTER (WHERE configuration_type <> ''),
+                array_agg(DISTINCT proposal_id) FILTER (WHERE proposal_id <> '')
+              FROM ({distinct_sql}) as t;
+            """
+            logger.info("executing aggregate query: %s", query_sql)
+            cursor.execute(query_sql, params)
             row = cursor.fetchone()
 
         response_dict = dict(
-          sites=row[0],
-          telescopes=row[1],
-          filters=row[2],
-          instruments=row[3],
-          obstypes=row[4],
-          proposals=row[5],
+          sites=row[0] or [],
+          telescopes=row[1] or [],
+          filters=row[2] or [],
+          instruments=row[3] or [],
+          obstypes=row[4] or [],
+          proposals=row[5] or [],
         )
 
         return response_dict
