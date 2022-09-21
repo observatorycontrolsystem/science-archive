@@ -30,8 +30,9 @@ from hashlib import blake2s
 from pytz import UTC
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
-from django.db import connections
+from django.db import connections, OperationalError
 from django.db.models.functions import Now
+from django.views.decorators.vary import vary_on_headers
 
 import subprocess
 import datetime
@@ -170,23 +171,28 @@ class FrameViewSet(viewsets.ModelViewSet):
 
 
     @action(detail=False)
-    @method_decorator(cache_page(30))
+    @method_decorator(cache_page(60))
+    @method_decorator(vary_on_headers("Authorization", "Cookie"))
     def aggregate(self, request):
         """
         Aggregate field values based on start/end time.
         Returns the unique values shared across all FITS files for site, telescope, instrument, filter, proposal, and obstype.
+
+        Aggregation with filters is done on a best effort basis. If it takes too long, the filters are effectively ignored,
+        returning a (most likely cached) response of all distict values.
         """
         frames = Frame.objects.all()
 
         start = request.query_params.get("start")
         if start:
-            frames = frames.filter(observation_date__gte=start)
+            frames = frames.filter(observation_date__gte=parse(start).replace(tzinfo=UTC, second=0, microsecond=0))
 
         end = request.query_params.get("end")
         if end:
-            frames = frames.filter(observation_date__lt=end)
+            frames = frames.filter(observation_date__lt=parse(end).replace(tzinfo=UTC, second=0, microsecond=0))
 
-        if not request.query_params.get("public"):
+        public = request.query_params.get("public")
+        if not public:
             frames = frames.filter(public_date__gte=Now())
 
         site_id = request.query_params.get("site_id")
@@ -213,6 +219,32 @@ class FrameViewSet(viewsets.ModelViewSet):
         if proposal_id:
             frames = frames.filter(proposal_id=proposal_id)
 
+        if request.user.is_authenticated and not request.user.is_superuser and not public:
+            frames = frames.filter(proposal_id__in=request.user.profile.proposals)
+
+        try:
+            # If a superuser is making this request, don't limit the query time.
+            # Also means it won't hit the cache.
+            if request.user.is_authenticated and request.user.is_superuser:
+                timeout = 0
+            else:
+                timeout = 1000
+            response_dict = self._agg_sql(frames, timeout)
+        except OperationalError:
+            # If we timeout, return a long-lived cached copy of every single
+            # possible value for every field.
+            cache_key = "all_aggregates"
+            response_dict = cache.get(cache_key)
+            if not response_dict:
+                response_dict = self._agg_sql(Frame.objects.all())
+
+                # cache for an hour
+                cache.set(cache_key, response_dict, 60 * 60)
+
+        response_serializer = self.get_response_serializer(response_dict)
+        return Response(response_serializer.data)
+
+    def _agg_sql(self, frames, timeout=0):
         frames = frames.values_list(
             "proposal_id",
             "site_id",
@@ -223,16 +255,19 @@ class FrameViewSet(viewsets.ModelViewSet):
         ).distinct().order_by()
 
         with connections["replica"].cursor() as cursor:
+            distinct_sql, params = frames.query.sql_with_params()
             cursor.execute(f"""
-              SELECT
-                array_agg(DISTINCT site_id),
-                array_agg(DISTINCT telescope_id),
-                array_agg(DISTINCT primary_optical_element),
-                array_agg(DISTINCT instrument_id),
-                array_agg(DISTINCT configuration_type),
-                array_agg(DISTINCT proposal_id)
-              FROM ({frames.query}) as t;
-            """)
+                SET LOCAL statement_timeout TO {timeout};
+                SELECT
+                  array_agg(DISTINCT site_id),
+                  array_agg(DISTINCT telescope_id),
+                  array_agg(DISTINCT primary_optical_element),
+                  array_agg(DISTINCT instrument_id),
+                  array_agg(DISTINCT configuration_type),
+                  array_agg(DISTINCT proposal_id)
+                FROM ({distinct_sql}) as t;
+                """,
+                params)
             row = cursor.fetchone()
 
         response_dict = dict(
@@ -244,8 +279,8 @@ class FrameViewSet(viewsets.ModelViewSet):
           proposals=row[5],
         )
 
-        response_serializer = self.get_response_serializer(response_dict)
-        return Response(response_serializer.data)
+        return response_dict
+
 
     def get_request_serializer(self, *args, **kwargs):
         request_serializers = {'zip': ZipSerializer}
