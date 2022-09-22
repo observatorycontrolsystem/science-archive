@@ -5,6 +5,7 @@ from urllib.parse import urlsplit, urljoin
 from django.conf import settings
 from django.core.cache import cache
 from django.urls import reverse
+from django.db import connections
 
 from kombu.connection import Connection
 from kombu import Exchange
@@ -156,3 +157,55 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
 
     # Concatenate all lines together into a single string
     return ''.join(ret)
+
+
+def aggregate_raw_sql(frames, timeout=0):
+    frames = frames.values_list(
+        "proposal_id",
+        "site_id",
+        "telescope_id",
+        "instrument_id",
+        "configuration_type",
+        "primary_optical_element",
+    ).distinct().order_by()
+
+    with connections["replica"].cursor() as cursor:
+        distinct_sql, params = frames.query.sql_with_params()
+        params = (timeout,) + params
+        query_sql = f"""
+          SET LOCAL statement_timeout TO %s;
+          SELECT
+            array_agg(DISTINCT site_id) FILTER (WHERE site_id <> ''),
+            array_agg(DISTINCT telescope_id) FILTER (WHERE telescope_id <> ''),
+            array_agg(DISTINCT primary_optical_element) FILTER (WHERE primary_optical_element <> ''),
+            array_agg(DISTINCT instrument_id) FILTER (WHERE instrument_id <> ''),
+            array_agg(DISTINCT configuration_type) FILTER (WHERE configuration_type <> ''),
+            array_agg(DISTINCT proposal_id) FILTER (WHERE proposal_id <> ''),
+            to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MSZ')
+          FROM ({distinct_sql}) as t;
+        """
+        logger.info("executing aggregate query: %s (params: %s)", query_sql, params)
+        cursor.execute(query_sql, params)
+        row = cursor.fetchone()
+
+    response_dict = dict(
+      sites=row[0] or [],
+      telescopes=row[1] or [],
+      filters=row[2] or [],
+      instruments=row[3] or [],
+      obstypes=row[4] or [],
+      proposals=row[5] or [],
+      generated_at=row[6]
+    )
+
+    return response_dict
+
+
+ALL_AGGREGATES_CACHE_KEY = "all_aggregates"
+
+def get_cached_aggregates():
+    return cache.get(ALL_AGGREGATES_CACHE_KEY)
+
+
+def set_cached_aggregates(value, timeout=None):
+    return cache.set(ALL_AGGREGATES_CACHE_KEY, value, timeout=timeout)

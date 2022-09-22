@@ -6,7 +6,9 @@ from archive.frames.serializers import (
 )
 from archive.frames.utils import (
     build_nginx_zip_text, post_to_archived_queue,
-    archived_queue_payload, get_file_store_path
+    archived_queue_payload, get_file_store_path,
+    aggregate_raw_sql, get_cached_aggregates
+
 )
 from archive.frames.permissions import AdminOrReadOnly
 from archive.frames.filters import FrameFilter
@@ -26,7 +28,7 @@ from django.core.cache import cache
 from dateutil.parser import parse
 from django.conf import settings
 from pytz import UTC
-from django.db import connections, OperationalError
+from django.db import OperationalError
 from django.db.models.functions import Now
 from django.utils.cache import patch_response_headers
 from hashlib import blake2b
@@ -173,12 +175,14 @@ class FrameViewSet(viewsets.ModelViewSet):
         Aggregate field values based on start/end time.
         Returns the unique values shared across all FITS files for site, telescope, instrument, filter, proposal, and obstype.
 
-        Aggregation with filters is done on a best effort basis. If it takes too long, the filters are effectively ignored,
-        returning a (most likely cached) response of all distict values.
+        Requests without a time range are returned from a pre-computed cache
+        populated by the management command: `python manage.py cacheaggregates`.
+
+        If a start/end time is specified, it must be less than 52 weeks.
         """
         start = request.query_params.get("start")
         end = request.query_params.get("end")
-        public = request.query_params.get("public", False)
+        public = request.query_params.get("public")
         site_id = request.query_params.get("site_id")
         telescope_id = request.query_params.get("telescope_id")
         primary_optical_element = request.query_params.get("primary_optical_element")
@@ -186,11 +190,52 @@ class FrameViewSet(viewsets.ModelViewSet):
         configuration_type = request.query_params.get("configuration_type")
         proposal_id = request.query_params.get("proposal_id")
 
-        if start:
-            start = parse(start).replace(tzinfo=UTC, second=0, microsecond=0)
+        # allow setting SQL query timeout
+        # between 0 & 20s; default is 2s; 0 = inf
+        timeout = max(min(int(request.query_params.get("timeout", 2000)), 20000), 0)
 
-        if end:
-            end = parse(end).replace(tzinfo=UTC, second=0, microsecond=0)
+        # limit unauthenticated users to smaller timeout (500 ms)
+        if not request.user.is_authenticated:
+            timeout = 500
+
+        if all(
+            x is None for x in [
+              start, end, public, site_id, telescope_id, primary_optical_element,
+              instrument_id, configuration_type, proposal_id
+            ]
+        ):
+            logger.info("returning all aggregates from cache")
+
+            response_dict = get_cached_aggregates()
+
+            if not response_dict:
+                logger.warn(
+                    "Cache does not have all aggregates. "
+                    "Perhaps the management command has not been run yet."
+                )
+                return Response(
+                    "Aggreates over everything have not been generated yet. "
+                    "Try again later.",
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            response_serializer = self.get_response_serializer(response_dict)
+            return Response(response_serializer.data)
+
+        if start is None or end is None:
+            return Response(
+                "both start & end must be specified",
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        start = parse(start).replace(tzinfo=UTC, second=0, microsecond=0)
+        end = parse(end).replace(tzinfo=UTC, second=0, microsecond=0)
+
+        if (end - start) > datetime.timedelta(weeks=52):
+            return Response(
+                "time range must be less than or equal to a year (52 weeks)",
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         cache_key_elms = [
             start,
@@ -204,12 +249,12 @@ class FrameViewSet(viewsets.ModelViewSet):
             proposal_id,
         ]
 
-        # unauthenticated users share the cache space
-        # authenticated users each get their own cache
+        # unauthenticated users share the same cache space
+        # authenticated users each get their own cache space
         if request.user.is_authenticated:
             cache_key_elms.append(request.user.id)
 
-        cache_key = blake2b("|".join(map(str, cache_key_elms)).encode("utf-8")).hexdigest()
+        cache_key = blake2b("".join(map(str, cache_key_elms)).encode("utf-8")).hexdigest()
 
         response_dict = cache.get(cache_key)
 
@@ -219,11 +264,9 @@ class FrameViewSet(viewsets.ModelViewSet):
 
         frames = Frame.objects.all()
 
-        if start:
-            frames = frames.filter(observation_date__gte=start)
+        frames = frames.filter(observation_date__gte=start)
 
-        if end:
-            frames = frames.filter(observation_date__lt=end)
+        frames = frames.filter(observation_date__lt=end)
 
         if not public:
             logger.info("excluding public data")
@@ -247,95 +290,52 @@ class FrameViewSet(viewsets.ModelViewSet):
         if proposal_id:
             frames = frames.filter(proposal_id=proposal_id)
 
-        # Limit non-authenticated users to only public data always to avoid
-        # leaking stuff. Probably don't have sensitive info in the aggregates,
-        # but why not. It'll at least help with limiting the query scan.
         if not request.user.is_authenticated:
-            logger.info("limiting unauthenticated user to only public data")
             frames = frames.exclude(public_date__gte=Now())
         elif not request.user.is_superuser:
             user_proposals = request.user.profile.proposals or []
 
-            # Authenticated users can only view their non-public data
+            # Authenticated users can only aggregate over their non-public data
             if user_proposals:
-                logger.info("limiting authenticated user to only their data")
                 frames = frames.filter(
                     public_date__gte=Now(),
                     proposal_id__in=user_proposals
                 )
             else:
-                logger.info("no proposals found for user; limiting to public only")
+                logger.info(
+                    "No proposals found for user. "
+                    "Aggregating over only public data."
+                )
                 frames = frames.exclude(public_date__gte=Now())
 
         try:
-            # If a superuser is making this request, don't limit the query time.
-            # Also means they won't hit the cache.
-            if request.user.is_authenticated and request.user.is_superuser:
-                timeout = 0
-            else:
-                timeout = 500
-            response_dict = self._agg_sql(frames, timeout)
+            response_dict = aggregate_raw_sql(frames, timeout)
         except OperationalError:
             logger.info("filtered aggregation timed out")
+            return Response(
+                "Aggregation query timed out. Either try narrowing the search "
+                "space by adding more filters or increase the timeout.",
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-            # If we timeout, return a long-lived cached copy of every single
-            # possible value for every publicly visible field.
-            all_cache_key = "all_public_aggregates"
-            response_dict = cache.get(all_cache_key)
-            if not response_dict:
-                frames = Frame.objects.all().exclude(public_date__gte=Now())
-                response_dict = self._agg_sql(frames, 0)
+        if request.user.is_authenticated:
+            # 30 secs
+            # Don't expect a lot of hits, but might be good if they're going
+            # back and forth in short bursts of activity.
+            cache_timeout = 30
+        else:
+            # 15 mins
+            # unautheticated users share the same cache space making it much
+            # more likely they'll be hitting the same keys
+            cache_timeout = 15 * 60
 
-                # cache for an hour
-                cache.set(all_cache_key, response_dict, 60 * 60)
-
-        # cache the specific response 30 secs
-        cache.set(cache_key, response_dict, 30)
+        cache.set(cache_key, response_dict, cache_timeout)
 
         response_serializer = self.get_response_serializer(response_dict)
         response =  Response(response_serializer.data)
-        patch_response_headers(response, 30)
+        patch_response_headers(response, cache_timeout)
 
         return response
-
-    def _agg_sql(self, frames, timeout=0):
-        frames = frames.values_list(
-            "proposal_id",
-            "site_id",
-            "telescope_id",
-            "instrument_id",
-            "configuration_type",
-            "primary_optical_element",
-        ).distinct().order_by()
-
-        with connections["replica"].cursor() as cursor:
-            distinct_sql, params = frames.query.sql_with_params()
-            query_sql = f"""
-              SET LOCAL statement_timeout TO {timeout};
-              SELECT
-                array_agg(DISTINCT site_id) FILTER (WHERE site_id <> ''),
-                array_agg(DISTINCT telescope_id) FILTER (WHERE telescope_id <> ''),
-                array_agg(DISTINCT primary_optical_element) FILTER (WHERE primary_optical_element <> ''),
-                array_agg(DISTINCT instrument_id) FILTER (WHERE instrument_id <> ''),
-                array_agg(DISTINCT configuration_type) FILTER (WHERE configuration_type <> ''),
-                array_agg(DISTINCT proposal_id) FILTER (WHERE proposal_id <> '')
-              FROM ({distinct_sql}) as t;
-            """
-            logger.info("executing aggregate query: %s", query_sql)
-            cursor.execute(query_sql, params)
-            row = cursor.fetchone()
-
-        response_dict = dict(
-          sites=row[0] or [],
-          telescopes=row[1] or [],
-          filters=row[2] or [],
-          instruments=row[3] or [],
-          obstypes=row[4] or [],
-          proposals=row[5] or [],
-        )
-
-        return response_dict
-
 
     def get_request_serializer(self, *args, **kwargs):
         request_serializers = {'zip': ZipSerializer}
