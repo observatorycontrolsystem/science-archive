@@ -178,7 +178,7 @@ class FrameViewSet(viewsets.ModelViewSet):
         Requests without a time range are returned from a pre-computed cache
         populated by the management command: `python manage.py cacheaggregates`.
 
-        If a start/end time is specified, it must be less than 52 weeks.
+        If a start/end time is specified, it must be less than 365 days.
         """
         start = request.query_params.get("start")
         end = request.query_params.get("end")
@@ -231,9 +231,9 @@ class FrameViewSet(viewsets.ModelViewSet):
         start = parse(start).replace(tzinfo=UTC, second=0, microsecond=0)
         end = parse(end).replace(tzinfo=UTC, second=0, microsecond=0)
 
-        if (end - start) > datetime.timedelta(weeks=52):
+        if (end - start) > datetime.timedelta(days=365):
             return Response(
-                "time range must be less than or equal to a year (52 weeks)",
+                "time range must be less than or equal to a year (365 days)",
                 status=status.HTTP_400_BAD_REQUEST
             )
 
