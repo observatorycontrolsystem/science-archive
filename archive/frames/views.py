@@ -326,15 +326,15 @@ class FrameViewSet(viewsets.ModelViewSet):
             )
 
         if request.user.is_authenticated:
-            # 30 secs
+            # 5 min
             # Don't expect a lot of hits, but might be good if they're going
             # back and forth in short bursts of activity.
-            cache_timeout = 30
+            cache_timeout = 5 * 60
         else:
-            # 15 mins
+            # 24 hours
             # unautheticated users share the same cache space making it much
             # more likely they'll be hitting the same keys
-            cache_timeout = 15 * 60
+            cache_timeout = 24 * 60 * 60
 
         cache.set(cache_key, response_dict, cache_timeout)
 
