@@ -231,10 +231,14 @@ CORS_ORIGIN_ALLOW_ALL = True
 if os.getenv('CACHE_LOC', None) is not None:
     CACHES = {
         'default': {
-            'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-            'LOCATION': os.getenv('CACHE_LOC', 'memcached.archiveapi:11211'),
+            'BACKEND': os.getenv('CACHE_BACKEND', 'django.core.cache.backends.locmem.LocMemCach'),
+            'LOCATION': os.getenv('CACHE_LOC', 'archiveapi'),
+            'OPTIONS': {}
         }
     }
+
+    if CACHES['default']['BACKEND'] == 'django_redis.cache.RedisCache':
+        CACHES['default']['OPTIONS']['CLIENT_CLASS'] = 'django_redis.client.DefaultClient'
 
 # Settings pertaining to posting messages to the post archived fits exchange
 QUEUE_BROKER_URL = os.getenv('QUEUE_BROKER_URL', 'memory://localhost')
