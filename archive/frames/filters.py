@@ -55,6 +55,11 @@ class FrameFilter(django_filters.FilterSet):
 
     def public_filter(self, queryset, name, value):
         if not value:
+            if self.request.user.is_authenticated and not self.request.user.is_superuser:
+                user_proposals = self.request.user.profile.proposals
+                if user_proposals:
+                    return queryset.filter(proposal_id__in=user_proposals)
+
             return queryset.exclude(public_date__lt=timezone.now())
         return queryset
 
