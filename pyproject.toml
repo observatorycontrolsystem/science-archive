@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "science-archive"
+version = "0.1.0"
+description = ""
+authors = ["Jashandeep Sohi <jsohi@lco.global>"]
+readme = "README.md"
+packages = [{include = "archive"}]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+Django = "^3.2"
+psycopg2 = "~2.8"
+django-filter = ">=2.2,<2.5"
+djangorestframework = ">=3.12,<3.13"
+PyYAML = ">=5.4,<5.5"
+boto3 = ">=1.7,<1.8"
+astropy = ">=4.0,<4.1"
+django-crispy-forms = ">=1.14,<2"
+Markdown = ">=3.0,<3.1"
+gunicorn = {version = "20.1.0", extras = ["gevent"]}
+django-cors-headers = ">=3.4,<4.0"
+drf-yasg = ">=1.20,<1.21"
+python3-memcached = ">=1.51,<2.0"
+uritemplate = "3.0.1"
+kombu = ">=4.6,<4.7"
+ocs-authentication = "0.1.0"
+setuptools-scm = "6.0.1"
+requests = ">2.0,<3.0"
+django-extensions = "^3.2.1"
+lcogt-logging = "^0.3.2"
+pytz = "^2022.2.1"
+django-redis = "^5.2.0"
+
+
+[tool.poetry.group.dev.dependencies]
+flake8 = "^5.0.4"
+factory-boy = "^3.2.1"
+responses = "^0.21.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

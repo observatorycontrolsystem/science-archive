@@ -8,9 +8,13 @@ RUN apt-get -y update \
         && apt-get -y install gdal-bin libcfitsio-bin libpq-dev python-dev gcc make htop \
         && apt-get -y clean
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip --no-cache-dir install -r requirements.txt
+COPY .poetry-version .
 
-# Install application code
-COPY . .
+RUN pip --no-cache-dir install -r .poetry-version
+
+COPY pyproject.toml poetry.lock ./
+
+RUN poetry export > requirements.txt \
+  && pip --no-cache-dir install -r requirements.txt
+
+COPY . ./
