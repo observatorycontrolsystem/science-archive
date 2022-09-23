@@ -187,15 +187,13 @@ class FrameViewSet(viewsets.ModelViewSet):
 
         start = query_params.get("start")
         end = query_params.get("end")
-        public = query_params.get("public")
+        include_public = query_params.get("public")
         site_id = query_params.get("site_id")
         telescope_id = query_params.get("telescope_id")
         primary_optical_element = query_params.get("primary_optical_element")
         instrument_id = query_params.get("instrument_id")
         configuration_type = query_params.get("configuration_type")
         proposal_id = query_params.get("proposal_id")
-
-        logger.info("public: %s", public)
 
         # allow setting SQL query timeout
         # between 0 & 20s; default is 2s; 0 = inf
@@ -207,7 +205,7 @@ class FrameViewSet(viewsets.ModelViewSet):
 
         if all(
             x is None for x in [
-              start, end, public, site_id, telescope_id, primary_optical_element,
+              start, end, include_public, site_id, telescope_id, primary_optical_element,
               instrument_id, configuration_type, proposal_id
             ]
         ):
@@ -247,7 +245,7 @@ class FrameViewSet(viewsets.ModelViewSet):
         cache_key_elms = [
             start,
             end,
-            public,
+            include_public,
             site_id,
             telescope_id,
             primary_optical_element,
@@ -275,10 +273,6 @@ class FrameViewSet(viewsets.ModelViewSet):
 
         frames = frames.filter(observation_date__lt=end)
 
-        if not public:
-            logger.info("excluding public data")
-            frames = frames.exclude(public_date__lt=Now())
-
         if site_id:
             frames = frames.filter(site_id=site_id)
 
@@ -298,22 +292,27 @@ class FrameViewSet(viewsets.ModelViewSet):
             frames = frames.filter(proposal_id=proposal_id)
 
         if not request.user.is_authenticated:
+            logger.info("unauthenticated request; excluding all private data")
             frames = frames.exclude(public_date__gte=Now())
         elif not request.user.is_superuser:
             user_proposals = request.user.profile.proposals or []
 
-            # Authenticated users can only aggregate over their non-public data
             if user_proposals:
-                frames = frames.filter(
-                    public_date__gte=Now(),
-                    proposal_id__in=user_proposals
-                )
+                if not include_public:
+                    logger.info("public false auth user")
+                    frames = frames.filter(proposal_id__in=user_proposals)
+                else:
+                    logger.info("public true auth user")
+                    frames = frames.filter(~Q(public_date__gte=Now(), proposal_id__in=user_proposals))
             else:
                 logger.info(
                     "No proposals found for user. "
                     "Aggregating over only public data."
                 )
                 frames = frames.exclude(public_date__gte=Now())
+        elif request.user.is_superuser and not include_public:
+            logger.info("excluding public data for superuser")
+            frames = frames.exclude(public_date__lt=Now())
 
         try:
             response_dict = aggregate_raw_sql(frames, timeout)
