@@ -2,7 +2,8 @@ from archive.schema import ScienceArchiveSchema
 from archive.frames.exceptions import FunpackError
 from archive.frames.models import Frame, Version
 from archive.frames.serializers import (
-    AggregateSerializer, FrameSerializer, ZipSerializer, VersionSerializer, HeadersSerializer
+    AggregateSerializer, FrameSerializer, ZipSerializer, VersionSerializer,
+    HeadersSerializer, AggregateQueryParamsSeralizer,
 )
 from archive.frames.utils import (
     build_nginx_zip_text, post_to_archived_queue,
@@ -180,19 +181,25 @@ class FrameViewSet(viewsets.ModelViewSet):
 
         If a start/end time is specified, it must be less than 365 days.
         """
-        start = request.query_params.get("start")
-        end = request.query_params.get("end")
-        public = request.query_params.get("public")
-        site_id = request.query_params.get("site_id")
-        telescope_id = request.query_params.get("telescope_id")
-        primary_optical_element = request.query_params.get("primary_optical_element")
-        instrument_id = request.query_params.get("instrument_id")
-        configuration_type = request.query_params.get("configuration_type")
-        proposal_id = request.query_params.get("proposal_id")
+        qp = AggregateQueryParamsSeralizer(data=request.query_params)
+        qp.is_valid(raise_exception=True)
+        query_params = qp.validated_data
+
+        start = query_params.get("start")
+        end = query_params.get("end")
+        public = query_params.get("public")
+        site_id = query_params.get("site_id")
+        telescope_id = query_params.get("telescope_id")
+        primary_optical_element = query_params.get("primary_optical_element")
+        instrument_id = query_params.get("instrument_id")
+        configuration_type = query_params.get("configuration_type")
+        proposal_id = query_params.get("proposal_id")
+
+        logger.info("public: %s", public)
 
         # allow setting SQL query timeout
         # between 0 & 20s; default is 2s; 0 = inf
-        timeout = max(min(int(request.query_params.get("timeout", 2000)), 20000), 0)
+        timeout = query_params.get("timeout")
 
         # limit unauthenticated users to smaller timeout (500 ms)
         if not request.user.is_authenticated:
@@ -228,8 +235,8 @@ class FrameViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        start = parse(start).replace(tzinfo=UTC, second=0, microsecond=0)
-        end = parse(end).replace(tzinfo=UTC, second=0, microsecond=0)
+        start = start.replace(tzinfo=UTC, second=0, microsecond=0)
+        end = end.replace(tzinfo=UTC, second=0, microsecond=0)
 
         if (end - start) > datetime.timedelta(days=365):
             return Response(

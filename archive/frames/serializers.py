@@ -120,3 +120,17 @@ class AggregateSerializer(serializers.Serializer):
     obstypes = serializers.ListField(child=serializers.CharField())
     proposals = serializers.ListField(child=serializers.CharField())
     generated_at = serializers.CharField()
+
+
+class AggregateQueryParamsSeralizer(serializers.Serializer):
+    start = serializers.DateTimeField(required=False, default=None)
+    end = serializers.DateTimeField(required=False, default=None)
+    public = serializers.BooleanField(required=False, default=None, allow_null=True)
+    site_id = serializers.CharField(required=False, default=None)
+    telescope_id = serializers.CharField(required=False, default=None)
+    primary_optical_element = serializers.CharField(required=False, default=None)
+    instrument_id = serializers.CharField(required=False, default=None)
+    configuration_type = serializers.CharField(required=False, default=None)
+    proposal_id = serializers.CharField(required=False, default=None)
+
+    timeout = serializers.IntegerField(min_value=0, max_value=20000, required=False, default=2000)
