@@ -380,7 +380,7 @@ class FrameViewSet(viewsets.ModelViewSet):
                 "Perhaps the management command has not been run yet."
             )
             return Response(
-                "Aggreates over everything have not been generated yet. "
+                "Aggregate over everything have not been generated yet. "
                 "Try again later.",
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
