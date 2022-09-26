@@ -209,23 +209,7 @@ class FrameViewSet(viewsets.ModelViewSet):
               instrument_id, configuration_type, proposal_id
             ]
         ):
-            logger.info("returning all aggregates from cache")
-
-            response_dict = get_cached_aggregates()
-
-            if not response_dict:
-                logger.warn(
-                    "Cache does not have all aggregates. "
-                    "Perhaps the management command has not been run yet."
-                )
-                return Response(
-                    "Aggreates over everything have not been generated yet. "
-                    "Try again later.",
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-
-            response_serializer = self.get_response_serializer(response_dict)
-            return Response(response_serializer.data)
+            return self._agg_all_resp()
 
         if start is None or end is None:
             return Response(
@@ -241,6 +225,10 @@ class FrameViewSet(viewsets.ModelViewSet):
                 "time range must be less than or equal to a year (365 days)",
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        # Optimization: unauthenticated users have no non-public data to view
+        if not request.user.is_authenticated and not include_public:
+            return self._agg_empty_resp()
 
         cache_key_elms = [
             start,
@@ -331,7 +319,10 @@ class FrameViewSet(viewsets.ModelViewSet):
                     "No proposals found for user. "
                     "Aggregating over only public data."
                 )
-                frames = frames.filter(public_date__lt=Now())
+                if include_public:
+                    frames = frames.filter(public_date__lt=Now())
+                else:
+                    return self._agg_empty_resp()
 
         try:
             response_dict = aggregate_raw_sql(frames, timeout)
@@ -364,6 +355,38 @@ class FrameViewSet(viewsets.ModelViewSet):
         patch_response_headers(response, cache_timeout)
 
         return response
+
+    def _agg_empty_resp(self):
+        r = dict (
+          sites=[],
+          telescopes=[],
+          filters=[],
+          instruments=[],
+          obstypes=[],
+          proposals=[],
+          generated_at=""
+        )
+        response_serializer = self.get_response_serializer(r)
+        return Response(response_serializer.data)
+
+    def _agg_all_resp(self):
+        logger.info("returning all aggregates from cache")
+
+        response_dict = get_cached_aggregates()
+
+        if not response_dict:
+            logger.warn(
+                "Cache does not have all aggregates. "
+                "Perhaps the management command has not been run yet."
+            )
+            return Response(
+                "Aggreates over everything have not been generated yet. "
+                "Try again later.",
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        response_serializer = self.get_response_serializer(response_dict)
+        return Response(response_serializer.data)
 
     def get_request_serializer(self, *args, **kwargs):
         request_serializers = {'zip': ZipSerializer}
