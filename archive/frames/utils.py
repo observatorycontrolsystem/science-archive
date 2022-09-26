@@ -167,10 +167,10 @@ def aggregate_raw_sql(frames, timeout=0):
         "instrument_id",
         "configuration_type",
         "primary_optical_element",
-    ).distinct().order_by()
+    ).order_by()
 
     with connections["replica"].cursor() as cursor:
-        distinct_sql, params = frames.query.sql_with_params()
+        filtered_sql, params = frames.query.sql_with_params()
         params = (timeout,) + params
         query_sql = f"""
           SET LOCAL statement_timeout TO %s;
@@ -182,7 +182,13 @@ def aggregate_raw_sql(frames, timeout=0):
             array_agg(DISTINCT configuration_type) FILTER (WHERE configuration_type <> ''),
             array_agg(DISTINCT proposal_id) FILTER (WHERE proposal_id <> ''),
             to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MSZ')
-          FROM ({distinct_sql}) as t;
+          FROM (
+            SELECT DISTINCT
+            proposal_id, site_id, telescope_id, primary_optical_element, instrument_id, configuration_type
+            FROM (
+              {filtered_sql}
+            ) as t
+          ) as t2;
         """
         logger.info("executing aggregate query: %s (params: %s)", query_sql, params)
         cursor.execute(query_sql, params)

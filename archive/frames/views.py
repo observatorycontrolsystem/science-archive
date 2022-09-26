@@ -293,7 +293,7 @@ class FrameViewSet(viewsets.ModelViewSet):
 
         if not request.user.is_authenticated:
             logger.info("unauthenticated request; excluding all private data")
-            frames = frames.exclude(public_date__gte=Now())
+            frames = frames.filter(public_date__lt=Now())
         elif not request.user.is_superuser:
             user_proposals = request.user.profile.proposals or []
 
@@ -303,13 +303,35 @@ class FrameViewSet(viewsets.ModelViewSet):
                     frames = frames.filter(proposal_id__in=user_proposals)
                 else:
                     logger.info("public true auth user")
-                    frames = frames.filter(~Q(public_date__gte=Now(), proposal_id__in=user_proposals))
+                    public_frames = frames.filter(
+                        public_date__lt=Now()
+                    ).values_list(
+                        "proposal_id",
+                        "site_id",
+                        "telescope_id",
+                        "instrument_id",
+                        "configuration_type",
+                        "primary_optical_element",
+                    ).order_by().distinct()
+                    private_frames = frames.filter(
+                        public_date__gte=Now()
+                    ).filter(
+                        proposal_id__in=user_proposals
+                    ).values_list(
+                        "proposal_id",
+                        "site_id",
+                        "telescope_id",
+                        "instrument_id",
+                        "configuration_type",
+                        "primary_optical_element",
+                    ).order_by().distinct()
+                    frames = public_frames.union(private_frames, all=True)
             else:
                 logger.info(
                     "No proposals found for user. "
                     "Aggregating over only public data."
                 )
-                frames = frames.exclude(public_date__gte=Now())
+                frames = frames.filter(public_date__lt=Now())
 
         try:
             response_dict = aggregate_raw_sql(frames, timeout)
@@ -331,6 +353,9 @@ class FrameViewSet(viewsets.ModelViewSet):
             # unautheticated users share the same cache space making it much
             # more likely they'll be hitting the same keys
             cache_timeout = 24 * 60 * 60
+
+        # TODO: remove before mergeing; usefull for testing
+        cache_timeout = 10
 
         cache.set(cache_key, response_dict, cache_timeout)
 
