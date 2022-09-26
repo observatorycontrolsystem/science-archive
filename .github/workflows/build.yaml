@@ -42,10 +42,10 @@ jobs:
         sudo apt-get -y update
         sudo apt-get install gdal-bin
         python -m pip install --upgrade pip
-        pip install -U coverage "coveralls<3.3"
-        pip install -r requirements.txt
+        pip install -r .poetry-version
+        pip install -r <(poetry export --with dev)
     - name: Run tests
-      run: coverage run manage.py test --settings=test_settings
+      run: poetry run coverage run manage.py test --settings=test_settings
       env:
         DB_USER: postgres
         DB_PASS: postgres
@@ -53,7 +53,7 @@ jobs:
         DB_HOST_READER: 127.0.0.1
         DB_PORT: 5432
     - name: Generate and send coveralls report
-      run: coveralls --service=github
+      run: poetry run coveralls --service=github
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
