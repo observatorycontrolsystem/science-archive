@@ -310,9 +310,6 @@ class FrameViewSet(viewsets.ModelViewSet):
                     "Aggregating over only public data."
                 )
                 frames = frames.exclude(public_date__gte=Now())
-        elif request.user.is_superuser and not include_public:
-            logger.info("excluding public data for superuser")
-            frames = frames.exclude(public_date__lt=Now())
 
         try:
             response_dict = aggregate_raw_sql(frames, timeout)
