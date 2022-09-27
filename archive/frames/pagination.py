@@ -29,6 +29,7 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
                 cursor.execute('SET LOCAL statement_timeout TO 5000;')
                 return super().get_count(queryset)
         except (OperationalError, InternalError):
+            logger.warning("Getting the count timed out after 5 seconds")
             pass
 
         if not queryset.query.where:
