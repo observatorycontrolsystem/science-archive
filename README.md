@@ -4,8 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/observatorycontrolsystem/science-archive/badge.svg)](https://coveralls.io/github/observatorycontrolsystem/science-archive)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/3ebd5b7fcff845c980f6f6a8bb4f7ab9)](https://www.codacy.com/gh/observatorycontrolsystem/science-archive?utm_source=github.com&utm_medium=referral&utm_content=observatorycontrolsystem/science-archive&utm_campaign=Badge_Grade)
 
-An application providing an API to save, retrieve, and view an observatory's science data. The data files themselves 
-are stored in AWS S3, with certain metadata for each file stored in a database for easy querying and filtering.
+An application providing an API to save, retrieve, and view an observatory's science data. The data files themselves are stored in a `FileStore` (S3 recommended), with certain metadata for each file stored in a database for easy querying and filtering. This application relies on the OCS [Archive library](https://github.com/observatorycontrolsystem/ocs_archive/) for configuration of its `FileStore` and input `DataFile` formats, and on the OCS [Ingester library](https://github.com/observatorycontrolsystem/ingester) to ingest file metadata into the archive and upload the files themselves to the FileStore configured.
 
 ## Prerequisites
 
@@ -13,7 +12,7 @@ Optional prerequisites can be skipped for reduced functionality.
 
 -   Python >= 3.7
 -   PostgreSQL with the PostGIS extension installed
--   An AWS S3 bucket with read/write privileges and versioning enabled
+-   A FileStore (S3 recommended) with read/write privileges and versioning enabled (if S3)
 -   System dependencies to install the [psycopg2](https://pypi.org/project/psycopg2/) package
 -   (Optional) RabbitMQ
 -   (Optional) Memcached
@@ -24,6 +23,8 @@ Optional prerequisites can be skipped for reduced functionality.
 Users can use Oauth for authentication. The authentication server for the science archive is the [observation portal](https://github.com/observatorycontrolsystem/observation-portal).
 
 This project can be configured to use just a single database, or queries can be routed to separate endpoints of a database cluster such that read operations are routed to replicas and write operations are routed to the main writer database.
+
+The `FileStore` and `DataFile` format are configured using the environment variables specified in the OCS [Archive library](https://github.com/observatorycontrolsystem/ocs_archive/), so please look over those first and set them properly. Specifically, the `FILESTORE_TYPE` environment variable must be set for your FileStore backend, since it defaults to `dummy` which stores no data. The header mapping environment variables should also be set to map to the correct keys in your data products as well. These environment variable values must match those used in the OCS [Ingester library](https://github.com/observatorycontrolsystem/ingester) to upload and ingest data products. For more information on how to customize your OCS Science Archive, please review the [data flow documentation](https://observatorycontrolsystem.github.io/integration/data_flow/).
 
 This project is configured using environment variables.
 
@@ -50,6 +51,7 @@ This project is configured using environment variables.
 |                       | `OAUTH_CLIENT_SECRET`        | Oauth client secret                                                                                                                                                                                                                  | _empty string_                  |
 |                       | `OAUTH_TOKEN_URL`            | Observation portal Oauth token URL                                                                                                                                                                                                   | `http://localhost/o/token/`     |
 |                       | `OAUTH_PROFILE_URL`          | Observation portal profile URL                                                                                                                                                                                                       | `http://localhost/api/profile/` |
+|                       | `OAUTH_SERVER_KEY`          | Observation portal server secret key to authenticate calls from the server (should match the value in the Observation Portal deploy)                                                                                                                                                                     | _empty string_  |
 | Configuration Types   | `CONFIGURATION_TYPES`        | Comma delimited list of configuration types to use for validation and forms. Only used if no `CONFIGDB_URL` is set.                                                                                                                                                                                                       | `BIAS,DARK,EXPOSE,SPECTRUM,LAMPFLAT,SKYFLAT` |
 |                       | `CONFIGDB_URL`               | Configuration Database URL. If set, it is used to retrieve available configuration_types.                                                                                                                                                                                                        | _empty string_ |
 | Appearance Settings   | `NAVBAR_TITLE_TEXT`          | Name that appears in the navbar of the browsable api                                                                                                                                                                                 | `Science Archive API`           |
