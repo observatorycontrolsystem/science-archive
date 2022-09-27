@@ -4,6 +4,8 @@ from unittest.mock import patch
 from archive.authentication.models import Profile
 from archive.frames.tests.factories import FrameFactory
 from archive.test_helpers import ReplicationTestCase
+from archive.frames.utils import aggregate_raw_sql, set_cached_aggregates
+from archive.frames.models import Frame
 from rest_framework.test import APITestCase
 from ocs_authentication.auth_profile.models import AuthProfile
 from django.urls import reverse
@@ -81,5 +83,9 @@ class TestAuthentication(ReplicationTestCase):
         self.client.force_login(self.admin_user)
         FrameFactory.create(proposal_id='prop1')
         FrameFactory.create(proposal_id='prop2')
+
+        # mimic a cache update from the cacheaggregations mgmt command
+        set_cached_aggregates(aggregate_raw_sql(Frame.objects.all()))
+
         self.assertCountEqual(['prop1', 'prop2'], self.admin_user.profile.proposals)
         self.assertFalse(get_mock.called)

@@ -9,23 +9,17 @@ from ocs_authentication.auth_profile.models import AuthProfile
 import requests
 import logging
 
-from archive.frames.models import Frame
+from archive.frames.utils import get_cached_aggregates
 
 logger = logging.getLogger()
 
 
 def get_all_proposals():
-    proposals = cache.get('proposal_id_set')
-    if not proposals:
-        proposals = [
-            i[0] for i in Frame.objects.all()
-                                        .order_by().values_list('proposal_id')
-                                        .distinct() if i[0]
-        ]
-        # Cache indefinitely since we will expand it as new frames come in
-        cache.set('proposal_id_set', proposals, None)
-    return proposals
+    all_aggregates = get_cached_aggregates()
+    if all_aggregates:
+        return all_aggregates.get("proposals", [])
 
+    return []
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
