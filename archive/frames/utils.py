@@ -190,7 +190,7 @@ def aggregate_raw_sql(frames, timeout=0):
             ) as t
           ) as t2;
         """ # nosec B608
-        logger.info("executing aggregate query: %s (params: %s)", query_sql, params)
+        logger.debug("executing aggregate query: %s (params: %s)", query_sql, params)
         cursor.execute(query_sql, params)
         row = cursor.fetchone()
 
