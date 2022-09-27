@@ -4,7 +4,7 @@ from django.db import connections, transaction, OperationalError, InternalError
 
 import sys
 import logging
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 class LimitedLimitOffsetPagination(LimitOffsetPagination):
     default_limit = settings.PAGINATION_DEFAULT_LIMIT
