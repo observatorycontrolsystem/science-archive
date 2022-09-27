@@ -31,14 +31,14 @@ lcogt-logging = "^0.3.2"
 pytz = "^2022.2.1"
 django-redis = "^5.2.0"
 ocs-archive = "0.2.9"
-coverage = "^6.4.4"
-coveralls = "<3.3"
 
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "^5.0.4"
 factory-boy = "^3.2.1"
 responses = "^0.21.0"
+coverage = "^6.4.4"
+coveralls = "^3.3"
 
 [build-system]
 requires = ["poetry-core"]
