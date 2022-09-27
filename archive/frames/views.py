@@ -208,37 +208,27 @@ class FrameViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         query_filters = {}
-        if request.user.is_authenticated:
-            for k in FIELD_MAPPING.keys():
-                if k in request.GET:
-                    query_filters[FIELD_MAPPING[k]] = request.GET[k]
-            for k in fields:
-                if k in request.GET:
-                    query_filters[k] = request.GET[k]
-            if 'start' in request.GET:
-                query_filters['start'] = parse(request.GET['start']).replace(tzinfo=UTC, second=0, microsecond=0)
-            if 'end' in request.GET:
-                query_filters['end'] = parse(request.GET['end']).replace(tzinfo=UTC, second=0, microsecond=0)
+        for k in FIELD_MAPPING.keys():
+            if k in request.GET:
+                query_filters[FIELD_MAPPING[k]] = request.GET[k]
+        for k in fields:
+            if k in request.GET:
+                query_filters[k] = request.GET[k]
+        if 'start' in request.GET:
+            query_filters['start'] = parse(request.GET['start']).replace(tzinfo=UTC, second=0, microsecond=0)
+        if 'end' in request.GET:
+            query_filters['end'] = parse(request.GET['end']).replace(tzinfo=UTC, second=0, microsecond=0)
         cache_hash = blake2s(repr(frozenset(list(query_filters.items()) + [aggregate_field])).encode()).hexdigest()
         response_dict = cache.get(cache_hash)
         if not response_dict:
             qs = Frame.objects.all()
             qs = DjangoFilterBackend().filter_queryset(request, qs, view=self)
-            proposals_set = None
-            if request.user.is_authenticated and not request.user.is_superuser and not query_filters.get('public', True):
-                proposals_cache_key = '{0}_proposals'.format(request.user.id)
-                proposals_set = cache.get(proposals_cache_key)
-                if proposals_set:
-                    qs.filter(proposal_id__in=proposals_set)
             sites = self._get_aggregate_values(qs, query_filters, 'site_id', aggregate_field)
             telescopes = self._get_aggregate_values(qs, query_filters, 'telescope_id', aggregate_field)
             filters = self._get_aggregate_values(qs, query_filters, 'primary_optical_element', aggregate_field)
             instruments = self._get_aggregate_values(qs, query_filters, 'instrument_id', aggregate_field)
             obstypes = self._get_aggregate_values(qs, query_filters, 'configuration_type', aggregate_field)
-            if proposals_set:
-                proposals = proposals_set
-            else:
-                proposals = self._get_aggregate_values(qs.filter(public_date__lte=timezone.now()), query_filters, 'proposal_id', aggregate_field)
+            proposals = self._get_aggregate_values(qs.filter(public_date__lte=timezone.now()), query_filters, 'proposal_id', aggregate_field)
             response_dict = {
                 'sites': sites,
                 'telescopes': telescopes,
