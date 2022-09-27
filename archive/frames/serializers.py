@@ -5,7 +5,6 @@ from archive.frames.utils import get_configuration_type_tuples
 from django.contrib.gis.geos import GEOSGeometry
 from django.db import transaction
 from django.conf import settings
-from django.core.cache import cache
 
 
 class ZipSerializer(serializers.Serializer):

@@ -23,7 +23,6 @@ import json
 import os
 import random
 import subprocess
-import factory.fuzzy
 
 from ocs_archive.input.file import EmptyFile
 from ocs_archive.input.fitsfile import FitsFile

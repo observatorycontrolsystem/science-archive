@@ -26,7 +26,6 @@ from django.db.models import Q, Prefetch
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
-from dateutil.parser import parse
 from django.conf import settings
 from pytz import UTC
 from django.db import OperationalError
