@@ -7,14 +7,14 @@ readme = "README.md"
 packages = [{include = "archive"}]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 Django = "^3.2"
 psycopg2 = "~2.8"
 django-filter = ">=2.2,<2.5"
 djangorestframework = ">=3.12,<3.13"
 PyYAML = ">=5.4,<5.5"
-boto3 = ">=1.7,<1.8"
-astropy = ">=4.0,<4.1"
+boto3 = "~1.24"
+astropy = "~5.1.0"
 django-crispy-forms = ">=1.14,<2"
 Markdown = ">=3.0,<3.1"
 gunicorn = {version = "20.1.0", extras = ["gevent"]}
