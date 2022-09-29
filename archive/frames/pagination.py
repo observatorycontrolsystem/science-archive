@@ -51,7 +51,7 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
                     # Obtain estimated values using the query planner (only valid with PostgreSQL)
                     sql = cursor.mogrify(*queryset.query.sql_with_params()).decode("utf-8")
                     cursor.execute(
-                        f"SELECT count_estimate(%s);",
+                        "SELECT count_estimate(%s);",
                         [sql]
                     )
                     estimate = int(cursor.fetchone()[0])
