@@ -1,6 +1,8 @@
 from archive.frames.models import Frame
 from archive.frames.utils import get_configuration_type_tuples
 from django.contrib.gis.geos import GEOSGeometry
+from django.contrib.gis.geos.error import GEOSException
+from rest_framework.exceptions import ValidationError
 from django.utils import timezone
 from django_filters import rest_framework as django_filters
 
@@ -46,11 +48,17 @@ class FrameFilter(django_filters.FilterSet):
     intersects = django_filters.CharFilter(method='intersects_filter')
 
     def covers_filter(self, queryset, name, value):
-        geo = GEOSGeometry(value)
+        try:
+            geo = GEOSGeometry(value)
+        except GEOSException:
+            raise ValidationError("Error with covers query: Point must be specified with exact format 'POINT(RA DEC)'")
         return queryset.filter(area__covers=geo)
 
     def intersects_filter(self, queryset, name, value):
-        geo = GEOSGeometry(value)
+        try:
+            geo = GEOSGeometry(value)
+        except GEOSException:
+            raise ValidationError("Error with intersects query: Point must be specified with exact format 'POINT(RA DEC)'")
         return queryset.filter(area__intersects=geo)
 
     def public_filter(self, queryset, name, value):
