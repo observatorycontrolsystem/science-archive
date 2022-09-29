@@ -132,4 +132,4 @@ class AggregateQueryParamsSeralizer(serializers.Serializer):
     configuration_type = serializers.CharField(required=False, default=None)
     proposal_id = serializers.CharField(required=False, default=None)
 
-    timeout = serializers.IntegerField(min_value=0, max_value=20000, required=False, default=2000)
+    query_timeout = serializers.IntegerField(min_value=0, max_value=20000, required=False, default=2000)

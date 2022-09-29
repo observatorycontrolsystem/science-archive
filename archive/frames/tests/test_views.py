@@ -1,6 +1,6 @@
 from archive.frames.tests.factories import FrameFactory, VersionFactory, PublicFrameFactory
 from archive.frames.models import Frame
-from archive.frames.utils import get_configuration_type_tuples, aggregate_raw_sql, set_cached_aggregates
+from archive.frames.utils import get_configuration_type_tuples, aggregate_frames_sql, set_cached_frames_aggregates
 from archive.authentication.models import Profile
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
@@ -548,7 +548,7 @@ class TestFrameAggregate(ReplicationTestCase):
         FrameFactory.create(configuration_type='SKYFLAT', telescope_id='2m0b', site_id='ogg', instrument_id='fl10',
                             proposal_id='prop3', primary_optical_element='B', public_date=is_public_date, observation_date=obs_date)
 
-        set_cached_aggregates(aggregate_raw_sql(Frame.objects.all()))
+        set_cached_frames_aggregates(aggregate_frames_sql(Frame.objects.all()))
 
     def test_frame_aggregate_all(self):
         response = self.client.get(reverse_drf('frame-aggregate'))
@@ -609,7 +609,6 @@ class TestFrameAggregate(ReplicationTestCase):
         )
         self.client.force_login(self.normal_user)
 
-        response = self.client.get(reverse('frame-list'))
         response = self.client.get(
           reverse('frame-aggregate'),
           {
@@ -620,12 +619,12 @@ class TestFrameAggregate(ReplicationTestCase):
         )
         self.assertEqual(response.status_code, 200)
 
+        self.assertEqual(set(response.json()['proposals']), set(['prop2']))
         self.assertEqual(set(response.json()['obstypes']), set(['BIAS']))
         self.assertEqual(set(response.json()['telescopes']), set(['0m4a']))
         self.assertEqual(set(response.json()['sites']), set(['coj']))
         self.assertEqual(set(response.json()['instruments']), set(['en05']))
         self.assertEqual(set(response.json()['filters']), set(['V']))
-        self.assertEqual(set(response.json()['proposals']), set(['prop2']))
 
     def test_frame_aggregate_filtered_site(self):
         response = self.client.get(

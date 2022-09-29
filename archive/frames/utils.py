@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.urls import reverse
 from django.db import connections
+from django.db.models.query import EmptyQuerySet
 
 from kombu.connection import Connection
 from kombu import Exchange
@@ -159,59 +160,92 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
     return ''.join(ret)
 
 
-def aggregate_raw_sql(frames, timeout=0):
+def aggregate_frames_sql(frames, timeout=0, user_proposals=None):
+    if isinstance(frames, EmptyQuerySet):
+        return {
+            "sites": set(),
+            "telescopes": set(),
+            "filters": set(),
+            "instruments": set(),
+            "obstypes": set(),
+            "proposals": set(),
+            "generated_at": "",
+        }
+
     frames = frames.values_list(
         "proposal_id",
+        "configuration_type",
         "site_id",
         "telescope_id",
         "instrument_id",
-        "configuration_type",
         "primary_optical_element",
     ).order_by()
 
+    user_proposals_not_none = user_proposals is not None
+    user_proposals = user_proposals if user_proposals_not_none else []
+
     with connections["replica"].cursor() as cursor:
-        filtered_sql, params = frames.query.sql_with_params()
-        params = (timeout,) + params
+        django_sql, params = frames.query.sql_with_params()
+        params = (timeout, ) + params + (user_proposals,)
         query_sql = f"""
           SET LOCAL statement_timeout TO %s;
-          SELECT
-            array_agg(DISTINCT site_id) FILTER (WHERE site_id <> ''),
-            array_agg(DISTINCT telescope_id) FILTER (WHERE telescope_id <> ''),
-            array_agg(DISTINCT primary_optical_element) FILTER (WHERE primary_optical_element <> ''),
-            array_agg(DISTINCT instrument_id) FILTER (WHERE instrument_id <> ''),
-            array_agg(DISTINCT configuration_type) FILTER (WHERE configuration_type <> ''),
-            array_agg(DISTINCT proposal_id) FILTER (WHERE proposal_id <> ''),
-            to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MSZ')
-          FROM (
+          SET LOCAL enable_sort = off;
+          WITH
+          django AS (
+            {django_sql}
+          ),
+          user_proposals AS (
+            SELECT unnest(%s::text[])::text AS proposal_id
+          ),
+          filtered_user_proposals AS(
+            SELECT *
+            FROM user_proposals
+            JOIN django USING(proposal_id)
+          ),
+          filtered AS (
+            SELECT * FROM {"filtered_user_proposals" if user_proposals_not_none else "django"}
+          ),
+          filtered_distinct AS (
             SELECT DISTINCT
-            proposal_id, site_id, telescope_id, primary_optical_element, instrument_id, configuration_type
-            FROM (
-              {filtered_sql}
-            ) as t
-          ) as t2;
+              proposal_id,
+              configuration_type,
+              site_id,
+              telescope_id,
+              instrument_id,
+              primary_optical_element
+            FROM filtered
+          )
+          SELECT
+            array_agg(DISTINCT proposal_id) FILTER (WHERE proposal_id <> '') AS proposals,
+            array_agg(DISTINCT configuration_type) FILTER (WHERE configuration_type <> '') AS obstypes,
+            array_agg(DISTINCT site_id)  FILTER (WHERE site_id <> '')AS sites,
+            array_agg(DISTINCT telescope_id) FILTER (WHERE telescope_id <> '') AS telescopes,
+            array_agg(DISTINCT instrument_id) FILTER (WHERE instrument_id <> '') AS instruments,
+            array_agg(DISTINCT primary_optical_element) FILTER (WHERE primary_optical_element <> '') AS filters,
+            to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS generated_at
+          FROM filtered_distinct;
         """ # nosec B608
-        logger.debug("executing aggregate query: %s (params: %s)", query_sql, params)
+        logger.info("executing aggregate query: %s (params: %s)", query_sql, params)
         cursor.execute(query_sql, params)
         row = cursor.fetchone()
 
-    response_dict = dict(
-      sites=row[0] or [],
-      telescopes=row[1] or [],
-      filters=row[2] or [],
-      instruments=row[3] or [],
-      obstypes=row[4] or [],
-      proposals=row[5] or [],
-      generated_at=row[6]
-    )
-
-    return response_dict
+    return {
+        "proposals": set(row[0] or []),
+        "obstypes": set(row[1] or []),
+        "sites": set(row[2] or []),
+        "telescopes": set(row[3] or []),
+        "instruments": set(row[4] or []),
+        "filters": set(row[5] or []),
+        "generated_at": row[6],
+    }
 
 
-ALL_AGGREGATES_CACHE_KEY = "all_aggregates"
 
-def get_cached_aggregates():
-    return cache.get(ALL_AGGREGATES_CACHE_KEY)
+ALL_FRAMES_AGGREGATES_CACHE_KEY = "all_frames_aggregates"
+
+def get_cached_frames_aggregates():
+    return cache.get(ALL_FRAMES_AGGREGATES_CACHE_KEY)
 
 
-def set_cached_aggregates(value, timeout=None):
-    return cache.set(ALL_AGGREGATES_CACHE_KEY, value, timeout=timeout)
+def set_cached_frames_aggregates(value, timeout=None):
+    return cache.set(ALL_FRAMES_AGGREGATES_CACHE_KEY, value, timeout=timeout)

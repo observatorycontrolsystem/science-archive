@@ -8,7 +8,7 @@ from archive.frames.serializers import (
 from archive.frames.utils import (
     build_nginx_zip_text, post_to_archived_queue,
     archived_queue_payload, get_file_store_path,
-    aggregate_raw_sql, get_cached_aggregates
+    aggregate_frames_sql, get_cached_frames_aggregates
 
 )
 from archive.frames.permissions import AdminOrReadOnly
@@ -20,6 +20,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework import status, filters, viewsets
 from rest_framework.authtoken.models import Token
+from rest_framework.exceptions import APIException
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
 from django.db.models import Q, Prefetch
@@ -196,11 +197,32 @@ class FrameViewSet(viewsets.ModelViewSet):
 
         # allow setting SQL query timeout
         # between 0 & 20s; default is 2s; 0 = inf
-        timeout = query_params.get("timeout")
+        query_timeout = query_params.get("query_timeout")
 
-        # limit unauthenticated users to smaller timeout (500 ms)
-        if not request.user.is_authenticated:
-            timeout = 500
+        is_authenticated = request.user.is_authenticated
+        is_superuser = request.user.is_superuser
+
+        # 24 hours
+        # aggregates for public frames (public_date < now()) are shared by
+        # both authenticated & unauthenticated users and not very likely to
+        # change so we can get away with a long timeout.
+        public_cache_timeout = 24 * 60 * 60
+
+        # 5 min
+        # Every authenticated user has their own cache of aggregates over
+        # the proposals they are part of (frame.proposal_id IN user_proposals)
+        # So, don't expect a lot of hits, but might be good if they're going
+        # back and forth in short bursts of activity.
+        private_cache_timeout = 5 * 60
+
+        # TODO: remove before merging; usefull for testing
+        public_cache_timeout = 60
+        private_cache_timeout = 10
+
+        if not is_authenticated:
+            # limit unauthenticated users to a smaller query timeout (500 ms)
+            query_timeout = min(query_timeout, 500)
+
 
         if all(
             x is None for x in [
@@ -208,7 +230,7 @@ class FrameViewSet(viewsets.ModelViewSet):
               instrument_id, configuration_type, proposal_id
             ]
         ):
-            return self._agg_all_resp()
+            return self._agg_frames_all_resp()
 
         if start is None or end is None:
             return Response(
@@ -225,153 +247,122 @@ class FrameViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Optimization: unauthenticated users have no non-public data to view
-        if not request.user.is_authenticated and not include_public:
-            return self._agg_empty_resp()
-
-        cache_key_elms = [
-            start,
-            end,
-            include_public,
-            site_id,
-            telescope_id,
-            primary_optical_element,
-            instrument_id,
-            configuration_type,
-            proposal_id,
-        ]
-
-        # unauthenticated users share the same cache space
-        # authenticated users each get their own cache space
-        if request.user.is_authenticated:
-            cache_key_elms.append(request.user.id)
-
-        cache_key = blake2b("".join(map(str, cache_key_elms)).encode("utf-8")).hexdigest()
-
-        response_dict = cache.get(cache_key)
-
-        if response_dict:
-            response_serializer = self.get_response_serializer(response_dict)
-            return Response(response_serializer.data)
-
         frames = Frame.objects.all()
 
         frames = frames.filter(observation_date__gte=start)
 
         frames = frames.filter(observation_date__lt=end)
 
-        if site_id:
-            frames = frames.filter(site_id=site_id)
-
-        if telescope_id:
-            frames = frames.filter(telescope_id=telescope_id)
-
-        if primary_optical_element:
-            frames = frames.filter(primary_optical_element=primary_optical_element)
-
-        if instrument_id:
-            frames = frames.filter(instrument_id=instrument_id)
-
-        if configuration_type:
-            frames = frames.filter(configuration_type=configuration_type)
-
-        if proposal_id:
+        if proposal_id is not None:
             frames = frames.filter(proposal_id=proposal_id)
 
-        if not request.user.is_authenticated:
-            logger.info("unauthenticated request; excluding all private data")
-            frames = frames.filter(public_date__lt=Now())
-        elif not request.user.is_superuser:
-            user_proposals = request.user.profile.proposals or []
+        if configuration_type is not None:
+            frames = frames.filter(configuration_type=configuration_type)
 
-            if user_proposals:
-                if not include_public:
-                    logger.info("public false auth user")
-                    frames = frames.filter(proposal_id__in=user_proposals)
-                else:
-                    logger.info("public true auth user")
-                    public_frames = frames.filter(
-                        public_date__lt=Now()
-                    ).values_list(
-                        "proposal_id",
-                        "site_id",
-                        "telescope_id",
-                        "instrument_id",
-                        "configuration_type",
-                        "primary_optical_element",
-                    ).order_by().distinct()
-                    private_frames = frames.filter(
-                        public_date__gte=Now()
-                    ).filter(
-                        proposal_id__in=user_proposals
-                    ).values_list(
-                        "proposal_id",
-                        "site_id",
-                        "telescope_id",
-                        "instrument_id",
-                        "configuration_type",
-                        "primary_optical_element",
-                    ).order_by().distinct()
-                    frames = public_frames.union(private_frames, all=True)
-            else:
-                logger.info(
-                    "No proposals found for user. "
-                    "Aggregating over only public data."
-                )
-                if include_public:
-                    frames = frames.filter(public_date__lt=Now())
-                else:
-                    return self._agg_empty_resp()
+        if site_id is not None:
+            frames = frames.filter(site_id=site_id)
 
-        try:
-            response_dict = aggregate_raw_sql(frames, timeout)
-        except OperationalError:
-            logger.info("filtered aggregation timed out")
-            return Response(
-                "Aggregation query timed out. Either try narrowing the search "
-                "space by adding more filters or increase the timeout.",
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        if telescope_id is not None:
+            frames = frames.filter(telescope_id=telescope_id)
 
-        if request.user.is_authenticated:
-            # 5 min
-            # Don't expect a lot of hits, but might be good if they're going
-            # back and forth in short bursts of activity.
-            cache_timeout = 5 * 60
+        if instrument_id is not None:
+            frames = frames.filter(instrument_id=instrument_id)
+
+        if primary_optical_element is not None:
+            frames = frames.filter(primary_optical_element=primary_optical_element)
+
+        cache_key_elms = [
+            start,
+            end,
+            proposal_id,
+            configuration_type,
+            site_id,
+            telescope_id,
+            instrument_id,
+            primary_optical_element,
+        ]
+
+        if include_public:
+            public_cache_key = "agg_public_%s" % blake2b(
+                settings.SECRET_KEY.join(
+                  map(str, cache_key_elms)
+                ).encode("utf-8")
+            ).hexdigest()
+
+            public_agg = cache.get(public_cache_key)
+
+            if public_agg is None:
+                public_frames = frames.all().filter(public_date__lte=Now())
+                public_agg = self._agg_frames_sql(public_frames, query_timeout)
+                cache.set(public_cache_key, public_agg, public_cache_timeout)
         else:
-            # 24 hours
-            # unautheticated users share the same cache space making it much
-            # more likely they'll be hitting the same keys
-            cache_timeout = 24 * 60 * 60
+            # doesn't actually do a query
+            public_agg = self._agg_frames_sql(frames.none(), public_cache_timeout)
 
-        # TODO: remove before mergeing; usefull for testing
-        cache_timeout = 10
+        # Exit early: unauthenticated users have no non-public data to view
+        # No point in making DB calls to return nothing
+        if not is_authenticated:
+            response_serializer = self.get_response_serializer(public_agg)
+            response =  Response(response_serializer.data)
+            patch_response_headers(response, public_cache_timeout)
+            return response
 
-        cache.set(cache_key, response_dict, cache_timeout)
+        private_cache_key = "agg_private_%s" % blake2b(
+            settings.SECRET_KEY.join(
+              map(str, cache_key_elms + [request.user.id])
+            ).encode("utf-8")
+        ).hexdigest()
 
-        response_serializer = self.get_response_serializer(response_dict)
+        private_agg = cache.get(private_cache_key)
+
+        if private_agg is None:
+            private_frames = frames.all().filter(public_date__gt=Now())
+
+            user_proposals = None
+            if not is_superuser:
+                user_proposals = request.user.profile.proposals or []
+
+            private_agg = self._agg_frames_sql(
+              private_frames,
+              query_timeout,
+              user_proposals
+            )
+            cache.set(private_cache_key, private_agg, private_cache_timeout)
+
+        union_agg = {}
+        for k, v in public_agg.items():
+          if k == "generated_at":
+              union_agg[k] = private_agg.get(k, "")
+              continue
+
+          union_agg[k] = v | private_agg.get(k, set())
+
+        response_serializer = self.get_response_serializer(union_agg)
         response =  Response(response_serializer.data)
-        patch_response_headers(response, cache_timeout)
+
+        # client can cache the request for at-least as long as the
+        # private cache key is valid
+        patch_response_headers(response, private_cache_timeout)
 
         return response
 
-    def _agg_empty_resp(self):
-        r = dict (
-          sites=[],
-          telescopes=[],
-          filters=[],
-          instruments=[],
-          obstypes=[],
-          proposals=[],
-          generated_at=""
-        )
-        response_serializer = self.get_response_serializer(r)
-        return Response(response_serializer.data)
+    def _agg_frames_sql(self, *args, **kwargs):
+        try:
+            r = aggregate_frames_sql(*args, **kwargs)
+        except OperationalError:
+            logger.exception("filtered aggregation timed out")
+            raise APIException(
+                "Aggregation query timed out. Either try narrowing the search "
+                "space by adding more filters or increase the timeout.",
+                599
+            )
 
-    def _agg_all_resp(self):
+        return r
+
+    def _agg_frames_all_resp(self):
         logger.info("returning all aggregates from cache")
 
-        response_dict = get_cached_aggregates()
+        response_dict = get_cached_frames_aggregates()
 
         if not response_dict:
             logger.warn(

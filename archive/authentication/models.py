@@ -9,13 +9,13 @@ from ocs_authentication.auth_profile.models import AuthProfile
 import requests
 import logging
 
-from archive.frames.utils import get_cached_aggregates
+from archive.frames.utils import get_cached_frames_aggregates
 
 logger = logging.getLogger()
 
 
 def get_all_proposals():
-    all_aggregates = get_cached_aggregates()
+    all_aggregates = get_cached_frames_aggregates()
     if all_aggregates:
         return all_aggregates.get("proposals", [])
 
