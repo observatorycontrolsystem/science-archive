@@ -32,6 +32,7 @@ from pytz import UTC
 from django.db import OperationalError
 from django.db.models.functions import Now
 from django.utils.cache import patch_response_headers
+from django.views.decorators.vary import vary_on_headers
 from hashlib import blake2b
 
 import subprocess
@@ -170,6 +171,7 @@ class FrameViewSet(viewsets.ModelViewSet):
         return Response(request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+    @vary_on_headers("Cookie", "Authorization")
     @action(detail=False)
     def aggregate(self, request):
         """
@@ -216,12 +218,12 @@ class FrameViewSet(viewsets.ModelViewSet):
         private_cache_timeout = 5 * 60
 
         # TODO: remove before merging; usefull for testing
-        public_cache_timeout = 60
-        private_cache_timeout = 10
+        #public_cache_timeout = 60
+        #private_cache_timeout = 10
 
         if not is_authenticated:
             # limit unauthenticated users to a smaller query timeout (500 ms)
-            query_timeout = min(query_timeout, 500)
+            query_timeout = min(query_timeout, 1000)
 
 
         if all(
@@ -246,6 +248,12 @@ class FrameViewSet(viewsets.ModelViewSet):
                 "time range must be less than or equal to a year (365 days)",
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        # Expire the public cache quicker if the query window is in the future
+        # to avoid serving stale public aggregates for too long.
+        if end >= datetime.datetime.now(tz=UTC):
+            # 1 hour
+            public_cache_timeout = 60 * 60
 
         frames = Frame.objects.all()
 
@@ -272,6 +280,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             frames = frames.filter(primary_optical_element=primary_optical_element)
 
         cache_key_elms = [
+            settings.SECRET_KEY,
             start,
             end,
             proposal_id,
@@ -284,7 +293,7 @@ class FrameViewSet(viewsets.ModelViewSet):
 
         if include_public:
             public_cache_key = "agg_public_%s" % blake2b(
-                settings.SECRET_KEY.join(
+                "|".join(
                   map(str, cache_key_elms)
                 ).encode("utf-8")
             ).hexdigest()
@@ -308,7 +317,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             return response
 
         private_cache_key = "agg_private_%s" % blake2b(
-            settings.SECRET_KEY.join(
+            "|".join(
               map(str, cache_key_elms + [request.user.id])
             ).encode("utf-8")
         ).hexdigest()
