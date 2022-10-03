@@ -217,10 +217,6 @@ class FrameViewSet(viewsets.ModelViewSet):
         # back and forth in short bursts of activity.
         private_cache_timeout = 5 * 60
 
-        # TODO: remove before merging; usefull for testing
-        #public_cache_timeout = 60
-        #private_cache_timeout = 10
-
         if not is_authenticated:
             # limit unauthenticated users to a smaller query timeout (500 ms)
             query_timeout = min(query_timeout, 1000)
@@ -301,9 +297,12 @@ class FrameViewSet(viewsets.ModelViewSet):
             public_agg = cache.get(public_cache_key)
 
             if public_agg is None:
+                logger.info("public agg cache miss")
                 public_frames = frames.all().filter(public_date__lte=Now())
                 public_agg = self._agg_frames_sql(public_frames, query_timeout)
                 cache.set(public_cache_key, public_agg, public_cache_timeout)
+            else:
+                logger.info("public agg cache hit")
         else:
             # doesn't actually do a query
             public_agg = self._agg_frames_sql(frames.none(), public_cache_timeout)
@@ -325,6 +324,7 @@ class FrameViewSet(viewsets.ModelViewSet):
         private_agg = cache.get(private_cache_key)
 
         if private_agg is None:
+            logger.info("private agg cache miss")
             private_frames = frames.all().filter(public_date__gt=Now())
 
             user_proposals = None
@@ -337,6 +337,8 @@ class FrameViewSet(viewsets.ModelViewSet):
               user_proposals
             )
             cache.set(private_cache_key, private_agg, private_cache_timeout)
+        else:
+            logger.info("private agg cache hit")
 
         union_agg = {}
         for k, v in public_agg.items():

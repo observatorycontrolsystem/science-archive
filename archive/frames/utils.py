@@ -261,7 +261,7 @@ def aggregate_frames_sql(frames, timeout=0, user_proposals=None):
             to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS generated_at
           FROM filtered_distinct;
         """ # nosec B608
-        logger.info("executing aggregate query: %s (params: %s)", query_sql, params)
+        logger.debug("executing aggregate query: %s (params: %s)", query_sql, params)
         cursor.execute(query_sql, params)
         row = cursor.fetchone()
 
