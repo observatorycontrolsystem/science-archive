@@ -1,18 +1,21 @@
 from archive.frames.tests.factories import FrameFactory, VersionFactory, PublicFrameFactory
 from archive.frames.models import Frame
-from archive.frames.utils import get_configuration_type_tuples
+from archive.frames.utils import get_configuration_type_tuples, aggregate_frames_sql, set_cached_frames_aggregates
 from archive.authentication.models import Profile
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from unittest.mock import MagicMock, patch
 from django.utils import timezone
 from django.urls import reverse
+from rest_framework.reverse import reverse as reverse_drf
 from archive.test_helpers import ReplicationTestCase
 from django.test import override_settings
 from django.conf import settings
 from django.contrib.gis.geos import Point
 from pytz import UTC
 from rest_framework import status
+from django.core.cache import cache
+
 import boto3
 import responses
 import datetime
@@ -527,26 +530,114 @@ class TestFunpackViewSet(ReplicationTestCase):
 
 class TestFrameAggregate(ReplicationTestCase):
     def setUp(self):
+        self.normal_user = User.objects.create(username='frodo', password='theone')
+        self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
+        Profile.objects.update_or_create(user=self.normal_user, defaults={'access_token': 'test', 'refresh_token': 'test'})
+        AuthProfile.objects.create(user=self.normal_user)
+
         is_public_date = timezone.now() - datetime.timedelta(days=7)
         is_not_public_date = timezone.now() + datetime.timedelta(days=7)
-        FrameFactory.create(configuration_type='EXPOSE', telescope_id='1m0a', site_id='bpl', instrument_id='kb46',
-                            proposal_id='prop1', primary_optical_element='rp', public_date=is_public_date)
-        FrameFactory.create(configuration_type='BIAS', telescope_id='0m4a', site_id='coj', instrument_id='en05',
-                            proposal_id='prop2', primary_optical_element='V', public_date=is_not_public_date)
-        FrameFactory.create(configuration_type='SKYFLAT', telescope_id='2m0b', site_id='ogg', instrument_id='fl10',
-                            proposal_id='prop3', primary_optical_element='B', public_date=is_public_date)
+        obs_date = datetime.datetime.now(tz=UTC) - datetime.timedelta(days=90)
 
-    def test_frame_aggregate(self):
-        response = self.client.get(reverse('frame-aggregate'))
+        FrameFactory.create(configuration_type='EXPOSE', telescope_id='1m0a', site_id='bpl', instrument_id='kb46',
+                            proposal_id='prop1', primary_optical_element='rp', public_date=is_public_date, observation_date=obs_date)
+
+        FrameFactory.create(configuration_type='BIAS', telescope_id='0m4a', site_id='coj', instrument_id='en05',
+                            proposal_id='prop2', primary_optical_element='V', public_date=is_not_public_date, observation_date=obs_date)
+
+        FrameFactory.create(configuration_type='SKYFLAT', telescope_id='2m0b', site_id='ogg', instrument_id='fl10',
+                            proposal_id='prop3', primary_optical_element='B', public_date=is_public_date, observation_date=obs_date)
+
+        set_cached_frames_aggregates(aggregate_frames_sql(Frame.objects.all()))
+
+    def test_frame_aggregate_all(self):
+        response = self.client.get(reverse_drf('frame-aggregate'))
+        self.assertEqual(response.status_code, 200)
+
         self.assertEqual(set(response.json()['obstypes']), set(['EXPOSE', 'BIAS', 'SKYFLAT']))
         self.assertEqual(set(response.json()['telescopes']), set(['1m0a', '0m4a', '2m0b']))
         self.assertEqual(set(response.json()['sites']), set(['bpl', 'coj', 'ogg']))
         self.assertEqual(set(response.json()['instruments']), set(['kb46', 'en05', 'fl10']))
         self.assertEqual(set(response.json()['filters']), set(['rp', 'V', 'B']))
-        self.assertEqual(set(response.json()['proposals']), set(['prop1', 'prop3']))
+        self.assertEqual(set(response.json()['proposals']), set(['prop1', 'prop3', 'prop2']))
 
-    def test_frame_aggregate_filtered(self):
-        response = self.client.get(reverse('frame-aggregate') + '?SITEID=ogg')
+    def test_frame_aggregate_filtered_time_public_all(self):
+        response = self.client.get(
+          reverse('frame-aggregate'),
+          {
+            "public": "true",
+            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+          }
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(set(response.json()['obstypes']), set(['EXPOSE', 'SKYFLAT']))
+        self.assertEqual(set(response.json()['telescopes']), set(['2m0b', '1m0a']))
+        self.assertEqual(set(response.json()['sites']), set(['ogg', 'bpl']))
+        self.assertEqual(set(response.json()['instruments']), set(['fl10', 'kb46']))
+        self.assertEqual(set(response.json()['filters']), set(['B', 'rp']))
+        self.assertEqual(set(response.json()['proposals']), set(['prop3', 'prop1']))
+
+    def test_frame_aggregate_filtered_time_nopublic_all(self):
+        response = self.client.get(reverse('frame-list'))
+        response = self.client.get(
+          reverse('frame-aggregate'),
+          {
+            "public": "false",
+            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+          }
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(set(response.json()['obstypes']), set())
+        self.assertEqual(set(response.json()['telescopes']), set())
+        self.assertEqual(set(response.json()['sites']), set())
+        self.assertEqual(set(response.json()['instruments']), set())
+        self.assertEqual(set(response.json()['filters']), set())
+        self.assertEqual(set(response.json()['proposals']), set())
+
+    @responses.activate
+    def test_frame_aggregate_filtered_time_nopublic_all_authed(self):
+        responses.add(
+            responses.GET,
+            settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
+            body=json.dumps({'proposals': [{'id': 'prop2'}]}),
+            status=200,
+            content_type='application/json'
+        )
+        self.client.force_login(self.normal_user)
+
+        response = self.client.get(
+          reverse('frame-aggregate'),
+          {
+            "public": "false",
+            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+          }
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(set(response.json()['proposals']), set(['prop2']))
+        self.assertEqual(set(response.json()['obstypes']), set(['BIAS']))
+        self.assertEqual(set(response.json()['telescopes']), set(['0m4a']))
+        self.assertEqual(set(response.json()['sites']), set(['coj']))
+        self.assertEqual(set(response.json()['instruments']), set(['en05']))
+        self.assertEqual(set(response.json()['filters']), set(['V']))
+
+    def test_frame_aggregate_filtered_site(self):
+        response = self.client.get(
+          reverse('frame-aggregate'),
+          {
+            "site_id": "ogg",
+            "public": "true",
+            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+          }
+        )
+        self.assertEqual(response.status_code, 200)
+
         self.assertEqual(set(response.json()['obstypes']), set(['SKYFLAT']))
         self.assertEqual(set(response.json()['telescopes']), set(['2m0b']))
         self.assertEqual(set(response.json()['sites']), set(['ogg']))
@@ -554,31 +645,87 @@ class TestFrameAggregate(ReplicationTestCase):
         self.assertEqual(set(response.json()['filters']), set(['B']))
         self.assertEqual(set(response.json()['proposals']), set(['prop3']))
 
-    def test_frame_aggregate_single_field(self):
-        response = self.client.get(reverse('frame-aggregate') + '?aggregate_field=site_id')
-        self.assertEqual(set(response.json()['obstypes']), set([]))
-        self.assertEqual(set(response.json()['telescopes']), set([]))
-        self.assertEqual(set(response.json()['sites']), set(['bpl', 'coj', 'ogg']))
-        self.assertEqual(set(response.json()['instruments']), set([]))
-        self.assertEqual(set(response.json()['filters']), set([]))
-        self.assertEqual(set(response.json()['proposals']), set([]))
+    def test_frame_aggregate_filtered_telescope(self):
+        response = self.client.get(
+          reverse('frame-aggregate'),
+          {
+            "telescope_id": "2m0b",
+            "public": "true",
+            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+          }
+        )
+        self.assertEqual(response.status_code, 200)
 
-    def test_frame_aggregate_single_field_filtered(self):
-        response = self.client.get(reverse('frame-aggregate') + '?INSTRUME=en05&aggregate_field=primary_optical_element')
-        self.assertEqual(set(response.json()['obstypes']), set([]))
-        self.assertEqual(set(response.json()['telescopes']), set([]))
-        self.assertEqual(set(response.json()['sites']), set([]))
-        self.assertEqual(set(response.json()['instruments']), set([]))
-        self.assertEqual(set(response.json()['filters']), set(['V']))
-        self.assertEqual(set(response.json()['proposals']), set([]))
+        self.assertEqual(set(response.json()['obstypes']), set(['SKYFLAT']))
+        self.assertEqual(set(response.json()['telescopes']), set(['2m0b']))
+        self.assertEqual(set(response.json()['sites']), set(['ogg']))
+        self.assertEqual(set(response.json()['instruments']), set(['fl10']))
+        self.assertEqual(set(response.json()['filters']), set(['B']))
+        self.assertEqual(set(response.json()['proposals']), set(['prop3']))
 
-    def test_frame_invalid_aggregate_field(self):
-        response = self.client.get(reverse('frame-aggregate') + '?INSTRUME=en05&aggregate_field=iaminvalid')
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('Invalid aggregate_field', str(response.content))
+    def test_frame_aggregate_filtered_instrument(self):
+        response = self.client.get(
+          reverse('frame-aggregate'),
+          {
+            "instrument_id": "fl10",
+            "public": "true",
+            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+          }
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(set(response.json()['obstypes']), set(['SKYFLAT']))
+        self.assertEqual(set(response.json()['telescopes']), set(['2m0b']))
+        self.assertEqual(set(response.json()['sites']), set(['ogg']))
+        self.assertEqual(set(response.json()['instruments']), set(['fl10']))
+        self.assertEqual(set(response.json()['filters']), set(['B']))
+        self.assertEqual(set(response.json()['proposals']), set(['prop3']))
+
+    def test_frame_aggregate_filtered_obstype(self):
+        response = self.client.get(
+          reverse('frame-aggregate'),
+          {
+            "configuration_type": "SKYFLAT",
+            "public": "true",
+            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+          }
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(set(response.json()['obstypes']), set(['SKYFLAT']))
+        self.assertEqual(set(response.json()['telescopes']), set(['2m0b']))
+        self.assertEqual(set(response.json()['sites']), set(['ogg']))
+        self.assertEqual(set(response.json()['instruments']), set(['fl10']))
+        self.assertEqual(set(response.json()['filters']), set(['B']))
+        self.assertEqual(set(response.json()['proposals']), set(['prop3']))
+
+    def test_frame_aggregate_filtered_filter(self):
+        response = self.client.get(
+          reverse('frame-aggregate'),
+          {
+            "primary_optical_element": "B",
+            "public": "true",
+            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+          }
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(set(response.json()['obstypes']), set(['SKYFLAT']))
+        self.assertEqual(set(response.json()['telescopes']), set(['2m0b']))
+        self.assertEqual(set(response.json()['sites']), set(['ogg']))
+        self.assertEqual(set(response.json()['instruments']), set(['fl10']))
+        self.assertEqual(set(response.json()['filters']), set(['B']))
+        self.assertEqual(set(response.json()['proposals']), set(['prop3']))
 
 
 class TestUtils(ReplicationTestCase):
+    def setUp(self):
+        cache.clear()
+
     @override_settings(CONFIGURATION_TYPES=('TEST1', 'TEST2'), CONFIGDB_URL='')
     def test_use_environment_variable_for_config_types(self):
         configuration_type_tuples = get_configuration_type_tuples()

@@ -5,7 +5,6 @@ from archive.frames.utils import get_configuration_type_tuples
 from django.contrib.gis.geos import GEOSGeometry
 from django.db import transaction
 from django.conf import settings
-from django.core.cache import cache
 
 
 class ZipSerializer(serializers.Serializer):
@@ -94,30 +93,6 @@ class FrameSerializer(serializers.ModelSerializer):
         return frame
 
     def create_or_update_frame(self, data):
-        all_proposals = cache.get('proposal_id_set', [])
-        if all_proposals and data['proposal_id'] not in all_proposals:
-            all_proposals.append(data['proposal_id'])
-            cache.set('proposal_id_set', all_proposals, None)
-        all_sites = cache.get('site_id_set', [])
-        if all_sites and data['site_id'] not in all_sites:
-            all_sites.append(data['site_id'])
-            cache.set('site_id_set', all_sites, None)
-        all_telescopes = cache.get('telescope_id_set', [])
-        if all_telescopes and data['telescope_id'] not in all_telescopes:
-            all_telescopes.append(data['telescope_id'])
-            cache.set('telescope_id_set', all_telescopes, None)
-        all_primary_optical_elements = cache.get('primary_optical_element_set', [])
-        if all_primary_optical_elements and data['primary_optical_element'] not in all_primary_optical_elements:
-            all_primary_optical_elements.append(data['primary_optical_element'])
-            cache.set('primary_optical_element_set', all_primary_optical_elements, None)
-        all_configuration_types = cache.get('configuration_type_set', [])
-        if all_configuration_types and data['configuration_type'] not in all_configuration_types:
-            all_configuration_types.append(data['configuration_type'])
-            cache.set('configuration_type_set', all_configuration_types, None)
-        all_instruments = cache.get('instrument_id_set', [])
-        if all_instruments and data['instrument_id'] not in all_instruments:
-            all_instruments.append(data['instrument_id'])
-            cache.set('instrument_id_set', all_instruments, None)
         frame, _ = Frame.objects.update_or_create(defaults=data, basename=data['basename'])
         return frame
 
@@ -143,3 +118,18 @@ class AggregateSerializer(serializers.Serializer):
     instruments = serializers.ListField(child=serializers.CharField())
     obstypes = serializers.ListField(child=serializers.CharField())
     proposals = serializers.ListField(child=serializers.CharField())
+    generated_at = serializers.CharField()
+
+
+class AggregateQueryParamsSeralizer(serializers.Serializer):
+    start = serializers.DateTimeField(required=False, default=None)
+    end = serializers.DateTimeField(required=False, default=None)
+    public = serializers.BooleanField(required=False, default=None, allow_null=True)
+    site_id = serializers.CharField(required=False, default=None)
+    telescope_id = serializers.CharField(required=False, default=None)
+    primary_optical_element = serializers.CharField(required=False, default=None)
+    instrument_id = serializers.CharField(required=False, default=None)
+    configuration_type = serializers.CharField(required=False, default=None)
+    proposal_id = serializers.CharField(required=False, default=None)
+
+    query_timeout = serializers.IntegerField(min_value=0, max_value=20000, required=False, default=2000)

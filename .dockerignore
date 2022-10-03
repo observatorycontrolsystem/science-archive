@@ -3,3 +3,4 @@ scratch/
 .tox/
 deploy
 venv
+.venv

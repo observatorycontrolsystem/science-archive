@@ -30,9 +30,9 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
                 return super().get_count(queryset)
         except (OperationalError, InternalError):
             logger.warning("Getting the count timed out after 5 seconds")
-            pass
 
         if not queryset.query.where:
+            logger.warning("Estimating the count using postgres stats table")
             try:
                 with transaction.atomic(using='replica'), connections['replica'].cursor() as cursor:
                     # Obtain estimated values (only valid with PostgreSQL)
@@ -42,7 +42,21 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
                     )
                     estimate = int(cursor.fetchone()[0])
                     return estimate
-            except Exception:
-                # If any other exception occurred fall back to no count
-                pass
+            except Exception as e:
+                logger.warning("Failed to estimate count", exc_info=e)
+        else:
+            logger.warning("Estimating the count using the postgres query planner")
+            try:
+                with transaction.atomic(using='replica'), connections['replica'].cursor() as cursor:
+                    # Obtain estimated values using the query planner (only valid with PostgreSQL)
+                    sql = cursor.mogrify(*queryset.query.sql_with_params()).decode("utf-8")
+                    cursor.execute(
+                        "SELECT count_estimate(%s);",
+                        [sql]
+                    )
+                    estimate = int(cursor.fetchone()[0])
+                    return estimate
+            except Exception as e:
+                logger.warning("Failed to estimate count", exc_info=e)
+
         return sys.maxsize
