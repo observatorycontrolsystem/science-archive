@@ -17,11 +17,9 @@ jobs:
         fetch-depth: 0
     - name: Install dependencies
       run: |
-        sudo apt-get -y update
-        sudo apt-get install gdal-bin
         python -m pip install --upgrade pip
-        pip install -r .poetry-version
-        pip install -r <(poetry export --with dev)
+        python -m pip install 'poetry>=1.1,<1.2'
+        poetry install
     - name: Build docs
       run: |
         poetry run python manage.py generateschema --file science-archive.yaml --generator_class archive.schema.ScienceArchiveSchemaGenerator
