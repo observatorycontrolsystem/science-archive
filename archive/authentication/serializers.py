@@ -14,7 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('username', 'profile')
+        fields = ('username', 'profile', 'is_staff')
 
 class RevokeTokenResponseSerializer(serializers.Serializer):
     message = serializers.CharField(default='API token revoked.')
