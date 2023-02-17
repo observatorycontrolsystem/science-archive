@@ -13,8 +13,10 @@ from archive.frames.utils import (
 )
 from archive.frames.permissions import AdminOrReadOnly
 from archive.frames.filters import FrameFilter
-
 from archive.doc_examples import EXAMPLE_RESPONSES, QUERY_PARAMETERS
+
+from astropy.io import fits
+from astropy.table import Table
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
@@ -34,10 +36,12 @@ from django.db.models.functions import Now
 from django.utils.cache import patch_response_headers
 from django.views.decorators.vary import vary_on_headers
 from hashlib import blake2b
+import requests
 
 import subprocess
 import datetime
 import logging
+import io
 
 from ocs_archive.storage.filestorefactory import FileStoreFactory
 from ocs_authentication.auth_profile.models import AuthProfile
@@ -138,6 +142,25 @@ class FrameViewSet(viewsets.ModelViewSet):
         frame = self.get_object()
         response_serializer = self.get_response_serializer(frame.headers)
         return Response(response_serializer.data)
+
+
+    @action(detail=True)
+    def photometry(self, request, pk=None):
+        frame = self.get_object()
+        # check that frame is a BANZAI-reduced image
+        if frame.reduction_level == 91 and 'igl' not in frame.telescope_id and frame.configuration_type == 'EXPOSE':
+            image_data = io.BytesIO(requests.get(frame.url).content)
+            image_data.seek(0)
+            with fits.open(image_data, memmap=True) as image:
+                table = Table(image['CAT'].data)
+                f = io.StringIO()
+                table.write(f, format='ascii.csv')
+                f.seek(0)
+            response = HttpResponse(f, content_type='text/csv')
+            return response
+        else:
+            return Response({'message': 'Could not find catalog in image'}, status=status.HTTP_404_NOT_FOUND)
+
 
     @xframe_options_exempt
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
