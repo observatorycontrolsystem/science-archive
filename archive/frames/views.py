@@ -156,7 +156,9 @@ class FrameViewSet(viewsets.ModelViewSet):
                 f = io.StringIO()
                 table.write(f, format='ascii.csv')
                 f.seek(0)
+            filename = f'{frame.basename}-photometry.csv'
             response = HttpResponse(f, content_type='text/csv')
+            response['Content-Disposition'] = f'inline; filename={filename}'
             return response
         else:
             return Response({'message': 'Could not find catalog in image'}, status=status.HTTP_404_NOT_FOUND)
