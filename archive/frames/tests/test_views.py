@@ -316,6 +316,12 @@ class TestQueryFiltering(ReplicationTestCase):
             self.assertContains(response, proposal_proprietary_frame.basename)
             self.assertContains(response, proposal_public_frame.basename)
             self.assertContains(response, public_frame.basename)
+        
+        # If public not specified, then show everything
+        response = self.client.get(reverse('frame-list'))
+        self.assertContains(response, proposal_proprietary_frame.basename)
+        self.assertContains(response, proposal_public_frame.basename)
+        self.assertContains(response, public_frame.basename)
 
         self.client.logout()
 
@@ -332,6 +338,12 @@ class TestQueryFiltering(ReplicationTestCase):
             self.assertNotContains(response, proposal_proprietary_frame.basename)
             self.assertContains(response, proposal_public_frame.basename)
             self.assertContains(response, public_frame.basename)
+
+        # If public not specified, anonymous users should still only see public data
+        response = self.client.get(reverse('frame-list'))
+        self.assertNotContains(response, proposal_proprietary_frame.basename)
+        self.assertContains(response, proposal_public_frame.basename)
+        self.assertContains(response, public_frame.basename)
 
 
     def test_area_covers(self):
