@@ -45,6 +45,11 @@ class FrameFilter(django_filters.FilterSet):
         label='Exclude Configuration Types',
         exclude=True
     )
+    include_configuration_type = django_filters.MultipleChoiceFilter(
+        field_name='configuration_type',
+        choices=get_configuration_type_tuples(),
+        label='Include Configuration Types',
+    )
     intersects = django_filters.CharFilter(method='intersects_filter')
 
     def covers_filter(self, queryset, name, value):
