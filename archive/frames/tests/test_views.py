@@ -301,6 +301,7 @@ class TestQueryFiltering(ReplicationTestCase):
         self.client.force_login(user)
         proposal_proprietary_frame = FrameFactory(public_date=datetime.datetime(2999, 1, 1, tzinfo=UTC), proposal_id='prop1')
         proposal_public_frame = FrameFactory(public_date=datetime.datetime(1992, 11, 14, tzinfo=UTC), proposal_id='prop1')
+        non_proposal_proprietary_frame = FrameFactory(public_date=datetime.datetime(2999, 1, 1, tzinfo=UTC), proposal_id='prop2')
         public_frame = PublicFrameFactory()
 
         # If public=false, then a logged in user should see all of their own data, proprietary or not
@@ -309,6 +310,7 @@ class TestQueryFiltering(ReplicationTestCase):
             self.assertContains(response, proposal_proprietary_frame.basename)
             self.assertContains(response, proposal_public_frame.basename)
             self.assertNotContains(response, public_frame.basename)
+            self.assertNotContains(response, non_proposal_proprietary_frame)
 
         # If public=true, then a logged in user should see all their data + all public data
         for true_string in ['true', 'True', '1']:
@@ -316,12 +318,14 @@ class TestQueryFiltering(ReplicationTestCase):
             self.assertContains(response, proposal_proprietary_frame.basename)
             self.assertContains(response, proposal_public_frame.basename)
             self.assertContains(response, public_frame.basename)
-        
+            self.assertNotContains(response, non_proposal_proprietary_frame)
+
         # If public not specified, then show everything
         response = self.client.get(reverse('frame-list'))
         self.assertContains(response, proposal_proprietary_frame.basename)
         self.assertContains(response, proposal_public_frame.basename)
         self.assertContains(response, public_frame.basename)
+        self.assertNotContains(response, non_proposal_proprietary_frame)
 
         self.client.logout()
 
@@ -338,12 +342,14 @@ class TestQueryFiltering(ReplicationTestCase):
             self.assertNotContains(response, proposal_proprietary_frame.basename)
             self.assertContains(response, proposal_public_frame.basename)
             self.assertContains(response, public_frame.basename)
+            self.assertNotContains(response, non_proposal_proprietary_frame)
 
         # If public not specified, anonymous users should still only see public data
         response = self.client.get(reverse('frame-list'))
         self.assertNotContains(response, proposal_proprietary_frame.basename)
         self.assertContains(response, proposal_public_frame.basename)
         self.assertContains(response, public_frame.basename)
+        self.assertNotContains(response, non_proposal_proprietary_frame)
 
 
     def test_area_covers(self):
