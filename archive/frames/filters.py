@@ -72,8 +72,8 @@ class FrameFilter(django_filters.FilterSet):
                 user_proposals = self.request.user.profile.proposals
                 if user_proposals:
                     return queryset.filter(proposal_id__in=user_proposals)
-
-            return queryset.exclude(public_date__lt=timezone.now())
+            else:
+                return queryset.exclude(public_date__lt=timezone.now())
         return queryset
 
     class Meta:
