@@ -299,20 +299,58 @@ class TestQueryFiltering(ReplicationTestCase):
             content_type='application/json'
         )
         self.client.force_login(user)
-        proposal_frame = FrameFactory(public_date=datetime.datetime(2999, 1, 1, tzinfo=UTC), proposal_id='prop1')
+        proposal_proprietary_frame = FrameFactory(public_date=datetime.datetime(2999, 1, 1, tzinfo=UTC), proposal_id='prop1')
+        proposal_public_frame = FrameFactory(public_date=datetime.datetime(1992, 11, 14, tzinfo=UTC), proposal_id='prop1')
+        non_proposal_proprietary_frame = FrameFactory(public_date=datetime.datetime(2999, 1, 1, tzinfo=UTC), proposal_id='prop2')
         public_frame = PublicFrameFactory()
 
+        # If public=false, then a logged in user should see all of their own data, proprietary or not
         for false_string in ['false', 'False', '0']:
             response = self.client.get(reverse('frame-list') + '?public={}'.format(false_string))
-            self.assertContains(response, proposal_frame.basename)
+            self.assertContains(response, proposal_proprietary_frame.basename)
+            self.assertContains(response, proposal_public_frame.basename)
             self.assertNotContains(response, public_frame.basename)
+            self.assertNotContains(response, non_proposal_proprietary_frame)
+
+        # If public=true, then a logged in user should see all their data + all public data
+        for true_string in ['true', 'True', '1']:
+            response = self.client.get(reverse('frame-list') + '?public={}'.format(true_string))
+            self.assertContains(response, proposal_proprietary_frame.basename)
+            self.assertContains(response, proposal_public_frame.basename)
+            self.assertContains(response, public_frame.basename)
+            self.assertNotContains(response, non_proposal_proprietary_frame)
+
+        # If public not specified, then show everything
+        response = self.client.get(reverse('frame-list'))
+        self.assertContains(response, proposal_proprietary_frame.basename)
+        self.assertContains(response, proposal_public_frame.basename)
+        self.assertContains(response, public_frame.basename)
+        self.assertNotContains(response, non_proposal_proprietary_frame)
 
         self.client.logout()
 
+        # If public=false, an anonymous user shouldn't see anything
         for false_string in ['false', 'False', '0']:
             response = self.client.get(reverse('frame-list') + '?public={}'.format(false_string))
-            self.assertNotContains(response, proposal_frame.basename)
+            self.assertNotContains(response, proposal_proprietary_frame.basename)
+            self.assertNotContains(response, proposal_public_frame.basename)
             self.assertNotContains(response, public_frame.basename)
+
+        # If public=true an anonymous user should only see publicly available data
+        for true_string in ['true', 'True', '1']:
+            response = self.client.get(reverse('frame-list') + '?public={}'.format(true_string))
+            self.assertNotContains(response, proposal_proprietary_frame.basename)
+            self.assertContains(response, proposal_public_frame.basename)
+            self.assertContains(response, public_frame.basename)
+            self.assertNotContains(response, non_proposal_proprietary_frame)
+
+        # If public not specified, anonymous users should still only see public data
+        response = self.client.get(reverse('frame-list'))
+        self.assertNotContains(response, proposal_proprietary_frame.basename)
+        self.assertContains(response, proposal_public_frame.basename)
+        self.assertContains(response, public_frame.basename)
+        self.assertNotContains(response, non_proposal_proprietary_frame)
+
 
     def test_area_covers(self):
         frame = PublicFrameFactory.create(

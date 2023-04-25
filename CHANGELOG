@@ -1,3 +1,9 @@
+2.3.2
+2023-04-25
+
+Fix public behavior so that logged in users see all of their proposal's data, public or proprietary by default
+Also add include_configuration_type multiple choice filter so that frames can be filtered by multiple configuration types
+
 2.2.4
 2022-04-21
 
