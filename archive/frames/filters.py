@@ -77,7 +77,7 @@ class FrameFilter(django_filters.FilterSet):
             else:
                 return queryset.exclude(public_date__lt=timezone.now())
         return queryset
-    
+
     def exclude_calibrations_filter(self, queryset, name, value):
         if value:
             return queryset.filter(configuration_type__in=SCIENCE_CONFIGURATION_TYPES)
