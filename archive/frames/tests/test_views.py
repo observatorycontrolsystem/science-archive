@@ -353,8 +353,8 @@ class TestQueryFiltering(ReplicationTestCase):
 
     @responses.activate
     def test_exclude_calibrations_filter(self):
-        science_frame = FrameFactory(configuration_type='EXPOSE')
-        bias_frame = FrameFactory(configuration_type='BIAS')
+        science_frame = FrameFactory(public_date=datetime.datetime(2020, 11, 14, tzinfo=UTC), configuration_type='EXPOSE')
+        bias_frame = FrameFactory(public_date=datetime.datetime(2020, 11, 14, tzinfo=UTC), configuration_type='BIAS')
 
         for false_string in ['false', 'False', '0']:
             response = self.client.get(reverse('frame-list') + '?exclude_calibrations={}'.format(false_string))
