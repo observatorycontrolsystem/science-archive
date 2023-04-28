@@ -351,6 +351,25 @@ class TestQueryFiltering(ReplicationTestCase):
         self.assertContains(response, public_frame.basename)
         self.assertNotContains(response, non_proposal_proprietary_frame)
 
+    @responses.activate
+    def test_exclude_calibrations_filter(self):
+        science_frame = FrameFactory(public_date=datetime.datetime(2020, 11, 14, tzinfo=UTC), configuration_type='EXPOSE')
+        bias_frame = FrameFactory(public_date=datetime.datetime(2020, 11, 14, tzinfo=UTC), configuration_type='BIAS')
+
+        for false_string in ['false', 'False', '0']:
+            response = self.client.get(reverse('frame-list') + '?exclude_calibrations={}'.format(false_string))
+            self.assertContains(response, science_frame.basename)
+            self.assertContains(response, bias_frame.basename)
+
+        for true_string in ['true', 'True', '1']:
+            response = self.client.get(reverse('frame-list') + '?exclude_calibrations={}'.format(true_string))
+            self.assertContains(response, science_frame.basename)
+            self.assertNotContains(response, bias_frame.basename)
+
+        response = self.client.get(reverse('frame-list'))
+        self.assertContains(response, science_frame.basename)
+        self.assertContains(response, bias_frame.basename)
+
 
     def test_area_covers(self):
         frame = PublicFrameFactory.create(
