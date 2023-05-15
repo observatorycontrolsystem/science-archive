@@ -1,5 +1,6 @@
 import logging
 import subprocess
+import io
 import requests
 from urllib.parse import urlsplit, urljoin
 from django.conf import settings
@@ -7,6 +8,7 @@ from django.core.cache import cache
 from django.urls import reverse
 from django.db import connections
 from django.db.models.query import EmptyQuerySet
+from astropy.io import fits
 
 from kombu.connection import Connection
 from kombu import Exchange
@@ -87,7 +89,7 @@ def post_to_archived_queue(payload):
             producer.publish(payload, delivery_mode='persistent', retry=True, retry_policy=retry_policy)
 
 
-def build_nginx_zip_text(frames, directory, uncompress=False):
+def build_nginx_zip_text(frames, directory, uncompress=False, catalog_only=False):
     '''
     Build a text document in the format required by the NGINX mod_zip module
     so that NGINX will automatically build and stream a ZIP file to the client.
@@ -136,7 +138,18 @@ def build_nginx_zip_text(frames, directory, uncompress=False):
                 except subprocess.CalledProcessError as cpe:
                     logger.error(f'funpack failed with return code {cpe.returncode} and error {cpe.stderr}')
                     raise FunpackError
-
+        elif catalog_only and frame.reduction_level == 91:
+            logger.info(msg='Adding catalog to manifest')
+            location = reverse('frame-catalog-catalog', kwargs={'pk': version.id})
+            extension = '-catalog.fits'
+        
+            with file_store.get_fileobj(path) as fileobj:
+                image = fits.open(fileobj)
+                with io.BytesIO() as buffer:
+                    hdulist = fits.HDUList([fits.PrimaryHDU(header=image['SCI'].header), image['CAT']])
+                    hdulist.writeto(buffer)
+                    buffer.seek(0)
+                    size = buffer.getbuffer().nbytes
         else:
             # The NGINX mod_zip module requires that the files which are used to build the
             # ZIP file must be loaded from an internal NGINX location. Replace the leading

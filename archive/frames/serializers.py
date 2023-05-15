@@ -16,6 +16,11 @@ class ZipSerializer(serializers.Serializer):
         default=False,
         help_text='Whether to uncompress the FITS files prior to creating zip archive'
     )
+    catalog_only = serializers.BooleanField(
+        default=False,
+        help_text='Whether to return only the catalog data as a smaller FITS file'
+    )
+
 
     def validate(self, data):
         selected_frames_count = len(data.get('frame_ids', []))
