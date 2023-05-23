@@ -567,7 +567,7 @@ class TestFunpackViewSet(ReplicationTestCase):
         mock_proc = MagicMock()
         mock_proc.stdout = b'test_value'
         mock_subprocess.run.return_value = mock_proc
-        response = self.client.get(reverse('frame-funpack-funpack', kwargs={'pk': self.frame.version_set.first().id}))
+        response = self.client.get(reverse('frame-funpack-funpack', kwargs={'pk': self.frame.id}))
         mock_subprocess.run.assert_called_with(
             ['/usr/bin/funpack', '-C', '-S', '-'], input=b'', stdout=mock_subprocess.PIPE
         )
@@ -578,7 +578,7 @@ class TestFunpackViewSet(ReplicationTestCase):
         """Test that funpack download endpoint returns correct response following a failure."""
         mock_run.side_effect = subprocess.CalledProcessError(-9, 'funpack')
 
-        response = self.client.get(reverse('frame-funpack-funpack', kwargs={'pk': self.frame.version_set.first().id}))
+        response = self.client.get(reverse('frame-funpack-funpack', kwargs={'pk': self.frame.id}))
 
         self.assertContains(response,
                             'There was a problem downloading your files. Please try again later or select fewer files.',
