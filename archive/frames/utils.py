@@ -138,15 +138,19 @@ def build_nginx_zip_text(frames, directory, uncompress=False, catalog_only=False
                 except subprocess.CalledProcessError as cpe:
                     logger.error(f'funpack failed with return code {cpe.returncode} and error {cpe.stderr}')
                     raise FunpackError
-        elif catalog_only and frame.reduction_level == 91:
+        elif catalog_only and frame.reduction_level == 91 and frame.configuration_type == 'EXPOSE':
             logger.info(msg='Adding catalog to manifest')
+            try:
+                catalog = image['CAT']
+            except KeyError:
+                continue
             location = reverse('frame-catalog-catalog', kwargs={'pk': frame.id})
             extension = '-catalog.fits'
-        
+
             with file_store.get_fileobj(path) as fileobj:
                 image = fits.open(fileobj)
                 with io.BytesIO() as buffer:
-                    hdulist = fits.HDUList([fits.PrimaryHDU(header=image['SCI'].header), image['CAT']])
+                    hdulist = fits.HDUList([fits.PrimaryHDU(header=image['SCI'].header), catalog])
                     hdulist.writeto(buffer)
                     buffer.seek(0)
                     size = buffer.getbuffer().nbytes
