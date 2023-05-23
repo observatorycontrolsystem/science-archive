@@ -124,7 +124,7 @@ def build_nginx_zip_text(frames, directory, uncompress=False, catalog_only=False
             # portion of the generated URL with an internal NGINX location which proxies all
             # traffic to Filestore URL.
             # funpack location (return decompressed files from FileStore)
-            location = reverse('frame-funpack-funpack', kwargs={'pk': version.id})
+            location = reverse('frame-funpack-funpack', kwargs={'pk': frame.id})
             extension = '.fits'
 
             # In order to build the manifest for mod_zip, we need to get the uncompressed file size. This is
@@ -140,7 +140,7 @@ def build_nginx_zip_text(frames, directory, uncompress=False, catalog_only=False
                     raise FunpackError
         elif catalog_only and frame.reduction_level == 91:
             logger.info(msg='Adding catalog to manifest')
-            location = reverse('frame-catalog-catalog', kwargs={'pk': version.id})
+            location = reverse('frame-catalog-catalog', kwargs={'pk': frame.id})
             extension = '-catalog.fits'
         
             with file_store.get_fileobj(path) as fileobj:

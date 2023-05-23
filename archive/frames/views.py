@@ -451,7 +451,8 @@ class FunpackViewSet(viewsets.ViewSet):
 
         logger.info(msg='Downloading file via funpack endpoint')
 
-        version = get_object_or_404(Version, pk=pk)
+        frame = get_object_or_404(Frame, pk=pk)
+        version = frame.version_set.first()
         file_store = FileStoreFactory.get_file_store_class()()
         path = get_file_store_path(version.frame.filename, version.frame.get_header_dict())
 
@@ -491,9 +492,12 @@ class CatalogViewSet(viewsets.ViewSet):
         '''
         logger.info(msg='Downloading file via catalog endpoint')
 
-        version = get_object_or_404(Version, pk=pk)
+        frame = get_object_or_404(Frame, pk=pk)
+        version = frame.version_set.first()
         file_store = FileStoreFactory.get_file_store_class()()
         path = get_file_store_path(version.frame.filename, version.frame.get_header_dict())
+
+        filename = frame.filename.replace('.fits.fz', '-catalog.fits')
 
         with file_store.get_fileobj(path) as fileobj:
             frame = fits.open(fileobj)
@@ -503,4 +507,5 @@ class CatalogViewSet(viewsets.ViewSet):
                 buffer.seek(0)
 
                 # return it to the client
-                return HttpResponse(buffer.getvalue(), content_type='application/octet-stream')
+                return HttpResponse(buffer.getvalue(), content_type='application/octet-stream',
+                                    headers={'Content-Disposition': f'attachment; filename={filename}'})
