@@ -33,11 +33,13 @@ from django.db import OperationalError
 from django.db.models.functions import Now
 from django.utils.cache import patch_response_headers
 from django.views.decorators.vary import vary_on_headers
+from astropy.io import fits
 from hashlib import blake2b
 
 import subprocess
 import datetime
 import logging
+import io
 
 from ocs_archive.storage.filestorefactory import FileStoreFactory
 from ocs_authentication.auth_profile.models import AuthProfile
@@ -162,7 +164,8 @@ class FrameViewSet(viewsets.ModelViewSet):
                 datetime.date.strftime(datetime.date.today(), '%Y%m%d'),
                 frames.count()
             )
-            body = build_nginx_zip_text(frames, filename, uncompress=request_serializer.data.get('uncompress'))
+            body = build_nginx_zip_text(frames, filename, uncompress=request_serializer.data.get('uncompress'), 
+                                        catalog_only=request_serializer.data.get('catalog_only'))
             response = HttpResponse(body, content_type='text/plain')
             response['X-Archive-Files'] = 'zip'
             response['Content-Disposition'] = 'attachment; filename={0}.zip'.format(filename)
@@ -448,7 +451,8 @@ class FunpackViewSet(viewsets.ViewSet):
 
         logger.info(msg='Downloading file via funpack endpoint')
 
-        version = get_object_or_404(Version, pk=pk)
+        frame = get_object_or_404(Frame, pk=pk)
+        version = frame.version_set.first()
         file_store = FileStoreFactory.get_file_store_class()()
         path = get_file_store_path(version.frame.filename, version.frame.get_header_dict())
 
@@ -475,3 +479,33 @@ class FunpackViewSet(viewsets.ViewSet):
         endpoint_names = {'funpack': 'getFunpackedFile'}
 
         return endpoint_names.get(self.action)
+
+
+class CatalogViewSet(viewsets.ViewSet):
+    schema = ScienceArchiveSchema(tags=['Frames'])
+
+    @action(detail=True)
+    def catalog(self, request, pk=None):
+        '''
+        Instruct the server to download the given Version (one part of a Frame), extract the catalog extension, and
+        then return a pared down FITS file to the client
+        '''
+        logger.info(msg='Downloading file via catalog endpoint')
+
+        frame = get_object_or_404(Frame, pk=pk)
+        version = frame.version_set.first()
+        file_store = FileStoreFactory.get_file_store_class()()
+        path = get_file_store_path(version.frame.filename, version.frame.get_header_dict())
+
+        filename = frame.filename.replace('.fits.fz', '-catalog.fits')
+
+        with file_store.get_fileobj(path) as fileobj:
+            frame = fits.open(fileobj)
+            with io.BytesIO() as buffer:
+                hdulist = fits.HDUList([fits.PrimaryHDU(header=frame['SCI'].header), frame['CAT']])
+                hdulist.writeto(buffer)
+                buffer.seek(0)
+
+                # return it to the client
+                return HttpResponse(buffer.getvalue(), content_type='application/octet-stream',
+                                    headers={'Content-Disposition': f'attachment; filename={filename}'})

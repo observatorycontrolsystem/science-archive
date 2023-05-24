@@ -10,6 +10,7 @@ router = DefaultRouter()
 router.register(r'frames', views.FrameViewSet, basename='frame')
 router.register(r'versions', views.VersionViewSet, basename='version')
 router.register(r'frame-funpack', views.FunpackViewSet, basename='frame-funpack')
+router.register(r'frame-catalog', views.CatalogViewSet, basename='frame-catalog')
 
 urlpatterns = [
     url(r'^', include(router.urls)),
