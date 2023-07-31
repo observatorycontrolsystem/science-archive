@@ -1,5 +1,4 @@
-from django.conf.urls import url
-from django.urls import include
+from django.urls import re_path, include
 from rest_framework.routers import DefaultRouter
 from archive.frames import views
 
@@ -13,6 +12,6 @@ router.register(r'frame-funpack', views.FunpackViewSet, basename='frame-funpack'
 router.register(r'frame-catalog', views.CatalogViewSet, basename='frame-catalog')
 
 urlpatterns = [
-    url(r'^', include(router.urls)),
-    url(r'^authprofile/', include(authprofile_urls))
+    re_path(r'^', include(router.urls)),
+    re_path(r'^authprofile/', include(authprofile_urls))
 ]
