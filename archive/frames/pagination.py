@@ -10,19 +10,20 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
     default_limit = settings.PAGINATION_DEFAULT_LIMIT
     max_limit = settings.PAGINATION_MAX_LIMIT
 
-    """
-    Combination of ideas from:
-     - https://gist.github.com/noviluni/d86adfa24843c7b8ed10c183a9df2afe
-     - https://gist.github.com/safar/3bbf96678f3e479b6cb683083d35cb4d
-     - https://medium.com/@hakibenita/optimizing-django-admin-paginator-53c4eb6bfca3
-    Overrides the count method of QuerySet objects to avoid timeouts.
-    - Try to get the real count limiting the queryset execution time to 5000 ms.
-    - If count takes longer than 5000 ms the database kills the query and raises OperationError. In that case,
-    get an estimate instead of actual count when not filtered (this estimate can be stale and hence not fit for
-    situations where the count of objects actually matter).
-    - If any other exception occured fall back to no count (large number returned).
-    """
     def get_count(self, queryset):
+        """
+        Combination of ideas from:
+         - https://gist.github.com/noviluni/d86adfa24843c7b8ed10c183a9df2afe
+         - https://gist.github.com/safar/3bbf96678f3e479b6cb683083d35cb4d
+         - https://medium.com/@hakibenita/optimizing-django-admin-paginator-53c4eb6bfca3
+        Overrides the count method of QuerySet objects to avoid timeouts.
+        - Try to get the real count limiting the queryset execution time to 5000 ms.
+        - If count takes longer than 5000 ms the database kills the query and raises OperationError. In that case,
+        get an estimate instead of actual count when not filtered (this estimate can be stale and hence not fit for
+        situations where the count of objects actually matter).
+        - If any other exception occured fall back to no count (large number returned).
+        """
+        self.count_estimated = False
         try:
             with transaction.atomic(using='replica'), connections['replica'].cursor() as cursor:
                 # Limit to 5000 ms
@@ -31,6 +32,8 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
         except (OperationalError, InternalError):
             logger.warning("Getting the count timed out after 5 seconds")
 
+
+        self.count_estimated = True
         if not queryset.query.where:
             logger.warning("Estimating the count using postgres stats table")
             try:
@@ -60,3 +63,17 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
                 logger.warning("Failed to estimate count", exc_info=e)
 
         return sys.maxsize
+
+    def get_paginated_response(self, data):
+        resp = super().get_paginated_response(data)
+        resp.data["count_estimated"] = self.count_estimated
+
+        return resp
+
+    def get_paginated_response_schema(self, schema):
+        resp_schema = super().get_paginated_response_schema(schema)
+
+        resp_schema["properties"]["count_estimated"] = {
+            "type": "boolean",
+        }
+        return resp_schema
