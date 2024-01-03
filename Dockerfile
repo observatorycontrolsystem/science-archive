@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Install operating system dependencies
 RUN apt-get -y update \
-        && apt-get -y install gdal-bin libcfitsio-bin libpq-dev python-dev gcc make htop \
+        && apt-get -y install gdal-bin libcfitsio-bin libpq-dev python-dev-is-python3 gcc make htop \
         && apt-get -y clean
 
 COPY .poetry-version .
