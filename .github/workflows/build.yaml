@@ -54,9 +54,17 @@ jobs:
         DB_HOST_READER: 127.0.0.1
         DB_PORT: 5432
     - name: Generate and send coveralls report
-      run: poetry run coveralls --service=github
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: coverallsapp/github-action@v2
+      with:
+        parallel: true
+  finish:
+    runs-on: ubuntu-latest
+    needs: run_tests
+    steps:
+      - name: Close parallel build
+        uses: coverallsapp/github-action@v2
+        with:
+          parallel-finished: true
 
   build_and_publish_image:
     # Only run this job if the run_tests job has succeeded, and if
