@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "main"
+      - "feature/add-jpg-support"
     # Publish semver tags as releases.
     tags:
       - "*.*.*"
