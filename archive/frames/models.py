@@ -1,7 +1,6 @@
 from archive.frames.utils import get_file_store_path
 from django.utils.functional import cached_property
-from django.contrib.postgres.fields import JSONField
-import hashlib
+from django.db.models import JSONField
 import logging
 import json
 from django.contrib.gis.db import models

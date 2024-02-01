@@ -18,10 +18,11 @@ jobs:
         python-version: ["3.8", "3.9", "3.10"]
     services:
       postgres:
-        image: postgis/postgis:9.6-2.5
+        image: postgis/postgis:14-3.3
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: archive
         # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready

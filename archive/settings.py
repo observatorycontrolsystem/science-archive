@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     'ocs_authentication.auth_profile',
     'django_filters',
     'corsheaders',
-    'crispy_forms',
     'django_extensions',
     'archive.frames',
     'archive.authentication',

@@ -1,6 +1,5 @@
-from django.conf.urls import url, include
+from django.urls import re_path, path, include
 from django.contrib import admin
-from django.urls import path
 from django.http import HttpResponse
 from django.conf import settings
 from drf_yasg.views import get_schema_view
@@ -27,14 +26,14 @@ schema_view = get_schema_view(
    generator_class=ScienceArchiveSchemaGenerator)
 
 urlpatterns = [
-    url(r'^robots.txt$', lambda r: HttpResponse("User-agent: *\nDisallow: /", content_type='text/plain')),
-    url(r'^', include(frame_urls)),
-    url(r'^', include(auth_urls)),
-    url(r'^admin/', admin.site.urls),
-    url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-    url(r'^api-token-auth/', ObtainAuthTokenWithHeaders.as_view()),
-    url(r'^revoke_token/', RevokeApiTokenApiView.as_view(), name='revoke_api_token'),
-    url(r'^health/', HealthCheckView.as_view()),
+    re_path(r'^robots.txt$', lambda r: HttpResponse("User-agent: *\nDisallow: /", content_type='text/plain')),
+    re_path(r'^', include(frame_urls)),
+    re_path(r'^', include(auth_urls)),
+    re_path(r'^admin/', admin.site.urls),
+    re_path(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+    re_path(r'^api-token-auth/', ObtainAuthTokenWithHeaders.as_view()),
+    re_path(r'^revoke_token/', RevokeApiTokenApiView.as_view(), name='revoke_api_token'),
+    re_path(r'^health/', HealthCheckView.as_view()),
     path('openapi/', schema_view.as_view(), name='openapi-schema'),
     path('redoc/', TemplateView.as_view(
         template_name='redoc.html',
