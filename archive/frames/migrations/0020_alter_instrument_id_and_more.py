@@ -17,11 +17,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterField(
             model_name='frame',
-            name='related_frames',
-            field=models.ManyToManyField(blank=True, to='frames.frame'),
-        ),
-        migrations.AlterField(
-            model_name='frame',
             name='site_id',
             field=models.CharField(blank=True, default='', help_text='Originating site code. Usually the 3 character airport code of the nearest airport', max_length=3),
         ),
@@ -29,10 +24,5 @@ class Migration(migrations.Migration):
             model_name='frame',
             name='telescope_id',
             field=models.CharField(blank=True, default='', help_text='Originating telescope 4 character code. Ex. 1m0a or 0m4b', max_length=4),
-        ),
-        migrations.AlterField(
-            model_name='headers',
-            name='data',
-            field=models.JSONField(default=dict),
         ),
     ]
