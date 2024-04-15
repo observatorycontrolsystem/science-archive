@@ -1,3 +1,8 @@
+2.4.1
+2024-04-15
+
+Allow for blank site_id, telescope_id, and instrument_id in Frames model to support serving data products that did not originate from a physical telescope.
+
 2.4.0
 2024-01-31
 
