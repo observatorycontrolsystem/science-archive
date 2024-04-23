@@ -1,6 +1,6 @@
 import json
 from rest_framework import serializers
-from archive.frames.models import Frame, Version, Headers
+from archive.frames.models import Frame, Version, Headers, Thumbnail
 from archive.frames.utils import get_configuration_type_tuples
 from django.contrib.gis.geos import GEOSGeometry
 from django.db import transaction
@@ -114,6 +114,28 @@ class FrameSerializer(serializers.ModelSerializer):
                 rf, _ = Frame.objects.get_or_create(basename=related_frame)
                 frame.related_frames.add(rf)
         frame.save()
+
+
+class ThumbnailSerializer(serializers.ModelSerializer):
+    # TODO: Make this runtime-configurable
+    SIZE_CHOICES = [
+        ('small', 'Small'),
+        ('medium', 'Medium'),
+        ('large', 'Large'),
+    ]
+    size = serializers.ChoiceField(choices=SIZE_CHOICES, help_text='Size of the thumbnail')
+    observation_id = serializers.IntegerField(required=True, help_text='The observation ID this thumbnail is associated with')
+    url = serializers.CharField(read_only=True, help_text='Download URL for thumbnail')
+
+    class Meta:
+        model = Thumbnail
+        fields = ['frame', 'key', 'md5', 'size', 'frame_basename', 'thumbnail_basename', 'file_extension', 'observation_id']
+
+    def create(self, validated_data):
+        frame_basename = validated_data.get('frame_basename')
+        frame = Frame.objects.get_or_create(basename=frame_basename)
+        validated_data['frame'] = frame
+        return super().create(validated_data)
 
 
 class AggregateSerializer(serializers.Serializer):

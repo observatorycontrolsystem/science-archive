@@ -159,6 +159,60 @@ class Frame(models.Model):
         ret_dict['related_frames'] = list(self.related_frames.all().values_list('id', flat=True))
         return ret_dict
 
+
+class Thumbnail(models.Model):
+    frame = models.ForeignKey(
+        Frame, 
+        on_delete=models.CASCADE, 
+        related_name='thumbnails', 
+        null=True,     # Allow for null frame for the case of thumbnails that arrived before the frame
+        blank=True,
+        help_text="The frame this thumbnail is associated with"
+    )
+    key = models.CharField(
+        max_length=32, 
+        unique=True,
+        help_text="File storage key for the thumbnail"
+    )
+    md5 = models.CharField(
+        max_length=32, 
+        unique=True,
+        help_text="MD5 hash of the thumbnail"
+    )
+    size = models.CharField(
+        max_length=20,
+        help_text="String description of the size of the thumbnail"
+    )
+    frame_basename = models.CharField(
+        max_length=1000, 
+        db_index=True, 
+        unique=True,
+        help_text="The basename of the frame this thumbnail is associated with"
+    )
+    thumbnail_basename = models.CharField(
+        max_length=1000, 
+        db_index=True, 
+        unique=True,
+        help_text="The basename of the thumbnail"
+    )
+    file_extension = models.CharField(
+        max_length=20,
+        help_text="The file extension of the thumbnail"
+    )
+    observation_id = models.PositiveIntegerField(
+        null=True, 
+        db_index=True,
+        help_text="Observation ID associated with the thumbnail"
+    )
+    
+    @cached_property
+    def url(self):
+        # TODO: Need to get the path from the metadata of the thumbnail - we may need more fields
+        path = get_file_store_path(self.frame.filename, self.frame.get_header_dict())
+        file_store = FileStoreFactory.get_file_store_class()()
+        return file_store.get_url(path, self.key, expiration=3600 * 48)
+
+
 class Headers(models.Model):
     data = JSONField(default=dict)
     frame = models.OneToOneField(Frame, on_delete=models.CASCADE)
