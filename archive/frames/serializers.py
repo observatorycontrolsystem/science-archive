@@ -124,16 +124,17 @@ class ThumbnailSerializer(serializers.ModelSerializer):
         ('large', 'Large'),
     ]
     size = serializers.ChoiceField(choices=SIZE_CHOICES, help_text='Size of the thumbnail')
-    observation_id = serializers.IntegerField(required=True, help_text='The observation ID this thumbnail is associated with')
     url = serializers.CharField(read_only=True, help_text='Download URL for thumbnail')
+    basename = serializers.CharField(required=True, help_text='File basename without extension')
+    headers = serializers.JSONField(required=True, write_only=True, help_text='Headers for the frame associated with the thumbnail\'s associated frame')
 
     class Meta:
         model = Thumbnail
-        fields = ['frame', 'key', 'md5', 'size', 'frame_basename', 'thumbnail_basename', 'file_extension', 'observation_id']
+        fields = ['frame', 'key', 'md5', 'size', 'basename', 'file_extension', 'observation_id']
 
     def create(self, validated_data):
         frame_basename = validated_data.get('frame_basename')
-        frame = Frame.objects.get_or_create(basename=frame_basename)
+        frame = Frame.objects.get_or_create(basename=frame_basename, headers=validated_data.pop('headers'))
         validated_data['frame'] = frame
         return super().create(validated_data)
 

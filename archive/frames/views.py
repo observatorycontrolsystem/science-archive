@@ -1,8 +1,8 @@
 from archive.schema import ScienceArchiveSchema
 from archive.frames.exceptions import FunpackError
-from archive.frames.models import Frame, Version
+from archive.frames.models import Frame, Thumbnail, Version
 from archive.frames.serializers import (
-    AggregateSerializer, FrameSerializer, ZipSerializer, VersionSerializer,
+    AggregateSerializer, FrameSerializer, ThumbnailSerializer, ZipSerializer, VersionSerializer,
     HeadersSerializer, AggregateQueryParamsSeralizer,
 )
 from archive.frames.utils import (
@@ -422,6 +422,73 @@ class FrameViewSet(viewsets.ModelViewSet):
                           'zip': 'getZipArchive'}
 
         return endpoint_names.get(self.action)
+    
+
+class ThumbnailViewSet(viewsets.ModelViewSet):
+
+    # Get queryset is overridden to filter thumbnails based on the logged in user
+    def get_queryset(self):
+        """
+        Filter thumbnails depending on the logged in user.
+        Admin users see all frames, excluding ones which have no versions.
+        Authenticated users see all frames with a PUBDAT in the past, plus
+        all frames that belong to their proposals.
+        Non authenticated see all frames with a PUBDAT in the past
+        """
+        queryset = (
+            Thumbnail.objects.exclude(observation_date=None)
+            .select_related('frame')
+        )
+        if self.request.user.is_superuser:
+            return queryset
+        elif self.request.user.is_authenticated:
+            return queryset.filter(
+                Q(frame__proposal_id__in=self.request.user.profile.proposals) |
+                Q(frame__public_date__lt=datetime.datetime.now(datetime.timezone.utc))
+            )
+        else:
+            return queryset.filter(frame__public_date__lt=datetime.datetime.now(datetime.timezone.utc))
+
+    # These two method overrides just force the use of the as_dict method for serialization for list and detail endpoints
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        json_models = [model.as_dict() for model in page]
+        return self.get_paginated_response(json_models)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        return Response(instance.as_dict())
+
+    def create(self, request):
+        basename = request.data.get('basename')
+        if len(request.data.get('version_set')) > 0:
+            extension = request.data.get('version_set')[0].get('extension')
+        else:
+            extension = ''
+        logger_tags = {'tags': {
+            'filename': '{}{}'.format(basename, extension),
+            'request_id': request.data.get('request_id')
+        }}
+        logger.info('Got request to process thumbnail', extra=logger_tags)
+
+        thumbnail_serializer = ThumbnailSerializer(data=request.data)
+        if thumbnail_serializer.is_valid():
+            # if it's valid, then we need to check if the associated frame exists by basename
+            
+            thumbnail = thumbnail_serializer.save()
+            logger_tags['tags']['id'] = thumbnail_serializer.id
+            logger.info('Created thumbnail', extra=logger_tags)
+            try:
+                post_to_archived_queue(archived_queue_payload(dictionary=request.data, frame=frame))
+            except Exception:
+                logger.exception('Failed to post frame to archived queue', extra=logger_tags)
+            logger.info('Request to process frame succeeded', extra=logger_tags)
+            return Response(frame_serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            logger_tags['tags']['errors'] = frame_serializer.errors
+            logger.fatal('Request to process frame failed', extra=logger_tags)
+            return Response(frame_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class VersionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (IsAdminUser,)

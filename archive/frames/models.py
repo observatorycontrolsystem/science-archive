@@ -183,13 +183,7 @@ class Thumbnail(models.Model):
         max_length=20,
         help_text="String description of the size of the thumbnail"
     )
-    frame_basename = models.CharField(
-        max_length=1000, 
-        db_index=True, 
-        unique=True,
-        help_text="The basename of the frame this thumbnail is associated with"
-    )
-    thumbnail_basename = models.CharField(
+    basename = models.CharField(
         max_length=1000, 
         db_index=True, 
         unique=True,
@@ -198,11 +192,6 @@ class Thumbnail(models.Model):
     file_extension = models.CharField(
         max_length=20,
         help_text="The file extension of the thumbnail"
-    )
-    observation_id = models.PositiveIntegerField(
-        null=True, 
-        db_index=True,
-        help_text="Observation ID associated with the thumbnail"
     )
     
     @cached_property
