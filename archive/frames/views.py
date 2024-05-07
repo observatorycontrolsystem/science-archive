@@ -12,7 +12,7 @@ from archive.frames.utils import (
 
 )
 from archive.frames.permissions import AdminOrReadOnly
-from archive.frames.filters import FrameFilter
+from archive.frames.filters import FrameFilter, ThumbnailFilter
 
 from archive.doc_examples import EXAMPLE_RESPONSES, QUERY_PARAMETERS
 from rest_framework.decorators import action
@@ -40,6 +40,7 @@ import subprocess
 import datetime
 import logging
 import io
+import datetime
 
 from ocs_archive.storage.filestorefactory import FileStoreFactory
 from ocs_authentication.auth_profile.models import AuthProfile
@@ -426,6 +427,10 @@ class FrameViewSet(viewsets.ModelViewSet):
 
 class ThumbnailViewSet(viewsets.ModelViewSet):
 
+    filter_backends = (
+        DjangoFilterBackend,
+    )
+    filter_class = ThumbnailFilter
     # Get queryset is overridden to filter thumbnails based on the logged in user
     def get_queryset(self):
         """
@@ -436,18 +441,18 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
         Non authenticated see all frames with a PUBDAT in the past
         """
         queryset = (
-            Thumbnail.objects.exclude(observation_date=None)
-            .select_related('frame')
+            Thumbnail.objects.all().select_related('frame')
         )
-        if self.request.user.is_superuser:
-            return queryset
-        elif self.request.user.is_authenticated:
-            return queryset.filter(
-                Q(frame__proposal_id__in=self.request.user.profile.proposals) |
-                Q(frame__public_date__lt=datetime.datetime.now(datetime.timezone.utc))
-            )
-        else:
-            return queryset.filter(frame__public_date__lt=datetime.datetime.now(datetime.timezone.utc))
+        return queryset
+        # if self.request.user.is_superuser:
+        #     return queryset
+        # elif self.request.user.is_authenticated:
+        #     return queryset.filter(
+        #         Q(frame__proposal_id__in=self.request.user.profile.proposals) |
+        #         Q(frame__public_date__lt=datetime.datetime.now(datetime.timezone.utc))
+        #     )
+        # else:
+        #     return queryset.filter(frame__public_date__lt=datetime.datetime.now(datetime.timezone.utc))
 
     # These two method overrides just force the use of the as_dict method for serialization for list and detail endpoints
     def list(self, request, *args, **kwargs):
@@ -461,34 +466,43 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
         return Response(instance.as_dict())
 
     def create(self, request):
-        basename = request.data.get('basename')
-        if len(request.data.get('version_set')) > 0:
-            extension = request.data.get('version_set')[0].get('extension')
-        else:
-            extension = ''
+        filename = request.data.get('filename')
         logger_tags = {'tags': {
-            'filename': '{}{}'.format(basename, extension),
+            'filename': filename,
             'request_id': request.data.get('request_id')
         }}
         logger.info('Got request to process thumbnail', extra=logger_tags)
 
+        # Populate the filestore key using the version set and create the minimal Frame object
+        request.data['key'] = request.data['version_set'][0]['key']
+        frame, _ = Frame.objects.get_or_create(basename=request.data['frame_basename'],
+                                               observation_date=request.data['observation_date'],
+                                               observation_day=datetime.datetime.strptime(request.data['observation_day'], '%Y%m%d').strftime('%Y-%m-%d'),
+                                               proposal_id=request.data['proposal_id'],
+                                               instrument_id=request.data['instrument_id'],
+                                               target_name=request.data['target_name'],
+                                               reduction_level=request.data['reduction_level'],
+                                               site_id=request.data['site_id'],
+                                               telescope_id=request.data['telescope_id'],
+                                               exposure_time=request.data['exposure_time'],
+                                               primary_optical_element=request.data['primary_optical_element'],
+                                               public_date=request.data['public_date'],
+                                               configuration_type=request.data['configuration_type'],
+                                               observation_id=request.data['observation_id'],
+                                               request_id=request.data['request_id'])
+        
         thumbnail_serializer = ThumbnailSerializer(data=request.data)
         if thumbnail_serializer.is_valid():
-            # if it's valid, then we need to check if the associated frame exists by basename
-            
-            thumbnail = thumbnail_serializer.save()
-            logger_tags['tags']['id'] = thumbnail_serializer.id
+            thumbnail = thumbnail_serializer.save(frame=frame)
+            logger_tags['tags']['id'] = thumbnail.id
             logger.info('Created thumbnail', extra=logger_tags)
-            try:
-                post_to_archived_queue(archived_queue_payload(dictionary=request.data, frame=frame))
-            except Exception:
-                logger.exception('Failed to post frame to archived queue', extra=logger_tags)
-            logger.info('Request to process frame succeeded', extra=logger_tags)
-            return Response(frame_serializer.data, status=status.HTTP_201_CREATED)
+            logger.info('Request to process thumbnail succeeded', extra=logger_tags)
+            return Response(thumbnail_serializer.data, status=status.HTTP_201_CREATED)
         else:
-            logger_tags['tags']['errors'] = frame_serializer.errors
+            logger_tags['tags']['errors'] = thumbnail_serializer.errors
             logger.fatal('Request to process frame failed', extra=logger_tags)
-            return Response(frame_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(thumbnail_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class VersionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (IsAdminUser,)

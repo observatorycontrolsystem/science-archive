@@ -6,6 +6,7 @@ from django.contrib.gis.geos import GEOSGeometry
 from django.db import transaction
 from django.conf import settings
 
+import logging
 
 class ZipSerializer(serializers.Serializer):
     frame_ids = serializers.ListField(
@@ -125,18 +126,17 @@ class ThumbnailSerializer(serializers.ModelSerializer):
     ]
     size = serializers.ChoiceField(choices=SIZE_CHOICES, help_text='Size of the thumbnail')
     url = serializers.CharField(read_only=True, help_text='Download URL for thumbnail')
-    basename = serializers.CharField(required=True, help_text='File basename without extension')
-    headers = serializers.JSONField(required=True, write_only=True, help_text='Headers for the frame associated with the thumbnail\'s associated frame')
+    filename = serializers.CharField(required=True, help_text='Filename of the thumbnail')
+    key = serializers.CharField(required=True, help_text='Key for the thumbnail in the file store')
+    frame = FrameSerializer(read_only=True, help_text='Frame associated with this thumbnail')
 
     class Meta:
         model = Thumbnail
-        fields = ['frame', 'key', 'md5', 'size', 'basename', 'file_extension', 'observation_id']
+        fields = ['frame', 'size', 'filename', 'url', 'key']
 
     def create(self, validated_data):
-        frame_basename = validated_data.get('frame_basename')
-        frame = Frame.objects.get_or_create(basename=frame_basename, headers=validated_data.pop('headers'))
-        validated_data['frame'] = frame
-        return super().create(validated_data)
+        thumbnail, created = Thumbnail.objects.update_or_create(validated_data)
+        return thumbnail
 
 
 class AggregateSerializer(serializers.Serializer):
