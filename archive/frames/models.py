@@ -136,8 +136,8 @@ class Frame(models.Model):
     def as_dict(self):
         ret_dict = model_to_dict(self, exclude=('related_frames', 'area'))
         ret_dict['version_set'] = [v.as_dict() for v in self.version_set.all()]
-        ret_dict['url'] = self.url
-        ret_dict['filename'] = self.filename
+        ret_dict['url'] = self.url if self.version_set.exists() else None
+        ret_dict['filename'] = self.filename if self.version_set.exists() else None
         # TODO: Remove these old model field names once users have migrated their code
         ret_dict['DATE_OBS'] = ret_dict['observation_date']
         ret_dict['DAY_OBS'] = ret_dict['observation_day']

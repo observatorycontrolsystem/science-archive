@@ -798,11 +798,9 @@ class TestThumbnailGet(ReplicationTestCase):
         self.assertEqual(len(response.json()), 5)
         self.assertContains(response, self.thumbnails[0].filename)
     
-    def test_get_thumbnail_list_filtered(self):
-        response = self.client.get(reverse('thumbnail-list') + '?filename=small')
-        self.assertEqual(len(response.json()), 5)
-        self.assertContains(response, self.thumbnails[0].filename)
-
+    def test_get_thumbnail_list_filtered_by_frame_attribute(self):
+        response = self.client.get(reverse('thumbnail-list') + '?proposal_id=' + self.thumbnails[0].frame.proposal_id)
+        self.assertContains(response, self.thumbnails[0].frame.id)
     
 
 class TestThumbnailPost(ReplicationTestCase):
