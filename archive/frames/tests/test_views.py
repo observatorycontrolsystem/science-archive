@@ -1,4 +1,5 @@
-from archive.frames.tests.factories import FrameFactory, VersionFactory, PublicFrameFactory
+import copy
+from archive.frames.tests.factories import FrameFactory, VersionFactory, PublicFrameFactory, ThumbnailFactory
 from archive.frames.models import Frame
 from archive.frames.utils import get_configuration_type_tuples, aggregate_frames_sql, set_cached_frames_aggregates
 from archive.authentication.models import Profile
@@ -26,6 +27,7 @@ import subprocess
 
 from ocs_archive.input.file import EmptyFile
 from ocs_archive.input.fitsfile import FitsFile
+from ocs_archive.input.filefactory import FileFactory
 from ocs_authentication.auth_profile.models import AuthProfile
 
 
@@ -777,6 +779,118 @@ class TestFrameAggregate(ReplicationTestCase):
         self.assertEqual(set(response.json()['instruments']), set(['fl10']))
         self.assertEqual(set(response.json()['filters']), set(['B']))
         self.assertEqual(set(response.json()['proposals']), set(['prop3']))
+
+
+class TestThumbnailGet(ReplicationTestCase):
+    def setUp(self):
+        user = User.objects.create(username='admin', password='admin', is_superuser=True)
+        user.backend = settings.AUTHENTICATION_BACKENDS[0]
+        self.client.force_login(user)
+        self.thumbnails = ThumbnailFactory.create_batch(5)
+        self.thumbnail = self.thumbnails[0]
+
+    def test_get_thumbnail(self):
+        response = self.client.get(reverse('thumbnail-detail', args=(self.thumbnail.id,)))
+        self.assertEqual(response.json()['filename'], self.thumbnail.filename)
+
+    def test_get_thumbnail_list(self):
+        response = self.client.get(reverse('thumbnail-list'))
+        self.assertEqual(len(response.json()), 5)
+        self.assertContains(response, self.thumbnails[0].filename)
+    
+    def test_get_thumbnail_list_filtered(self):
+        response = self.client.get(reverse('thumbnail-list') + '?filename=small')
+        self.assertEqual(len(response.json()), 5)
+        self.assertContains(response, self.thumbnails[0].filename)
+
+    
+
+class TestThumbnailPost(ReplicationTestCase):
+    
+    def setUp(self):
+        user = User.objects.create(username='admin', password='admin', is_superuser=True)
+        user.backend = settings.AUTHENTICATION_BACKENDS[0]
+        self.client.force_login(user)
+        boto3.client = MagicMock()
+        settings.QUEUE_BROKER_URL = 'memory://localhost'
+        archive_fits_patcher = patch('kombu.Producer.publish')
+        self.addCleanup(archive_fits_patcher.stop)
+        self.mock_archive_fits_publish = archive_fits_patcher.start()
+        self.header_json = json.load(open(os.path.join(os.path.dirname(__file__), 'frames.json')))
+        headers = self.header_json[random.choice(list(self.header_json.keys()))]
+        datafile = FitsFile(EmptyFile('test.fits'), file_metadata=headers)
+        f = datafile.get_header_data().get_archive_frame_data()
+        f['headers'] = headers
+        f['basename'] = FrameFactory.basename.fuzz()
+        f['area'] = FrameFactory.area.fuzz(as_dict=True)
+        f['version_set'] = [
+            {
+                'md5': VersionFactory.md5.fuzz(),
+                'key': VersionFactory.key.fuzz(),
+                'extension': VersionFactory.extension.fuzz()
+            }
+        ]
+        self.single_frame_payload = f
+
+        # Create the corresponding thumbnail
+        self.single_thumbnail_payload = copy.deepcopy(f)
+        self.single_thumbnail_payload['frame_basename'] = self.single_frame_payload['basename']
+        self.single_thumbnail_payload['size'] = 'small'
+        self.single_thumbnail_payload['filename'] = 'test.jpg'
+        self.single_thumbnail_payload['version_set'] = [
+            {
+                'md5': VersionFactory.md5.fuzz(),
+                'key': VersionFactory.key.fuzz(),
+                'extension': VersionFactory.extension.fuzz()
+            }
+        ]
+
+    def test_thumbnail_without_frame_creates_frame(self):
+        response = self.client.post(
+            reverse('thumbnail-list'), json.dumps(self.single_thumbnail_payload), content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, 201)
+        self.mock_archive_fits_publish.assert_not_called()
+        self.assertTrue(Frame.objects.filter(basename=self.single_thumbnail_payload['frame_basename']).exists())
+
+    def test_thumbnail_with_frame_uses_existing_frame(self):
+        response = self.client.post(
+            reverse('frame-list'), json.dumps(self.single_frame_payload), content_type='application/json'
+        )
+        assert response.status_code == 201
+        assert Frame.objects.filter(basename=self.single_frame_payload['basename']).exists()
+        frame = Frame.objects.get(basename=self.single_frame_payload['basename'])
+
+        response = self.client.post(
+            reverse('thumbnail-list'), json.dumps(self.single_thumbnail_payload), content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, 201)
+        self.mock_archive_fits_publish.assert_called_once()
+        self.assertTrue(frame.id == response.json()['frame']['id'])
+
+    def test_frame_updated_after_thumbnail_post(self):
+        response = self.client.post(
+            reverse('thumbnail-list'), json.dumps(self.single_thumbnail_payload), content_type='application/json'
+        )
+        
+        self.assertEqual(response.status_code, 201)
+        self.mock_archive_fits_publish.assert_not_called()
+        self.assertFalse(Frame.objects.get(basename=self.single_thumbnail_payload['frame_basename']).version_set.exists())
+
+        response = self.client.post(
+            reverse('frame-list'), json.dumps(self.single_frame_payload), content_type='application/json'
+        )
+        self.assertTrue(Frame.objects.get(basename=self.single_thumbnail_payload['frame_basename']).version_set.exists())
+
+    def test_thumbnail_post_with_no_size(self):
+        del self.single_thumbnail_payload['size']
+        response = self.client.post(
+            reverse('thumbnail-list'), json.dumps(self.single_thumbnail_payload), content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEquals(response.json()['size'],  ["This field is required."])
 
 
 class TestUtils(ReplicationTestCase):

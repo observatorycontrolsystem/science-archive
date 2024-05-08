@@ -186,7 +186,6 @@ class Thumbnail(models.Model):
     )
 
     def as_dict(self):
-        print(self.frame)
         ret_dict = model_to_dict(self)
         ret_dict['url'] = self.url
         ret_dict['size'] = self.size

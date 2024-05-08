@@ -443,16 +443,15 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
         queryset = (
             Thumbnail.objects.all().select_related('frame')
         )
-        return queryset
-        # if self.request.user.is_superuser:
-        #     return queryset
-        # elif self.request.user.is_authenticated:
-        #     return queryset.filter(
-        #         Q(frame__proposal_id__in=self.request.user.profile.proposals) |
-        #         Q(frame__public_date__lt=datetime.datetime.now(datetime.timezone.utc))
-        #     )
-        # else:
-        #     return queryset.filter(frame__public_date__lt=datetime.datetime.now(datetime.timezone.utc))
+        if self.request.user.is_superuser:
+            return queryset
+        elif self.request.user.is_authenticated:
+            return queryset.filter(
+                Q(frame__proposal_id__in=self.request.user.profile.proposals) |
+                Q(frame__public_date__lt=datetime.datetime.now(datetime.timezone.utc))
+            )
+        else:
+            return queryset.filter(frame__public_date__lt=datetime.datetime.now(datetime.timezone.utc))
 
     # These two method overrides just force the use of the as_dict method for serialization for list and detail endpoints
     def list(self, request, *args, **kwargs):
@@ -472,27 +471,31 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
             'request_id': request.data.get('request_id')
         }}
         logger.info('Got request to process thumbnail', extra=logger_tags)
-
-        # Populate the filestore key using the version set and create the minimal Frame object
-        request.data['key'] = request.data['version_set'][0]['key']
-        frame, _ = Frame.objects.get_or_create(basename=request.data['frame_basename'],
-                                               observation_date=request.data['observation_date'],
-                                               observation_day=datetime.datetime.strptime(request.data['observation_day'], '%Y%m%d').strftime('%Y-%m-%d'),
-                                               proposal_id=request.data['proposal_id'],
-                                               instrument_id=request.data['instrument_id'],
-                                               target_name=request.data['target_name'],
-                                               reduction_level=request.data['reduction_level'],
-                                               site_id=request.data['site_id'],
-                                               telescope_id=request.data['telescope_id'],
-                                               exposure_time=request.data['exposure_time'],
-                                               primary_optical_element=request.data['primary_optical_element'],
-                                               public_date=request.data['public_date'],
-                                               configuration_type=request.data['configuration_type'],
-                                               observation_id=request.data['observation_id'],
-                                               request_id=request.data['request_id'])
-        
+        frame_serializer = FrameSerializer(data=request.data)
+        if frame_serializer.is_valid():
+            # The ingester sends the key in the version_set, but we don't keep versions of thumbnails, so just store the key in the thumbnail
+            request.data['key'] = request.data['version_set'][0]['key']
+        else:
+            logger_tags['tags']['errors'] = frame_serializer.errors
+            logger.fatal('Request to process thumbnail failed when serializing frame metadata', extra=logger_tags)
+            return Response(frame_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         thumbnail_serializer = ThumbnailSerializer(data=request.data)
         if thumbnail_serializer.is_valid():
+            frame, _ = Frame.objects.get_or_create(basename=request.data['frame_basename'],
+                                                   observation_date=request.data['observation_date'],
+                                                   observation_day=datetime.datetime.strptime(request.data['observation_day'], '%Y%m%d').strftime('%Y-%m-%d'),
+                                                   proposal_id=request.data['proposal_id'],
+                                                   instrument_id=request.data['instrument_id'],
+                                                   target_name=request.data['target_name'],
+                                                   reduction_level=request.data['reduction_level'],
+                                                   site_id=request.data['site_id'],
+                                                   telescope_id=request.data['telescope_id'],
+                                                   exposure_time=request.data['exposure_time'],
+                                                   primary_optical_element=request.data['primary_optical_element'],
+                                                   public_date=request.data['public_date'],
+                                                   configuration_type=request.data['configuration_type'],
+                                                   observation_id=request.data['observation_id'],
+                                                   request_id=request.data['request_id'])
             thumbnail = thumbnail_serializer.save(frame=frame)
             logger_tags['tags']['id'] = thumbnail.id
             logger.info('Created thumbnail', extra=logger_tags)
@@ -500,7 +503,7 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
             return Response(thumbnail_serializer.data, status=status.HTTP_201_CREATED)
         else:
             logger_tags['tags']['errors'] = thumbnail_serializer.errors
-            logger.fatal('Request to process frame failed', extra=logger_tags)
+            logger.fatal('Request to process thumbnail failed', extra=logger_tags)
             return Response(thumbnail_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
