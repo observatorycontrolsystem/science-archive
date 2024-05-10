@@ -88,7 +88,7 @@ class FrameSerializer(serializers.ModelSerializer):
         # }
 
     def create(self, validated_data):
-        version_data = validated_data.pop('version_set')
+        version_data = validated_data.pop('version_set') if 'version_set' in validated_data else {}
         header_data = validated_data.pop('headers')
         related_frames = validated_data.pop('related_frame_filenames')
         with transaction.atomic():
@@ -118,21 +118,16 @@ class FrameSerializer(serializers.ModelSerializer):
 
 
 class ThumbnailSerializer(serializers.ModelSerializer):
-    # TODO: Make this runtime-configurable
-    SIZE_CHOICES = [
-        ('small', 'Small'),
-        ('medium', 'Medium'),
-        ('large', 'Large'),
-    ]
-    size = serializers.ChoiceField(choices=SIZE_CHOICES, help_text='Size of the thumbnail')
+    size = serializers.ChoiceField(choices=settings.THUMBNAIL_SIZE_CHOICES, help_text='Size of the thumbnail')
     url = serializers.CharField(read_only=True, help_text='Download URL for thumbnail')
-    filename = serializers.CharField(required=True, help_text='Filename of the thumbnail')
+    basename = serializers.CharField(required=True, help_text='Filename of the thumbnail')
     key = serializers.CharField(required=True, help_text='Key for the thumbnail in the file store')
+    extension = serializers.CharField(required=True, help_text='File extension of the thumbnail')
     frame = FrameSerializer(read_only=True, help_text='Frame associated with this thumbnail')
 
     class Meta:
         model = Thumbnail
-        fields = ['frame', 'size', 'filename', 'url', 'key']
+        fields = ['frame', 'size', 'basename', 'url', 'key', 'extension']
 
     def create(self, validated_data):
         thumbnail, created = Thumbnail.objects.update_or_create(validated_data)

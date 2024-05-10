@@ -1,6 +1,6 @@
 from archive.schema import ScienceArchiveSchema
 from archive.frames.exceptions import FunpackError
-from archive.frames.models import Frame, Thumbnail, Version
+from archive.frames.models import Frame, Headers, Thumbnail, Version
 from archive.frames.serializers import (
     AggregateSerializer, FrameSerializer, ThumbnailSerializer, ZipSerializer, VersionSerializer,
     HeadersSerializer, AggregateQueryParamsSeralizer,
@@ -72,6 +72,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             Frame.objects.exclude(observation_date=None)
             .prefetch_related('version_set')
             .prefetch_related(Prefetch('related_frames', queryset=Frame.objects.all().only('id')))
+            .prefetch_related('thumbnails')
         )
         if self.request.user.is_superuser:
             return queryset
@@ -473,29 +474,19 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
         logger.info('Got request to process thumbnail', extra=logger_tags)
         frame_serializer = FrameSerializer(data=request.data)
         if frame_serializer.is_valid():
-            # The ingester sends the key in the version_set, but we don't keep versions of thumbnails, so just store the key in the thumbnail
+            # The ingester sends the key/extension in the version_set, but we don't keep versions of thumbnails, so just store the key/extension in the thumbnail
             request.data['key'] = request.data['version_set'][0]['key']
+            request.data['extension'] = request.data['version_set'][0]['extension']
         else:
             logger_tags['tags']['errors'] = frame_serializer.errors
             logger.fatal('Request to process thumbnail failed when serializing frame metadata', extra=logger_tags)
             return Response(frame_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         thumbnail_serializer = ThumbnailSerializer(data=request.data)
         if thumbnail_serializer.is_valid():
-            frame, _ = Frame.objects.get_or_create(basename=request.data['frame_basename'],
-                                                   observation_date=request.data['observation_date'],
-                                                   observation_day=datetime.datetime.strptime(request.data['observation_day'], '%Y%m%d').strftime('%Y-%m-%d'),
-                                                   proposal_id=request.data['proposal_id'],
-                                                   instrument_id=request.data['instrument_id'],
-                                                   target_name=request.data['target_name'],
-                                                   reduction_level=request.data['reduction_level'],
-                                                   site_id=request.data['site_id'],
-                                                   telescope_id=request.data['telescope_id'],
-                                                   exposure_time=request.data['exposure_time'],
-                                                   primary_optical_element=request.data['primary_optical_element'],
-                                                   public_date=request.data['public_date'],
-                                                   configuration_type=request.data['configuration_type'],
-                                                   observation_id=request.data['observation_id'],
-                                                   request_id=request.data['request_id'])
+            # remove the version set as this version does not correspond to the frame object, but rather the thumbnail.
+            del frame_serializer.validated_data['version_set']
+            frame = frame_serializer.save()
+
             thumbnail = thumbnail_serializer.save(frame=frame)
             logger_tags['tags']['id'] = thumbnail.id
             logger.info('Created thumbnail', extra=logger_tags)

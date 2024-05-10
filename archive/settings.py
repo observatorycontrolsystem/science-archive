@@ -252,6 +252,7 @@ SCIENCE_CONFIGURATION_TYPES = get_tuple_from_environment('SCIENCE_CONFIGURATION_
 # Additional Customization
 ZIP_DOWNLOAD_FILENAME_BASE = os.getenv('ZIP_DOWNLOAD_FILENAME_BASE', 'ocs_archive_data')
 ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES = int(os.getenv('ZIP_DOWNLOAD_MAX_UNCOMPRESSED_FILES', 10))
+THUMBNAIL_SIZE_CHOICES = get_tuple_from_environment('THUMBNAIL_SIZE_CHOICES', 'small,medium,large')
 NAVBAR_TITLE_TEXT = os.getenv('NAVBAR_TITLE_TEXT', 'Science Archive API')
 NAVBAR_TITLE_URL = os.getenv('NAVBAR_TITLE_URL', 'https://archive.lco.global')
 TERMS_OF_SERVICE_URL = os.getenv('TERMS_OF_SERVICE_URL', 'https://lco.global/policies/terms/')

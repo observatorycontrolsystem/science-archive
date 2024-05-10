@@ -850,7 +850,8 @@ class TestThumbnailPost(ReplicationTestCase):
         
         self.assertEqual(response.status_code, 201)
         self.mock_archive_fits_publish.assert_not_called()
-        self.assertTrue(Frame.objects.filter(basename=self.single_thumbnail_payload['frame_basename']).exists())
+        self.assertTrue(Frame.objects.get(basename=self.single_thumbnail_payload['frame_basename']) is not None)
+        self.assertTrue(Frame.objects.get(basename=self.single_thumbnail_payload['frame_basename']).headers is not None)
 
     def test_thumbnail_with_frame_uses_existing_frame(self):
         response = self.client.post(

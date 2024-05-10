@@ -138,6 +138,7 @@ class Frame(models.Model):
         ret_dict['version_set'] = [v.as_dict() for v in self.version_set.all()]
         ret_dict['url'] = self.url if self.version_set.exists() else None
         ret_dict['filename'] = self.filename if self.version_set.exists() else None
+        ret_dict['thumbnails'] = [t.as_dict() for t in Thumbnail.objects.filter(frame=self)]
         # TODO: Remove these old model field names once users have migrated their code
         ret_dict['DATE_OBS'] = ret_dict['observation_date']
         ret_dict['DAY_OBS'] = ret_dict['observation_day']
@@ -173,11 +174,15 @@ class Thumbnail(models.Model):
         max_length=20,
         help_text="String description of the size of the thumbnail"
     )
-    filename = models.CharField(
+    basename = models.CharField(
         max_length=1000, 
         db_index=True, 
         unique=True,
         help_text="The basename of the thumbnail"
+    )
+    extension = models.CharField(
+        max_length=20,
+        help_text="The file extension of the thumbnail"
     )
     key = models.CharField(
         max_length=64,
@@ -191,6 +196,13 @@ class Thumbnail(models.Model):
         ret_dict['size'] = self.size
         return ret_dict
     
+    @property
+    def filename(self):
+        """
+        Returns the full filename for the thumbnail
+        """
+        return '{0}{1}'.format(self.basename, self.extension)
+
     @cached_property
     def url(self):
         path = get_file_store_path(self.filename, self.frame.get_header_dict())
