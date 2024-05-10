@@ -193,6 +193,7 @@ class ThumbnailFactory(factory.django.DjangoModelFactory):
         model = Thumbnail
 
     size = factory.fuzzy.FuzzyChoice(['small', 'medium', 'large'])
-    filename = factory.fuzzy.FuzzyText(length=10, suffix='.jpg')
+    basename = factory.fuzzy.FuzzyText(length=10)
+    extension = factory.fuzzy.FuzzyChoice(['.jpeg', '.jpg'])
     key = factory.fuzzy.FuzzyText(length=32)
     frame = factory.SubFactory('archive.frames.tests.factories.FrameFactory')

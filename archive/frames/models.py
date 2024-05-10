@@ -205,7 +205,10 @@ class Thumbnail(models.Model):
 
     @cached_property
     def url(self):
-        path = get_file_store_path(self.filename, self.frame.get_header_dict())
+        metadata = self.frame.get_header_dict()
+        metadata['size'] = self.size
+        metadata['frame_basename'] = self.frame.basename
+        path = get_file_store_path(self.filename, metadata)
         file_store = FileStoreFactory.get_file_store_class()()
         return file_store.get_url(path, self.key, expiration=3600 * 48)
 

@@ -466,9 +466,9 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
         return Response(instance.as_dict())
 
     def create(self, request):
-        filename = request.data.get('filename')
+        basename = request.data.get('basename')
         logger_tags = {'tags': {
-            'filename': filename,
+            'filename': basename,
             'request_id': request.data.get('request_id')
         }}
         logger.info('Got request to process thumbnail', extra=logger_tags)
@@ -485,7 +485,7 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
         if thumbnail_serializer.is_valid():
             # remove the version set as this version does not correspond to the frame object, but rather the thumbnail.
             del frame_serializer.validated_data['version_set']
-            frame = frame_serializer.save()
+            frame = frame_serializer.save(basename=request.data['frame_basename'])
 
             thumbnail = thumbnail_serializer.save(frame=frame)
             logger_tags['tags']['id'] = thumbnail.id
