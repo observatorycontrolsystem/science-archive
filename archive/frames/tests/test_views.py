@@ -1,6 +1,6 @@
 import copy
 from archive.frames.tests.factories import FrameFactory, VersionFactory, PublicFrameFactory, ThumbnailFactory
-from archive.frames.models import Frame
+from archive.frames.models import Frame, Thumbnail
 from archive.frames.utils import get_configuration_type_tuples, aggregate_frames_sql, set_cached_frames_aggregates
 from archive.authentication.models import Profile
 from rest_framework.authtoken.models import Token
@@ -801,10 +801,55 @@ class TestThumbnailGet(ReplicationTestCase):
     def test_get_thumbnail_list_filtered_by_frame_attribute(self):
         response = self.client.get(reverse('thumbnail-list') + '?proposal_id=' + self.thumbnails[0].frame.proposal_id)
         self.assertContains(response, self.thumbnails[0].frame.id)
-    
+
+
+class TestThumbnailFiltering(ReplicationTestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_superuser(username='admin', password='admin', is_superuser=True)
+        self.admin_user.backend = settings.AUTHENTICATION_BACKENDS[0]
+        self.normal_user = User.objects.create(username='frodo', password='theone')
+        self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
+        Profile.objects.update_or_create(user=self.normal_user, defaults={'access_token': 'test', 'refresh_token': 'test'})
+        AuthProfile.objects.create(user=self.normal_user)
+        self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=UTC))
+        self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
+        self.not_owned = FrameFactory(proposal_id='notyours', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
+        self.public_thumbnail = ThumbnailFactory(frame=self.public_frame)
+        self.proposal_thumbnail = ThumbnailFactory(frame=self.proposal_frame)
+        self.not_owned_thumbnail = ThumbnailFactory(frame=self.not_owned)
+
+    def test_admin_view_all(self):
+        self.client.force_login(self.admin_user)
+        response = self.client.get(reverse('thumbnail-list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.public_frame.id)
+        self.assertContains(response, self.proposal_frame.id)
+        self.assertContains(response, self.not_owned.id)
+
+    @responses.activate
+    def test_proposal_user(self):
+        responses.add(
+            responses.GET,
+            settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
+            body=json.dumps({'proposals': [{'id': 'prop1'}]}),
+            status=200,
+            content_type='application/json'
+        )
+        self.client.force_login(self.normal_user)
+        response = self.client.get(reverse('thumbnail-list'))
+        self.assertContains(response, self.public_frame.id)
+        self.assertContains(response, self.proposal_frame.id)
+        self.assertNotContains(response, self.not_owned.id)
+
+    def test_unauthenticated_view_public(self):
+        self.client.logout()
+        response = self.client.get(reverse('thumbnail-list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.public_frame.id)
+        self.assertNotContains(response, self.proposal_frame.id)
+
 
 class TestThumbnailPost(ReplicationTestCase):
-    
     def setUp(self):
         user = User.objects.create(username='admin', password='admin', is_superuser=True)
         user.backend = settings.AUTHENTICATION_BACKENDS[0]
@@ -834,12 +879,12 @@ class TestThumbnailPost(ReplicationTestCase):
         self.single_thumbnail_payload = copy.deepcopy(f)
         self.single_thumbnail_payload['frame_basename'] = self.single_frame_payload['basename']
         self.single_thumbnail_payload['size'] = 'small'
-        self.single_thumbnail_payload['filename'] = 'test.jpg'
+        self.single_thumbnail_payload['basename'] = 'test'
         self.single_thumbnail_payload['version_set'] = [
             {
                 'md5': VersionFactory.md5.fuzz(),
                 'key': VersionFactory.key.fuzz(),
-                'extension': VersionFactory.extension.fuzz()
+                'extension': '.jpg'
             }
         ]
 
@@ -890,6 +935,26 @@ class TestThumbnailPost(ReplicationTestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertEquals(response.json()['size'],  ["This field is required."])
+
+    def test_multiple_thumbnails_created_different_basenames(self):
+        second_thumbnail_payload = copy.deepcopy(self.single_thumbnail_payload)
+        second_thumbnail_payload['basename'] = 'test2'
+        thumbnail_payloads = [self.single_thumbnail_payload, second_thumbnail_payload]
+        for payload in thumbnail_payloads:
+            response = self.client.post(
+                reverse('thumbnail-list'), json.dumps(payload), content_type='application/json'
+            )
+            self.assertEqual(response.status_code, 201)
+        self.assertEqual(Thumbnail.objects.count(), 2)
+
+    def test_one_thumbnail_created_single_basename(self):
+        thumbnail_payloads = [self.single_thumbnail_payload, self.single_thumbnail_payload]
+        for payload in thumbnail_payloads:
+            response = self.client.post(
+                reverse('thumbnail-list'), json.dumps(payload), content_type='application/json'
+            )
+            self.assertEqual(response.status_code, 201)
+        self.assertEqual(Thumbnail.objects.count(), 1)
 
 
 class TestUtils(ReplicationTestCase):

@@ -206,6 +206,7 @@ class Thumbnail(models.Model):
     @cached_property
     def url(self):
         metadata = self.frame.get_header_dict()
+        # include frame basename and size so that this passes metadata validation in the DataFile class
         metadata['size'] = self.size
         metadata['frame_basename'] = self.frame.basename
         path = get_file_store_path(self.filename, metadata)

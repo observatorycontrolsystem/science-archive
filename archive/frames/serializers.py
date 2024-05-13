@@ -130,7 +130,7 @@ class ThumbnailSerializer(serializers.ModelSerializer):
         fields = ['frame', 'size', 'basename', 'url', 'key', 'extension']
 
     def create(self, validated_data):
-        thumbnail, created = Thumbnail.objects.update_or_create(validated_data)
+        thumbnail, _ = Thumbnail.objects.update_or_create(defaults=validated_data, basename=validated_data['basename'])
         return thumbnail
 
 

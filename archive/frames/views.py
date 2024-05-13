@@ -427,12 +427,12 @@ class FrameViewSet(viewsets.ModelViewSet):
     
 
 class ThumbnailViewSet(viewsets.ModelViewSet):
-
+    permission_classes = (AdminOrReadOnly,)
     filter_backends = (
         DjangoFilterBackend,
     )
     filter_class = ThumbnailFilter
-    # Get queryset is overridden to filter thumbnails based on the logged in user
+
     def get_queryset(self):
         """
         Filter thumbnails depending on the logged in user.
