@@ -133,12 +133,13 @@ class Frame(models.Model):
             archive_settings.PUBLIC_DATE_KEY: self.public_date,
         }
 
-    def as_dict(self):
+    def as_dict(self, include_thumbnails=False):
         ret_dict = model_to_dict(self, exclude=('related_frames', 'area'))
         ret_dict['version_set'] = [v.as_dict() for v in self.version_set.all()]
         ret_dict['url'] = self.url if self.version_set.exists() else None
         ret_dict['filename'] = self.filename if self.version_set.exists() else None
-        ret_dict['thumbnails'] = [t.as_dict() for t in Thumbnail.objects.filter(frame=self)]
+        if include_thumbnails:
+            ret_dict['thumbnails'] = [t.as_dict() for t in Thumbnail.objects.filter(frame=self)]
         # TODO: Remove these old model field names once users have migrated their code
         ret_dict['DATE_OBS'] = ret_dict['observation_date']
         ret_dict['DAY_OBS'] = ret_dict['observation_day']
@@ -166,7 +167,7 @@ class Thumbnail(models.Model):
         Frame, 
         on_delete=models.CASCADE, 
         related_name='thumbnails', 
-        null=True,     # Allow for null frame for the case of thumbnails that arrived before the frame - we create the frame record upon thumnbail creation
+        null=True,
         blank=True,
         help_text="The frame this thumbnail is associated with"
     )
@@ -202,7 +203,7 @@ class Thumbnail(models.Model):
         Returns the full filename for the thumbnail
         """
         return '{0}{1}'.format(self.basename, self.extension)
-
+     
     @cached_property
     def url(self):
         metadata = self.frame.get_header_dict()
@@ -212,6 +213,15 @@ class Thumbnail(models.Model):
         path = get_file_store_path(self.filename, metadata)
         file_store = FileStoreFactory.get_file_store_class()()
         return file_store.get_url(path, self.key, expiration=3600 * 48)
+    
+    def delete_data(self):
+        logger.info('Deleting thumbnail', extra={'tags': {'key': self.key, 'frame': self.frame.id, 'thumbnail': self.basename}})
+        metadata = self.frame.get_header_dict()
+        metadata['size'] = self.size
+        metadata['frame_basename'] = self.frame.basename
+        path = get_file_store_path(self.frame.filename, metadata)
+        file_store = FileStoreFactory.get_file_store_class()()
+        file_store.delete_file(path, self.key)
 
 
 class Headers(models.Model):

@@ -88,7 +88,8 @@ class FrameViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
-        json_models = [model.as_dict() for model in page]
+        include_thumbnails = True if request.query_params.get('include_thumbnails', '').lower() == 'true' else False
+        json_models = [model.as_dict(include_thumbnails) for model in page]
         return self.get_paginated_response(json_models)
 
     def retrieve(self, request, *args, **kwargs):
