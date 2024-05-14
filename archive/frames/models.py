@@ -186,7 +186,7 @@ class Thumbnail(models.Model):
         help_text="The file extension of the thumbnail"
     )
     key = models.CharField(
-        max_length=64,
+        max_length=32,
         help_text="The key used to store the thumbnail in the file store",
         default=''
     )
