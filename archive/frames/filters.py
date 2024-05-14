@@ -1,5 +1,4 @@
 from archive.frames.models import Frame, Thumbnail
-from archive.frames.serializers import ThumbnailSerializer
 from archive.frames.utils import get_configuration_type_tuples
 from archive.settings import SCIENCE_CONFIGURATION_TYPES
 from django.contrib.gis.geos import GEOSGeometry
@@ -93,7 +92,7 @@ class FrameFilter(django_filters.FilterSet):
 
 
 class ThumbnailFilter(django_filters.FilterSet):
-    frame = django_filters.CharFilter(field_name='frame__basename', lookup_expr='exact')
+    frame_basename = django_filters.CharFilter(field_name='frame__basename', lookup_expr='exact')
     proposal_id = django_filters.CharFilter(field_name='frame__proposal_id', lookup_expr='exact')
     observation_id = django_filters.NumberFilter(field_name='frame__observation_id', lookup_expr='exact')
     request_id = django_filters.NumberFilter(field_name='frame__request_id', lookup_expr='exact')

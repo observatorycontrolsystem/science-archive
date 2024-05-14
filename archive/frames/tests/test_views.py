@@ -1,4 +1,3 @@
-import copy
 from archive.frames.tests.factories import FrameFactory, VersionFactory, PublicFrameFactory, ThumbnailFactory
 from archive.frames.models import Frame, Thumbnail
 from archive.frames.utils import get_configuration_type_tuples, aggregate_frames_sql, set_cached_frames_aggregates
@@ -24,6 +23,7 @@ import json
 import os
 import random
 import subprocess
+import copy
 
 from ocs_archive.input.file import EmptyFile
 from ocs_archive.input.fitsfile import FitsFile

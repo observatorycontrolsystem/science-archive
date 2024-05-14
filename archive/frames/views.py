@@ -436,10 +436,10 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """
         Filter thumbnails depending on the logged in user.
-        Admin users see all frames, excluding ones which have no versions.
+        Admin users see all thumbnails
         Authenticated users see all frames with a PUBDAT in the past, plus
-        all frames that belong to their proposals.
-        Non authenticated see all frames with a PUBDAT in the past
+        all thumbnails that belong to frames under their proposals.
+        Non authenticated see all thumbnails for frames with a PUBDAT in the past
         """
         queryset = (
             Thumbnail.objects.all().select_related('frame')
@@ -472,6 +472,7 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
             'request_id': request.data.get('request_id')
         }}
         logger.info('Got request to process thumbnail', extra=logger_tags)
+        # Make sure we have the minimum information to make a frame object associated with the thumbnail if one doesn't already exist
         frame_serializer = FrameSerializer(data=request.data)
         if frame_serializer.is_valid():
             # The ingester sends the key/extension in the version_set, but we don't keep versions of thumbnails, so just store the key/extension in the thumbnail
@@ -481,9 +482,10 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
             logger_tags['tags']['errors'] = frame_serializer.errors
             logger.fatal('Request to process thumbnail failed when serializing frame metadata', extra=logger_tags)
             return Response(frame_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         thumbnail_serializer = ThumbnailSerializer(data=request.data)
         if thumbnail_serializer.is_valid():
-            # remove the version set as this version does not correspond to the frame object, but rather the thumbnail.
+            # Remove the version set as this version does not correspond to the frame object, but rather the thumbnail.
             del frame_serializer.validated_data['version_set']
             frame = frame_serializer.save(basename=request.data['frame_basename'])
 
