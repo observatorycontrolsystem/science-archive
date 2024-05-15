@@ -219,7 +219,7 @@ class Thumbnail(models.Model):
         metadata = self.frame.get_header_dict()
         metadata['size'] = self.size
         metadata['frame_basename'] = self.frame.basename
-        path = get_file_store_path(self.frame.filename, metadata)
+        path = get_file_store_path(self.filename, metadata)
         file_store = FileStoreFactory.get_file_store_class()()
         file_store.delete_file(path, self.key)
 
