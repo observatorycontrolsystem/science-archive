@@ -167,8 +167,6 @@ class Thumbnail(models.Model):
         Frame, 
         on_delete=models.CASCADE, 
         related_name='thumbnails', 
-        null=True,
-        blank=True,
         help_text="The frame this thumbnail is associated with"
     )
     size = models.CharField(
