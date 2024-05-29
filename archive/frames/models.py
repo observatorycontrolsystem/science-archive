@@ -212,10 +212,8 @@ class Thumbnail(models.Model):
     
     def delete_data(self):
         logger.info('Deleting thumbnail', extra={'tags': {'key': self.key, 'frame': self.frame.id, 'thumbnail': self.basename}})
-        metadata = self.frame.get_header_dict()
-        metadata['size'] = self.size
-        metadata['frame_basename'] = self.frame.basename
-        path = get_file_store_path(self.filename, metadata)
+        path = ThumbnailFile.get_filestore_path_from_frame_metadata(self.frame.site_id, self.frame.instrument_id, 
+                                                                    self.frame.observation_day.strftime('%Y%m%d'), self.filename)
         file_store = FileStoreFactory.get_file_store_class()()
         file_store.delete_file(path, self.key)
 
