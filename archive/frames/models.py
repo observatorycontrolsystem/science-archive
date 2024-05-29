@@ -8,6 +8,7 @@ from django.forms.models import model_to_dict
 
 from ocs_archive.storage.filestorefactory import FileStoreFactory
 from ocs_archive.settings import settings as archive_settings
+from ocs_archive.input.thumbnailfile import ThumbnailFile
 
 logger = logging.getLogger()
 
@@ -204,11 +205,8 @@ class Thumbnail(models.Model):
      
     @cached_property
     def url(self):
-        metadata = self.frame.get_header_dict()
-        # include frame basename and size so that this passes metadata validation in the DataFile class
-        metadata['size'] = self.size
-        metadata['frame_basename'] = self.frame.basename
-        path = get_file_store_path(self.filename, metadata)
+        path = ThumbnailFile.get_filestore_path_from_frame_metadata(self.frame.site_id, self.frame.instrument_id, 
+                                                                    self.frame.observation_day.strftime('%Y%m%d'), self.filename)
         file_store = FileStoreFactory.get_file_store_class()()
         return file_store.get_url(path, self.key, expiration=3600 * 48)
     

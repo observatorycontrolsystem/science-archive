@@ -23,7 +23,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import APIException
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
-from django.db.models import Q, Prefetch
+from django.db.models import Q, Prefetch, Count
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
@@ -73,6 +73,8 @@ class FrameViewSet(viewsets.ModelViewSet):
             .prefetch_related('version_set')
             .prefetch_related(Prefetch('related_frames', queryset=Frame.objects.all().only('id')))
             .prefetch_related('thumbnails')
+            .annotate(num_versions=Count('version'))
+            .filter(num_versions__gt=0)
         )
         if self.request.user.is_superuser:
             return queryset
@@ -488,7 +490,11 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
         if thumbnail_serializer.is_valid():
             # Remove the version set as this version does not correspond to the frame object, but rather the thumbnail.
             del frame_serializer.validated_data['version_set']
-            frame = frame_serializer.save(basename=request.data['frame_basename'])
+
+            # Check if the frame already exists by basename, if not, create it.
+            frame = Frame.objects.filter(basename=request.data['frame_basename']).first()
+            if frame is None:
+                frame = frame_serializer.save(basename=request.data['frame_basename'])
 
             thumbnail = thumbnail_serializer.save(frame=frame)
             logger_tags['tags']['id'] = thumbnail.id

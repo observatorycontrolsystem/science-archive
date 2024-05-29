@@ -66,6 +66,16 @@ class TestFrameGet(ReplicationTestCase):
         response = self.client.get(reverse('frame-headers', args=(frame.id,)))
         self.assertContains(response, frame.headers.data['TRACKNUM'])
 
+    def test_get_frame_list_exclude_empty_version_set(self):
+        # we can create a frame with no version set by using build, and it will not
+        # execute the post_generation signal to create the version set
+        frame = FrameFactory.build()
+        frame.save()    
+        response = self.client.get(reverse('frame-list'))
+        self.assertEqual(frame.version_set.count(), 0)
+        self.assertEqual(Frame.objects.count(), 6)
+        self.assertEqual(response.json()['count'], 5)        
+
 
 class TestFramePost(ReplicationTestCase):
     def setUp(self):
