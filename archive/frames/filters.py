@@ -100,4 +100,4 @@ class ThumbnailFilter(django_filters.FilterSet):
 
     class Meta:
         model = Thumbnail
-        fields = ['frame', 'proposal_id', 'observation_id', 'request_id', 'size']
+        fields = ['frame_basename', 'proposal_id', 'observation_id', 'request_id', 'size']
