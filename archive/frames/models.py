@@ -8,7 +8,6 @@ from django.forms.models import model_to_dict
 
 from ocs_archive.storage.filestorefactory import FileStoreFactory
 from ocs_archive.settings import settings as archive_settings
-from ocs_archive.input.thumbnailfile import ThumbnailFile
 
 logger = logging.getLogger()
 
@@ -202,18 +201,20 @@ class Thumbnail(models.Model):
         Returns the full filename for the thumbnail
         """
         return '{0}{1}'.format(self.basename, self.extension)
-     
+
     @cached_property
     def url(self):
-        path = ThumbnailFile.get_filestore_path_from_frame_metadata(self.frame.site_id, self.frame.instrument_id, 
-                                                                    self.frame.observation_day.strftime('%Y%m%d'), self.filename)
+        path = get_file_store_path(self.filename, {'SITEID': self.frame.site_id, 'INSTRUME': self.frame.instrument_id, 'TELID': self.frame.telescope_id,
+                                                   'DAY-OBS': self.frame.observation_day.strftime('%Y%m%d'), 'DATE-OBS': self.frame.observation_date.isoformat(),
+                                                   'frame_basename': self.frame.basename, 'size': self.size})
         file_store = FileStoreFactory.get_file_store_class()()
         return file_store.get_url(path, self.key, expiration=3600 * 48)
     
     def delete_data(self):
         logger.info('Deleting thumbnail', extra={'tags': {'key': self.key, 'frame': self.frame.id, 'thumbnail': self.basename}})
-        path = ThumbnailFile.get_filestore_path_from_frame_metadata(self.frame.site_id, self.frame.instrument_id, 
-                                                                    self.frame.observation_day.strftime('%Y%m%d'), self.filename)
+        path = get_file_store_path(self.filename, {'SITEID': self.frame.site_id, 'INSTRUME': self.frame.instrument_id, 'TELID': self.frame.telescope_id,
+                                                   'DAY-OBS': self.frame.observation_day.strftime('%Y%m%d'), 'DATE-OBS': self.frame.observation_date.isoformat(),
+                                                   'frame_basename': self.frame.basename, 'size': self.size})
         file_store = FileStoreFactory.get_file_store_class()()
         file_store.delete_file(path, self.key)
 
