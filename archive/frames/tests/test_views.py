@@ -73,7 +73,7 @@ class TestFrameGet(ReplicationTestCase):
         response = self.client.get(reverse('frame-list'))
         self.assertEqual(frame.version_set.count(), 0)
         self.assertEqual(Frame.objects.count(), 6)
-        self.assertEqual(response.json()['count'], 5)
+        self.assertEqual(len(response.json()['results']), 5)
 
 
 class TestFramePost(ReplicationTestCase):

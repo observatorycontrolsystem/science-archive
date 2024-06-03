@@ -1,3 +1,7 @@
+2.5.1
+2024-06-03
+Fix for /frames/ ordering when filtering out frames with empty version_sets
+
 2.5.0
 2024-06-03
 Add support for storing thumbnail images associated with a frame
@@ -70,7 +74,7 @@ Add configurable endpoint_url for s3
 
 1.77
 2021-03-15
-Separated proxy endpoints for uncompressed and compressed fits download endpoints to direct 
+Separated proxy endpoints for uncompressed and compressed fits download endpoints to direct
 compressed downloads directly to S3.
 Put a limit on the number of uncompressed files that can be downloaded in one request.
 

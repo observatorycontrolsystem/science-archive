@@ -72,8 +72,6 @@ class FrameViewSet(viewsets.ModelViewSet):
             .prefetch_related('version_set')
             .prefetch_related(Prefetch('related_frames', queryset=Frame.objects.all().only('id')))
             .prefetch_related('thumbnails')
-            .annotate(num_versions=Count('version'))
-            .filter(num_versions__gt=0)
         )
         if self.request.user.is_superuser:
             return queryset
@@ -91,6 +89,7 @@ class FrameViewSet(viewsets.ModelViewSet):
         page = self.paginate_queryset(queryset)
         include_thumbnails = True if request.query_params.get('include_thumbnails', '').lower() == 'true' else False
         json_models = [model.as_dict(include_thumbnails) for model in page]
+        json_models = [model for model in json_models if model['version_set']]  # Filter out frames with no versions
         return self.get_paginated_response(json_models)
 
     def retrieve(self, request, *args, **kwargs):
@@ -168,7 +167,7 @@ class FrameViewSet(viewsets.ModelViewSet):
                 datetime.date.strftime(datetime.date.today(), '%Y%m%d'),
                 frames.count()
             )
-            body = build_nginx_zip_text(frames, filename, uncompress=request_serializer.data.get('uncompress'), 
+            body = build_nginx_zip_text(frames, filename, uncompress=request_serializer.data.get('uncompress'),
                                         catalog_only=request_serializer.data.get('catalog_only'))
             response = HttpResponse(body, content_type='text/plain')
             response['X-Archive-Files'] = 'zip'
