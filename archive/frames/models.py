@@ -174,8 +174,8 @@ class Thumbnail(models.Model):
         help_text="String description of the size of the thumbnail"
     )
     basename = models.CharField(
-        max_length=1000, 
-        db_index=True, 
+        max_length=1000,
+        db_index=True,
         unique=True,
         help_text="The basename of the thumbnail"
     )
@@ -209,7 +209,7 @@ class Thumbnail(models.Model):
                                                    'frame_basename': self.frame.basename, 'size': self.size})
         file_store = FileStoreFactory.get_file_store_class()()
         return file_store.get_url(path, self.key, expiration=3600 * 48)
-    
+
     def delete_data(self):
         logger.info('Deleting thumbnail', extra={'tags': {'key': self.key, 'frame': self.frame.id, 'thumbnail': self.basename}})
         path = get_file_store_path(self.filename, {'SITEID': self.frame.site_id, 'INSTRUME': self.frame.instrument_id, 'TELID': self.frame.telescope_id,

@@ -901,7 +901,7 @@ class TestThumbnailPost(ReplicationTestCase):
         response = self.client.post(
             reverse('thumbnail-list'), json.dumps(self.single_thumbnail_payload), content_type='application/json'
         )
-        
+
         self.assertEqual(response.status_code, 201)
         self.mock_archive_fits_publish.assert_not_called()
         self.assertTrue(Frame.objects.get(basename=self.single_thumbnail_payload['frame_basename']) is not None)
@@ -918,7 +918,7 @@ class TestThumbnailPost(ReplicationTestCase):
         response = self.client.post(
             reverse('thumbnail-list'), json.dumps(self.single_thumbnail_payload), content_type='application/json'
         )
-        
+
         self.assertEqual(response.status_code, 201)
         self.mock_archive_fits_publish.assert_called_once()
         self.assertTrue(frame.id == response.json()['frame']['id'])
@@ -927,7 +927,7 @@ class TestThumbnailPost(ReplicationTestCase):
         response = self.client.post(
             reverse('thumbnail-list'), json.dumps(self.single_thumbnail_payload), content_type='application/json'
         )
-        
+
         self.assertEqual(response.status_code, 201)
         self.mock_archive_fits_publish.assert_not_called()
         self.assertFalse(Frame.objects.get(basename=self.single_thumbnail_payload['frame_basename']).version_set.exists())
