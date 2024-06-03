@@ -4,7 +4,7 @@ import random
 import datetime
 import json
 import os
-from archive.frames.models import Frame, Version, Headers
+from archive.frames.models import Frame, Thumbnail, Version, Headers
 from django.utils import timezone
 from pytz import UTC
 
@@ -186,3 +186,14 @@ class FrameFactory(factory.django.DjangoModelFactory):
 
 class PublicFrameFactory(FrameFactory):
     public_date = datetime.datetime(2000, 1, 1, tzinfo=UTC)
+
+
+class ThumbnailFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Thumbnail
+
+    size = factory.fuzzy.FuzzyChoice(['small', 'medium', 'large'])
+    basename = factory.fuzzy.FuzzyText(length=10)
+    extension = factory.fuzzy.FuzzyChoice(['.jpeg', '.jpg'])
+    key = factory.fuzzy.FuzzyText(length=32)
+    frame = factory.SubFactory('archive.frames.tests.factories.FrameFactory')

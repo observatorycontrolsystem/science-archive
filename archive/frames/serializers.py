@@ -1,6 +1,6 @@
 import json
 from rest_framework import serializers
-from archive.frames.models import Frame, Version, Headers
+from archive.frames.models import Frame, Version, Headers, Thumbnail
 from archive.frames.utils import get_configuration_type_tuples
 from django.contrib.gis.geos import GEOSGeometry
 from django.db import transaction
@@ -87,7 +87,7 @@ class FrameSerializer(serializers.ModelSerializer):
         # }
 
     def create(self, validated_data):
-        version_data = validated_data.pop('version_set')
+        version_data = validated_data.pop('version_set') if 'version_set' in validated_data else {}
         header_data = validated_data.pop('headers')
         related_frames = validated_data.pop('related_frame_filenames')
         with transaction.atomic():
@@ -114,6 +114,23 @@ class FrameSerializer(serializers.ModelSerializer):
                 rf, _ = Frame.objects.get_or_create(basename=related_frame)
                 frame.related_frames.add(rf)
         frame.save()
+
+
+class ThumbnailSerializer(serializers.ModelSerializer):
+    size = serializers.ChoiceField(choices=settings.THUMBNAIL_SIZE_CHOICES, help_text='Size of the thumbnail')
+    url = serializers.CharField(read_only=True, help_text='Download URL for thumbnail')
+    basename = serializers.CharField(required=True, help_text='Filename of the thumbnail')
+    key = serializers.CharField(required=True, help_text='Key for the thumbnail in the file store')
+    extension = serializers.CharField(required=True, help_text='File extension of the thumbnail')
+    frame = FrameSerializer(read_only=True, help_text='Frame associated with this thumbnail')
+
+    class Meta:
+        model = Thumbnail
+        fields = ['frame', 'size', 'basename', 'url', 'key', 'extension']
+
+    def create(self, validated_data):
+        thumbnail, _ = Thumbnail.objects.update_or_create(defaults=validated_data, basename=validated_data['basename'])
+        return thumbnail
 
 
 class AggregateSerializer(serializers.Serializer):

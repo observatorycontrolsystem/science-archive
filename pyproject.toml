@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "science-archive"
-version = "2.4.1"
+version = "2.5.0"
 description = ""
 authors = ["Jashandeep Sohi <jsohi@lco.global>"]
 readme = "README.md"
@@ -29,7 +29,7 @@ django-extensions = "^3.2.1"
 lcogt-logging = "^0.3.2"
 pytz = "^2022.2.1"
 django-redis = "^5.2.0"
-ocs-archive = "0.3.0"
+ocs-archive = "0.4.0"
 urllib3 = "<2.0"
 
 [tool.poetry.group.dev.dependencies]

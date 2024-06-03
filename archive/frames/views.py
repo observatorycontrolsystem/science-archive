@@ -1,8 +1,8 @@
 from archive.schema import ScienceArchiveSchema
 from archive.frames.exceptions import FunpackError
-from archive.frames.models import Frame, Version
+from archive.frames.models import Frame, Thumbnail, Version
 from archive.frames.serializers import (
-    AggregateSerializer, FrameSerializer, ZipSerializer, VersionSerializer,
+    AggregateSerializer, FrameSerializer, ThumbnailSerializer, ZipSerializer, VersionSerializer,
     HeadersSerializer, AggregateQueryParamsSeralizer,
 )
 from archive.frames.utils import (
@@ -12,7 +12,7 @@ from archive.frames.utils import (
 
 )
 from archive.frames.permissions import AdminOrReadOnly
-from archive.frames.filters import FrameFilter
+from archive.frames.filters import FrameFilter, ThumbnailFilter
 
 from archive.doc_examples import EXAMPLE_RESPONSES, QUERY_PARAMETERS
 from rest_framework.decorators import action
@@ -23,7 +23,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import APIException
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
-from django.db.models import Q, Prefetch
+from django.db.models import Q, Prefetch, Count
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
@@ -71,6 +71,9 @@ class FrameViewSet(viewsets.ModelViewSet):
             Frame.objects.exclude(observation_date=None)
             .prefetch_related('version_set')
             .prefetch_related(Prefetch('related_frames', queryset=Frame.objects.all().only('id')))
+            .prefetch_related('thumbnails')
+            .annotate(num_versions=Count('version'))
+            .filter(num_versions__gt=0)
         )
         if self.request.user.is_superuser:
             return queryset
@@ -86,7 +89,8 @@ class FrameViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
-        json_models = [model.as_dict() for model in page]
+        include_thumbnails = True if request.query_params.get('include_thumbnails', '').lower() == 'true' else False
+        json_models = [model.as_dict(include_thumbnails) for model in page]
         return self.get_paginated_response(json_models)
 
     def retrieve(self, request, *args, **kwargs):
@@ -422,6 +426,85 @@ class FrameViewSet(viewsets.ModelViewSet):
                           'zip': 'getZipArchive'}
 
         return endpoint_names.get(self.action)
+
+
+class ThumbnailViewSet(viewsets.ModelViewSet):
+    permission_classes = (AdminOrReadOnly,)
+    filter_backends = (
+        DjangoFilterBackend,
+    )
+    filter_class = ThumbnailFilter
+
+    def get_queryset(self):
+        """
+        Filter thumbnails depending on the logged in user.
+        Admin users see all thumbnails
+        Authenticated users see all frames with a PUBDAT in the past, plus
+        all thumbnails that belong to frames under their proposals.
+        Non authenticated see all thumbnails for frames with a PUBDAT in the past
+        """
+        queryset = (
+            Thumbnail.objects.all().select_related('frame')
+        )
+        if self.request.user.is_superuser:
+            return queryset
+        elif self.request.user.is_authenticated:
+            return queryset.filter(
+                Q(frame__proposal_id__in=self.request.user.profile.proposals) |
+                Q(frame__public_date__lt=datetime.datetime.now(datetime.timezone.utc))
+            )
+        else:
+            return queryset.filter(frame__public_date__lt=datetime.datetime.now(datetime.timezone.utc))
+
+    # These two method overrides just force the use of the as_dict method for serialization for list and detail endpoints
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        json_models = [model.as_dict() for model in page]
+        return self.get_paginated_response(json_models)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        return Response(instance.as_dict())
+
+    def create(self, request):
+        basename = request.data.get('basename')
+        logger_tags = {'tags': {
+            'filename': basename,
+            'request_id': request.data.get('request_id')
+        }}
+        logger.info('Got request to process thumbnail', extra=logger_tags)
+        # Make sure we have the minimum information to make a frame object associated with the thumbnail if one doesn't already exist
+        frame_serializer = FrameSerializer(data=request.data)
+        if frame_serializer.is_valid():
+            # The ingester sends the key/extension in the version_set, but we don't keep versions of thumbnails, so just store the key/extension in the thumbnail
+            request.data['key'] = request.data['version_set'][0]['key']
+            request.data['extension'] = request.data['version_set'][0]['extension']
+        else:
+            logger_tags['tags']['errors'] = frame_serializer.errors
+            logger.fatal('Request to process thumbnail failed when serializing frame metadata', extra=logger_tags)
+            return Response(frame_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        thumbnail_serializer = ThumbnailSerializer(data=request.data)
+        if thumbnail_serializer.is_valid():
+            # Remove the version set as this version does not correspond to the frame object, but rather the thumbnail.
+            del frame_serializer.validated_data['version_set']
+
+            # Check if the frame already exists by basename, if not, create it.
+            frame = Frame.objects.filter(basename=request.data['frame_basename']).first()
+            if frame is None:
+                frame = frame_serializer.save(basename=request.data['frame_basename'])
+
+            thumbnail = thumbnail_serializer.save(frame=frame)
+            logger_tags['tags']['id'] = thumbnail.id
+            logger.info('Created thumbnail', extra=logger_tags)
+            logger.info('Request to process thumbnail succeeded', extra=logger_tags)
+            return Response(thumbnail_serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            logger_tags['tags']['errors'] = thumbnail_serializer.errors
+            logger.fatal('Request to process thumbnail failed', extra=logger_tags)
+            return Response(thumbnail_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class VersionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (IsAdminUser,)

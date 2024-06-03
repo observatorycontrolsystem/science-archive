@@ -1,10 +1,11 @@
-from archive.frames.models import Frame
+from archive.frames.models import Frame, Thumbnail
 from archive.frames.utils import get_configuration_type_tuples
 from archive.settings import SCIENCE_CONFIGURATION_TYPES
 from django.contrib.gis.geos import GEOSGeometry
 from django.contrib.gis.geos.error import GEOSException
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
+from django.conf import settings
 from django_filters import rest_framework as django_filters
 
 
@@ -88,3 +89,15 @@ class FrameFilter(django_filters.FilterSet):
         fields = ['proposal_id', 'configuration_type', 'instrument_id',
                   'reduction_level', 'site_id', 'telescope_id', 'primary_optical_element',
                   'observation_id', 'request_id']
+
+
+class ThumbnailFilter(django_filters.FilterSet):
+    frame_basename = django_filters.CharFilter(field_name='frame__basename', lookup_expr='exact')
+    proposal_id = django_filters.CharFilter(field_name='frame__proposal_id', lookup_expr='exact')
+    observation_id = django_filters.NumberFilter(field_name='frame__observation_id', lookup_expr='exact')
+    request_id = django_filters.NumberFilter(field_name='frame__request_id', lookup_expr='exact')
+    size = django_filters.ChoiceFilter(choices=[(size,size) for size in settings.THUMBNAIL_SIZE_CHOICES], field_name='size', lookup_expr='exact')
+
+    class Meta:
+        model = Thumbnail
+        fields = ['frame_basename', 'proposal_id', 'observation_id', 'request_id', 'size']
