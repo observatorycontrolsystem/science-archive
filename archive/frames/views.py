@@ -89,6 +89,7 @@ class FrameViewSet(viewsets.ModelViewSet):
         page = self.paginate_queryset(queryset)
         include_thumbnails = True if request.query_params.get('include_thumbnails', '').lower() == 'true' else False
         json_models = [model.as_dict(include_thumbnails) for model in page]
+        json_models = [model for model in json_models if model['version_set']]  # Filter out frames with no versions
         return self.get_paginated_response(json_models)
 
     def retrieve(self, request, *args, **kwargs):
