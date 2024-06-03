@@ -6,7 +6,6 @@ from django.contrib.gis.geos import GEOSGeometry
 from django.db import transaction
 from django.conf import settings
 
-import logging
 
 class ZipSerializer(serializers.Serializer):
     frame_ids = serializers.ListField(

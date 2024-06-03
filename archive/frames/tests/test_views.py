@@ -27,7 +27,6 @@ import copy
 
 from ocs_archive.input.file import EmptyFile
 from ocs_archive.input.fitsfile import FitsFile
-from ocs_archive.input.filefactory import FileFactory
 from ocs_authentication.auth_profile.models import AuthProfile
 
 
@@ -70,11 +69,11 @@ class TestFrameGet(ReplicationTestCase):
         # we can create a frame with no version set by using build, and it will not
         # execute the post_generation signal to create the version set
         frame = FrameFactory.build()
-        frame.save()    
+        frame.save()
         response = self.client.get(reverse('frame-list'))
         self.assertEqual(frame.version_set.count(), 0)
         self.assertEqual(Frame.objects.count(), 6)
-        self.assertEqual(response.json()['count'], 5)        
+        self.assertEqual(response.json()['count'], 5)
 
 
 class TestFramePost(ReplicationTestCase):
@@ -807,7 +806,7 @@ class TestThumbnailGet(ReplicationTestCase):
         response = self.client.get(reverse('thumbnail-list'))
         self.assertEqual(len(response.json()), 5)
         self.assertContains(response, self.thumbnails[0].basename)
-    
+
     def test_get_thumbnail_list_filtered_by_frame_attribute(self):
         response = self.client.get(reverse('thumbnail-list') + '?proposal_id=' + self.thumbnails[0].frame.proposal_id)
         self.assertContains(response, self.thumbnails[0].frame.id)

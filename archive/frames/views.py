@@ -1,6 +1,6 @@
 from archive.schema import ScienceArchiveSchema
 from archive.frames.exceptions import FunpackError
-from archive.frames.models import Frame, Headers, Thumbnail, Version
+from archive.frames.models import Frame, Thumbnail, Version
 from archive.frames.serializers import (
     AggregateSerializer, FrameSerializer, ThumbnailSerializer, ZipSerializer, VersionSerializer,
     HeadersSerializer, AggregateQueryParamsSeralizer,
@@ -40,7 +40,6 @@ import subprocess
 import datetime
 import logging
 import io
-import datetime
 
 from ocs_archive.storage.filestorefactory import FileStoreFactory
 from ocs_authentication.auth_profile.models import AuthProfile
@@ -427,7 +426,7 @@ class FrameViewSet(viewsets.ModelViewSet):
                           'zip': 'getZipArchive'}
 
         return endpoint_names.get(self.action)
-    
+
 
 class ThumbnailViewSet(viewsets.ModelViewSet):
     permission_classes = (AdminOrReadOnly,)

@@ -164,9 +164,9 @@ class Frame(models.Model):
 
 class Thumbnail(models.Model):
     frame = models.ForeignKey(
-        Frame, 
-        on_delete=models.CASCADE, 
-        related_name='thumbnails', 
+        Frame,
+        on_delete=models.CASCADE,
+        related_name='thumbnails',
         help_text="The frame this thumbnail is associated with"
     )
     size = models.CharField(
@@ -194,7 +194,7 @@ class Thumbnail(models.Model):
         ret_dict['url'] = self.url
         ret_dict['size'] = self.size
         return ret_dict
-    
+
     @property
     def filename(self):
         """
