@@ -40,6 +40,7 @@ import subprocess
 import datetime
 import logging
 import io
+import os
 
 from ocs_archive.storage.filestorefactory import FileStoreFactory
 from ocs_authentication.auth_profile.models import AuthProfile
@@ -576,18 +577,26 @@ class CatalogViewSet(viewsets.ViewSet):
 
         frame = get_object_or_404(Frame, pk=pk)
         version = frame.version_set.first()
-        file_store = FileStoreFactory.get_file_store_class()()
         path = get_file_store_path(version.frame.filename, version.frame.get_header_dict())
+
+        # get s3 URI
+        s3_uri = f's3://{os.getenv("AWS_BUCKET")}/{path}'
+        fsspec_kwargs = {
+            'key': os.getenv('AWS_ACCESS_KEY_ID'),
+            'secret': os.getenv('AWS_SECRET_ACCESS_KEY'),
+        }
+    
+        with fits.open(s3_uri, fsspec_kwargs=fsspec_kwargs) as hdulist:
+            catalog = hdulist['CAT']
+            sci_header = hdulist['SCI'].header
 
         filename = frame.filename.replace('.fits.fz', '-catalog.fits')
 
-        with file_store.get_fileobj(path) as fileobj:
-            frame = fits.open(fileobj)
-            with io.BytesIO() as buffer:
-                hdulist = fits.HDUList([fits.PrimaryHDU(header=frame['SCI'].header), frame['CAT']])
-                hdulist.writeto(buffer)
-                buffer.seek(0)
+        with io.BytesIO() as buffer:
+            hdulist = fits.HDUList([fits.PrimaryHDU(header=sci_header), catalog])
+            hdulist.writeto(buffer)
+            buffer.seek(0)
 
-                # return it to the client
-                return HttpResponse(buffer.getvalue(), content_type='application/octet-stream',
-                                    headers={'Content-Disposition': f'attachment; filename={filename}'})
+        # return it to the client
+        return HttpResponse(buffer.getvalue(), content_type='application/octet-stream',
+                            headers={'Content-Disposition': f'attachment; filename={filename}'})
