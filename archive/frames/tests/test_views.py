@@ -936,6 +936,9 @@ class TestThumbnailPost(ReplicationTestCase):
             reverse('frame-list'), json.dumps(self.single_frame_payload), content_type='application/json'
         )
         self.assertTrue(Frame.objects.get(basename=self.single_thumbnail_payload['frame_basename']).version_set.exists())
+        # make sure we call to enqueue the message to the FITS exchange
+        self.mock_archive_fits_publish.assert_called_once()
+
 
     def test_thumbnail_post_with_no_size(self):
         del self.single_thumbnail_payload['size']
