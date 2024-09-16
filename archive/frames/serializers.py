@@ -104,12 +104,12 @@ class FrameSerializer(serializers.ModelSerializer):
         # If there is no version data, don't post this to the archived queue
         if version_data:
             try:
+                post_to_archived_queue(archived_queue_payload(queue_data, frame=frame))
+            except Exception:
                 logger_tags = {'tags': {
                 'filename': '{}{}'.format(queue_data.get('basename'), version_data[0].get('extension')),
                 'request_id': queue_data.get('request_id')
                 }}
-                post_to_archived_queue(archived_queue_payload(queue_data, frame=frame))
-            except Exception:
                 logger.exception('Failed to post frame to archived queue', extra=logger_tags)
         return frame
 
