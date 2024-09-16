@@ -33,7 +33,7 @@ def get_file_store_path(filename, file_metadata):
 
 def archived_queue_payload(validated_data: dict, frame):
     new_dictionary = validated_data.get('headers').copy()
-    new_dictionary['area'] = validated_data.get('area')
+    new_dictionary['area'] = validated_data.get('area').json
     new_dictionary['basename'] = validated_data.get('basename')
     new_dictionary['version_set'] = validated_data.get('version_set')
     new_dictionary['filename'] = frame.filename
