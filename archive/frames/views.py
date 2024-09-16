@@ -6,8 +6,7 @@ from archive.frames.serializers import (
     HeadersSerializer, AggregateQueryParamsSeralizer,
 )
 from archive.frames.utils import (
-    build_nginx_zip_text, post_to_archived_queue,
-    archived_queue_payload, get_file_store_path,
+    build_nginx_zip_text, get_file_store_path,
     aggregate_frames_sql, get_cached_frames_aggregates
 
 )
