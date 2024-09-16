@@ -1,10 +1,15 @@
 import json
+import copy
+import logging
+
 from rest_framework import serializers
 from archive.frames.models import Frame, Version, Headers, Thumbnail
-from archive.frames.utils import get_configuration_type_tuples
+from archive.frames.utils import get_configuration_type_tuples, post_to_archived_queue, archived_queue_payload
 from django.contrib.gis.geos import GEOSGeometry
 from django.db import transaction
 from django.conf import settings
+
+logger = logging.getLogger()
 
 
 class ZipSerializer(serializers.Serializer):
@@ -87,6 +92,7 @@ class FrameSerializer(serializers.ModelSerializer):
         # }
 
     def create(self, validated_data):
+        queue_data = copy.deepcopy(validated_data)
         version_data = validated_data.pop('version_set') if 'version_set' in validated_data else {}
         header_data = validated_data.pop('headers')
         related_frames = validated_data.pop('related_frame_filenames')
@@ -95,6 +101,16 @@ class FrameSerializer(serializers.ModelSerializer):
             self.create_or_update_versions(frame, version_data)
             self.create_or_update_header(frame, header_data)
             self.create_related_frames(frame, related_frames)
+        # If there is no version data, don't post this to the archived queue
+        if version_data:
+            try:
+                post_to_archived_queue(archived_queue_payload(queue_data, frame=frame))
+            except Exception:
+                logger_tags = {'tags': {
+                'filename': '{}{}'.format(queue_data.get('basename'), version_data[0].get('extension')),
+                'request_id': queue_data.get('request_id')
+                }}
+                logger.exception('Failed to post frame to archived queue', extra=logger_tags)
         return frame
 
     def create_or_update_frame(self, data):

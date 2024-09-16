@@ -6,8 +6,7 @@ from archive.frames.serializers import (
     HeadersSerializer, AggregateQueryParamsSeralizer,
 )
 from archive.frames.utils import (
-    build_nginx_zip_text, post_to_archived_queue,
-    archived_queue_payload, get_file_store_path,
+    build_nginx_zip_text, get_file_store_path,
     aggregate_frames_sql, get_cached_frames_aggregates
 
 )
@@ -113,10 +112,6 @@ class FrameViewSet(viewsets.ModelViewSet):
             frame = frame_serializer.save()
             logger_tags['tags']['id'] = frame.id
             logger.info('Created frame', extra=logger_tags)
-            try:
-                post_to_archived_queue(archived_queue_payload(dictionary=request.data, frame=frame))
-            except Exception:
-                logger.exception('Failed to post frame to archived queue', extra=logger_tags)
             logger.info('Request to process frame succeeded', extra=logger_tags)
             return Response(frame_serializer.data, status=status.HTTP_201_CREATED)
         else:

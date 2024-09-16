@@ -1,3 +1,7 @@
+2.5.2
+2024-09-16
+Fix for posting payloads to FITS queue when thumbnail arrives before FITS image
+
 2.5.1
 2024-06-03
 Fix for /frames/ ordering when filtering out frames with empty version_sets
