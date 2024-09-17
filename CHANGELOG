@@ -1,3 +1,7 @@
+2.5.3
+2024-09-16
+Make sure we can properly JSON serialize the FITS queue payload
+
 2.5.2
 2024-09-16
 Fix for posting payloads to FITS queue when thumbnail arrives before FITS image
