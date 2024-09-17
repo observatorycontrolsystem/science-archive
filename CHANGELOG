@@ -1,3 +1,7 @@
+2.5.4
+2024-09-17
+Make sure we handle files that don't have an area associated with them when sending to the FITS queue
+
 2.5.3
 2024-09-16
 Make sure we can properly JSON serialize the FITS queue payload
