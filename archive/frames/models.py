@@ -5,7 +5,6 @@ import logging
 import json
 from django.contrib.gis.db import models
 from django.forms.models import model_to_dict
-from django.conf import settings
 
 from ocs_archive.storage.filestorefactory import FileStoreFactory
 from ocs_archive.settings import settings as archive_settings

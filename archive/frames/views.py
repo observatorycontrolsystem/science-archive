@@ -71,7 +71,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             .prefetch_related('version_set')
             .prefetch_related('thumbnails')
         )
-        # We're not including related frames in the response, so don't prefetch them
+        # Only prefetch related frames if we're including them in the response
         if include_related_frames:
             queryset = queryset.prefetch_related(Prefetch('related_frames', queryset=Frame.objects.all().only('id')))
         if self.request.user.is_superuser:
