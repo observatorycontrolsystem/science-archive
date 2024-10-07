@@ -101,8 +101,7 @@ class FrameSerializer(serializers.ModelSerializer):
             self.create_or_update_versions(frame, version_data)
             self.create_or_update_header(frame, header_data)
             self.create_related_frames(frame, related_frames)
-            # Make sure we refresh the frame from the primary db to avoid any replication lag
-            frame.refresh_from_db(using='default')
+
         # If there is no version data, don't post this to the archived queue
         if version_data:
             try:
