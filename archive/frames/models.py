@@ -5,6 +5,7 @@ import logging
 import json
 from django.contrib.gis.db import models
 from django.forms.models import model_to_dict
+from django.conf import settings
 
 from ocs_archive.storage.filestorefactory import FileStoreFactory
 from ocs_archive.settings import settings as archive_settings
@@ -158,7 +159,10 @@ class Frame(models.Model):
 
         if self.area:
             ret_dict['area'] = json.loads(self.area.geojson)
-        ret_dict['related_frames'] = list(self.related_frames.all().values_list('id', flat=True))
+        if self.configuration_type in settings.EXCLUDE_RELATED_FRAME_TYPES:
+            ret_dict['related_frames'] = []
+        else:
+            ret_dict['related_frames'] = list(self.related_frames.all().values_list('id', flat=True))
         return ret_dict
 
 
