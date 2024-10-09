@@ -41,11 +41,26 @@ class TestFrameGet(ReplicationTestCase):
     def test_get_frame(self):
         response = self.client.get(reverse('frame-detail', args=(self.frame.id, )))
         self.assertEqual(response.json()['basename'], self.frame.basename)
+        self.assertContains(response, 'related_frames')
+
+    def test_get_frame_exclude_related_frames(self):
+        response = self.client.get(reverse('frame-detail', args=(self.frame.id,)),
+                                   {'include_related_frames': False})
+
+        self.assertNotContains(response, 'related_frames')
 
     def test_get_frame_list(self):
         response = self.client.get(reverse('frame-list'))
         self.assertEqual(response.json()['count'], 5)
         self.assertContains(response, self.frame.basename)
+        self.assertContains(response, 'related_frames')
+
+    def test_get_frame_list_exclude_related_frames(self):
+        response = self.client.get(reverse('frame-list'),
+                                   {'include_related_frames': False})
+        self.assertEqual(response.json()['count'], 5)
+        self.assertContains(response, self.frame.basename)
+        self.assertNotContains(response, 'related_frames')
 
     def test_get_frame_list_filter(self):
         response = self.client.get(
