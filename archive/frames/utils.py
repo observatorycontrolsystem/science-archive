@@ -43,7 +43,6 @@ def archived_queue_payload(validated_data: dict, frame):
         filename = ''
     new_dictionary['filename'] = filename
     new_dictionary['frameid'] = frame.id
-    logger.info(f"Archived queue payload: {new_dictionary}")
     return new_dictionary
 
 
