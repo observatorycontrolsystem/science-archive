@@ -36,7 +36,12 @@ def archived_queue_payload(validated_data: dict, frame):
     new_dictionary['area'] = validated_data.get('area').json if validated_data.get('area') else None
     new_dictionary['basename'] = validated_data.get('basename')
     new_dictionary['version_set'] = validated_data.get('version_set')
-    new_dictionary['filename'] = frame.filename
+    # construct filename from version_set
+    try:
+        filename =  ''.join([validated_data.get('basename'), validated_data.get('version_set')[0].get('extension')])
+    except Exception:
+        filename = ''
+    new_dictionary['filename'] = filename
     new_dictionary['frameid'] = frame.id
     return new_dictionary
 

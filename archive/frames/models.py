@@ -133,7 +133,7 @@ class Frame(models.Model):
             archive_settings.PUBLIC_DATE_KEY: self.public_date,
         }
 
-    def as_dict(self, include_thumbnails=False):
+    def as_dict(self, include_thumbnails=False, include_related_frames=False):
         ret_dict = model_to_dict(self, exclude=('related_frames', 'area'))
         ret_dict['version_set'] = [v.as_dict() for v in self.version_set.all()]
         ret_dict['url'] = self.url if self.version_set.exists() else None
@@ -158,7 +158,10 @@ class Frame(models.Model):
 
         if self.area:
             ret_dict['area'] = json.loads(self.area.geojson)
-        ret_dict['related_frames'] = list(self.related_frames.all().values_list('id', flat=True))
+        if include_thumbnails:
+            ret_dict['thumbnails'] = [t.as_dict() for t in Thumbnail.objects.filter(frame=self)]
+        if include_related_frames:
+            ret_dict['related_frames'] = list(self.related_frames.all().values_list('id', flat=True))
         return ret_dict
 
 
