@@ -58,7 +58,7 @@ class FrameViewSet(viewsets.ModelViewSet):
     ordering_fields = ('id', 'basename', 'observation_date', 'primary_optical_element', 'configuration_type',
                        'proposal_id', 'instrument_id', 'target_name', 'reduction_level', 'exposure_time')
 
-    def get_queryset(self, include_related_frames=False):
+    def get_queryset(self):
         """
         Filter frames depending on the logged in user.
         Admin users see all frames, excluding ones which have no versions.
@@ -72,7 +72,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             .prefetch_related('thumbnails')
         )
         # Only prefetch related frames if we're including them in the response
-        if include_related_frames:
+        if self.request.query_params.get('include_related_frames', '').lower() != 'false':
             queryset = queryset.prefetch_related(Prefetch('related_frames', queryset=Frame.objects.all().only('id')))
         if self.request.user.is_superuser:
             return queryset
@@ -92,7 +92,7 @@ class FrameViewSet(viewsets.ModelViewSet):
             include_related_frames = False
         include_thumbnails = True if request.query_params.get('include_thumbnails', '').lower() == 'true' else False
 
-        queryset = self.filter_queryset(self.get_queryset(include_related_frames))
+        queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
         json_models = [model.as_dict(include_thumbnails, include_related_frames) for model in page]
         json_models = [model for model in json_models if model['version_set']]  # Filter out frames with no versions
