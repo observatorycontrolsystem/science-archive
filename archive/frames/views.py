@@ -69,9 +69,11 @@ class FrameViewSet(viewsets.ModelViewSet):
         queryset = (
             Frame.objects.exclude(observation_date=None)
             .prefetch_related('version_set')
-            .prefetch_related(Prefetch('related_frames', queryset=Frame.objects.all().only('id')))
             .prefetch_related('thumbnails')
         )
+        # Only prefetch related frames if we're including them in the response
+        if self.request.query_params.get('include_related_frames', '').lower() != 'false':
+            queryset = queryset.prefetch_related(Prefetch('related_frames', queryset=Frame.objects.all().only('id')))
         if self.request.user.is_superuser:
             return queryset
         elif self.request.user.is_authenticated:
@@ -84,16 +86,25 @@ class FrameViewSet(viewsets.ModelViewSet):
 
     # These two method overrides just force the use of the as_dict method for serialization for list and detail endpoints
     def list(self, request, *args, **kwargs):
+        # TODO: Default to not include related frames once we've announced it to users
+        include_related_frames = True
+        if request.query_params.get('include_related_frames', '').lower() == 'false':
+            include_related_frames = False
+        include_thumbnails = True if request.query_params.get('include_thumbnails', '').lower() == 'true' else False
+
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
-        include_thumbnails = True if request.query_params.get('include_thumbnails', '').lower() == 'true' else False
-        json_models = [model.as_dict(include_thumbnails) for model in page]
+        json_models = [model.as_dict(include_thumbnails, include_related_frames) for model in page]
         json_models = [model for model in json_models if model['version_set']]  # Filter out frames with no versions
         return self.get_paginated_response(json_models)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        return Response(instance.as_dict())
+        include_thumbnails = True if request.query_params.get('include_thumbnails', '').lower() == 'true' else False
+        include_related_frames = True
+        if request.query_params.get('include_related_frames', '').lower() == 'false':
+            include_related_frames = False
+        return Response(instance.as_dict(include_thumbnails, include_related_frames))
 
     def create(self, request):
         basename = request.data.get('basename')
