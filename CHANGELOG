@@ -1,3 +1,9 @@
+2.5.5
+2024-10-15
+Construct the queue filename from the version_set within the request body sent by the ingester lib, rather than querying it from the newly created frame object.
+
+Add include_related_frames query param for frames queries. This defaults to true if not set to preserve API compatibility, but can be turned off by setting ?include_related_frames=false.
+
 2.5.4
 2024-09-17
 Make sure we handle files that don't have an area associated with them when sending to the FITS queue
