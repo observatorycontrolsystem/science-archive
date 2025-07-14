@@ -35,6 +35,7 @@ class FrameFilter(django_filters.FilterSet):
     REQNUM = django_filters.NumberFilter(field_name='request_id', lookup_expr='exact')
     RLEVEL = django_filters.NumberFilter(field_name='reduction_level', lookup_expr='exact')
     covers = django_filters.CharFilter(method='covers_filter')
+    submitter = django_filters.CharFilter(method='submitter_filter')
     exclude_OBSTYPE = django_filters.MultipleChoiceFilter(
         field_name='configuration_type',
         choices=get_configuration_type_tuples(),
@@ -82,6 +83,13 @@ class FrameFilter(django_filters.FilterSet):
     def exclude_calibrations_filter(self, queryset, name, value):
         if value:
             return queryset.filter(configuration_type__in=SCIENCE_CONFIGURATION_TYPES)
+        return queryset
+    
+    def submitter_filter(self, queryset, name, value):
+        # looks in a proposal for frames by a user in it's headers
+        if value:
+            return queryset.filter(headers__data__USERID=value)
+
         return queryset
 
     class Meta:
