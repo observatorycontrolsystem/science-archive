@@ -7,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 from django.utils import timezone
 from django.conf import settings
 from django_filters import rest_framework as django_filters
+from anyascii import anyascii
 
 
 class FrameFilter(django_filters.FilterSet):
@@ -19,8 +20,8 @@ class FrameFilter(django_filters.FilterSet):
     basename = django_filters.CharFilter(field_name='basename', lookup_expr='icontains')
     basename_exact = django_filters.CharFilter(field_name='basename', lookup_expr='exact')
     OBJECT = django_filters.CharFilter(field_name='target_name', lookup_expr='icontains')
-    target_name = django_filters.CharFilter(field_name='target_name', lookup_expr='icontains')
-    target_name_exact = django_filters.CharFilter(field_name='target_name', lookup_expr='exact')
+    target_name = django_filters.CharFilter(method='target_filter')
+    target_name_exact = django_filters.CharFilter(method='target_filter_exact')
     L1PUBDAT = django_filters.DateTimeFilter(field_name='public_date')
     public = django_filters.BooleanFilter(field_name='public', method='public_filter')
     EXPTIME = django_filters.NumberFilter(field_name='exposure_time', lookup_expr='gte')
@@ -88,9 +89,25 @@ class FrameFilter(django_filters.FilterSet):
     def submitter_filter(self, queryset, name, value):
         # looks in a proposal for frames by a user in it's headers
         if value:
-            return queryset.filter(headers__data__USERID=value)
+            user = anyascii(value)
+            return queryset.filter(headers__data__USERID=user)
 
         return queryset
+
+    def target_filter(self, queryset, name, value):
+        # Use the anyascii version of the target name
+        if value:
+            target = anyascii(value)
+            return queryset.filter(target_name__icontains=target)
+        return queryset
+
+    def target_filter_exact(self, queryset, name, value):
+        # Use the anyascii version of the target name
+        if value:
+            target = anyascii(value)
+            return queryset.filter(target_name__exact=target)
+        return queryset
+
 
     class Meta:
         model = Frame
