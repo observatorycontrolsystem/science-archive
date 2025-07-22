@@ -1,3 +1,7 @@
+2.6.1
+2025-07-22
+Add submitter filter to check fitsheaders USERID field, and have target name and user id filters convert to ascii for queries
+
 2.5.5
 2024-10-15
 Construct the queue filename from the version_set within the request body sent by the ingester lib, rather than querying it from the newly created frame object.
