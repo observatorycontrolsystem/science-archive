@@ -55,7 +55,7 @@ class TestFrameGet(ReplicationTestCase):
         self.assertEqual(self.mock_prefetch.call_count, 0)
 
     def test_get_frame_list(self):
-        response = self.client.get(reverse('frame-list'))
+        response = self.client.get(reverse('frame-list') + '?force_count')
         self.assertEqual(response.json()['count'], 5)
         self.assertContains(response, self.frame.basename)
         self.assertContains(response, 'related_frames')
@@ -63,7 +63,7 @@ class TestFrameGet(ReplicationTestCase):
 
     def test_get_frame_list_exclude_related_frames(self):
         response = self.client.get(reverse('frame-list'),
-                                   {'include_related_frames': False})
+                                   {'include_related_frames': False, 'force_count': True})
         self.assertEqual(response.json()['count'], 5)
         self.assertContains(response, self.frame.basename)
         self.assertNotContains(response, 'related_frames')
@@ -147,7 +147,7 @@ class TestFramePost(ReplicationTestCase):
                 reverse('frame-list'), json.dumps(frame_payload), content_type='application/json'
             )
             self.assertContains(response, frame_payload['basename'], status_code=201)
-        response = self.client.get(reverse('frame-list'))
+        response = self.client.get(reverse('frame-list') + '?force_count')
         self.assertEqual(response.json()['count'], total_frames)
 
     def test_post_to_archive_fits_on_successful_frame_creation(self):
@@ -828,7 +828,7 @@ class TestThumbnailGet(ReplicationTestCase):
         self.assertEqual(response.json()['basename'], self.thumbnail.basename)
 
     def test_get_thumbnail_list(self):
-        response = self.client.get(reverse('thumbnail-list'))
+        response = self.client.get(reverse('thumbnail-list') + '?force_count')
         self.assertEqual(len(response.json()), 5)
         self.assertContains(response, self.thumbnails[0].basename)
 
@@ -854,7 +854,7 @@ class TestThumbnailFiltering(ReplicationTestCase):
 
     def test_admin_view_all(self):
         self.client.force_login(self.admin_user)
-        response = self.client.get(reverse('thumbnail-list'))
+        response = self.client.get(reverse('thumbnail-list') + '?force_count')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.public_frame.id)
         self.assertContains(response, self.proposal_frame.id)

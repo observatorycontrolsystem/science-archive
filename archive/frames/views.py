@@ -461,6 +461,7 @@ class FrameViewSet(SelectablePaginationMixin, viewsets.ModelViewSet):
 
 
 class ThumbnailViewSet(viewsets.ModelViewSet):
+    serializer_class = ThumbnailSerializer
     permission_classes = (AdminOrReadOnly,)
     filter_backends = (
         DjangoFilterBackend,
@@ -492,8 +493,11 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
-        json_models = [model.as_dict() for model in page]
-        return self.get_paginated_response(json_models)
+        if page is not None:
+            json_models = [model.as_dict() for model in page]
+            return self.get_paginated_response(json_models)
+        return Response(self.get_serializer(queryset, many=True).data)
+
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
