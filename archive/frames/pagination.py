@@ -86,12 +86,12 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
         if 'request_id' in query_params or 'observation_id' in query_params or 'force_count' in query_params:
             self.small_query = True
         elif 'start' in query_params and 'end' in query_params:
-            range = dateparse.parse_datetime(request.query_params.get('end')) - dateparse.parse_datetime(request.query_params.get('start'))
+            timespan = dateparse.parse_datetime(request.query_params.get('end')) - dateparse.parse_datetime(request.query_params.get('start'))
             # Allow 1 week of querys with no other params
-            if range <= timedelta(days=7):
+            if timespan <= timedelta(days=7):
                 self.small_query = True
             # Or up to 2 months of querys with some other bounding params
-            elif range <= timedelta(weeks=9) and any(field in query_params for field in ['proposal_id', 'target_name_exact', 'basename_exact']):
+            elif timespan <= timedelta(weeks=9) and any(field in query_params for field in ['proposal_id', 'target_name_exact', 'basename_exact']):
                 self.small_query = True
 
         return super().paginate_queryset(queryset, request, view)
