@@ -21,6 +21,7 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
 
     def __init__(self):
         self.small_query = False
+        self.force_count = False
         super().__init__()
 
     def get_count(self, queryset):
@@ -39,13 +40,14 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
         self.count_estimated = False
         # Only attempt to get the real count if we have already determined this is a "small" query
         if self.small_query:
+            # Limit to 5000 ms if force_count is used, otherwise 1500 ms
+            timeout = '5000' if self.force_count else '1500'
             try:
                 with transaction.atomic(using='replica'), connections['replica'].cursor() as cursor:
-                    # Limit to 5000 ms
-                    cursor.execute('SET LOCAL statement_timeout TO 5000;')
+                    cursor.execute(f'SET LOCAL statement_timeout TO {timeout};')
                     return super().get_count(queryset)
             except (OperationalError, InternalError):
-                logger.warning("Getting the count timed out after 5 seconds")
+                logger.warning(f"Getting the count timed out after {timeout} milliseconds")
 
         self.count_estimated = True
         if not queryset.query.where:
@@ -84,6 +86,7 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
         # If these indexed fields are in the query params, query should be small and bounded so allow full count
         # Also have a fallback 'force_count' param to force it to attempt the full count
         if 'request_id' in query_params or 'observation_id' in query_params or 'force_count' in query_params:
+            self.force_count = 'force_count' in query_params
             self.small_query = True
         elif 'start' in query_params and 'end' in query_params:
             timespan = dateparse.parse_datetime(request.query_params.get('end')) - dateparse.parse_datetime(request.query_params.get('start'))

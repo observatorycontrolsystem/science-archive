@@ -22,6 +22,7 @@ class FrameFilter(django_filters.FilterSet):
     OBJECT = django_filters.CharFilter(field_name='target_name', lookup_expr='icontains')
     target_name = django_filters.CharFilter(method='target_filter')
     target_name_exact = django_filters.CharFilter(method='target_filter_exact')
+    empty_target_name = django_filters.CharFilter(method='empty_target_filter')
     L1PUBDAT = django_filters.DateTimeFilter(field_name='public_date')
     public = django_filters.BooleanFilter(field_name='public', method='public_filter')
     EXPTIME = django_filters.NumberFilter(field_name='exposure_time', lookup_expr='gte')
@@ -108,6 +109,9 @@ class FrameFilter(django_filters.FilterSet):
             return queryset.filter(target_name__exact=target)
         return queryset
 
+    def empty_target_filter(self, queryset, name, value):
+        # Matches things with an empty string for target_name
+        return queryset.filter(target_name__exact='')
 
     class Meta:
         model = Frame
