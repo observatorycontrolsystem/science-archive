@@ -85,8 +85,10 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
         query_params = dict(request.query_params)
         # If these indexed fields are in the query params, query should be small and bounded so allow full count
         # Also have a fallback 'force_count' param to force it to attempt the full count
-        if 'request_id' in query_params or 'observation_id' in query_params or 'force_count' in query_params:
-            self.force_count = 'force_count' in query_params
+        if 'force_count' in query_params and request.user.is_authenticated:
+            self.force_count = True
+            self.small_query = True
+        elif 'request_id' in query_params or 'observation_id' in query_params:
             self.small_query = True
         elif 'start' in query_params and 'end' in query_params:
             timespan = dateparse.parse_datetime(request.query_params.get('end')) - dateparse.parse_datetime(request.query_params.get('start'))
