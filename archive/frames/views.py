@@ -14,6 +14,7 @@ from archive.frames.permissions import AdminOrReadOnly
 from archive.frames.filters import FrameFilter, ThumbnailFilter
 
 from archive.doc_examples import EXAMPLE_RESPONSES, QUERY_PARAMETERS
+from archive.frames.pagination import LimitedLimitOffsetPagination, CustomCursorPagination
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
@@ -46,7 +47,29 @@ from ocs_authentication.auth_profile.models import AuthProfile
 logger = logging.getLogger()
 
 
-class FrameViewSet(viewsets.ModelViewSet):
+class SelectablePaginationMixin:
+    def get_pagination_class(self):
+        # Allow users to specify cursor pagination for faster queries
+        pagination_style = self.request.query_params.get('pagination_style')
+        if pagination_style == 'cursor':
+            return CustomCursorPagination
+        else:
+            return LimitedLimitOffsetPagination
+
+    @property
+    def paginator(self):
+        if not hasattr(self, '_paginator'):
+            pagination_class = self.get_pagination_class()
+            if pagination_class is None:
+                return None
+            self._paginator = pagination_class()
+            return self._paginator
+        else:
+            return self._paginator
+
+
+
+class FrameViewSet(SelectablePaginationMixin, viewsets.ModelViewSet):
     permission_classes = (AdminOrReadOnly,)
     schema = ScienceArchiveSchema(tags=['Frames'])
     serializer_class = FrameSerializer
@@ -57,6 +80,7 @@ class FrameViewSet(viewsets.ModelViewSet):
     filter_class = FrameFilter
     ordering_fields = ('id', 'basename', 'observation_date', 'primary_optical_element', 'configuration_type',
                        'proposal_id', 'instrument_id', 'target_name', 'reduction_level', 'exposure_time')
+    ordering = ['-observation_date']
 
     def get_queryset(self):
         """
@@ -94,9 +118,12 @@ class FrameViewSet(viewsets.ModelViewSet):
 
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
-        json_models = [model.as_dict(include_thumbnails, include_related_frames) for model in page]
-        json_models = [model for model in json_models if model['version_set']]  # Filter out frames with no versions
-        return self.get_paginated_response(json_models)
+        if page is not None:
+            json_models = [model.as_dict(include_thumbnails, include_related_frames) for model in page]
+            json_models = [model for model in json_models if model['version_set']]  # Filter out frames with no versions
+            return self.get_paginated_response(json_models)
+        else:
+            return Response(self.get_serializer(queryset, many=True).data)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -434,6 +461,7 @@ class FrameViewSet(viewsets.ModelViewSet):
 
 
 class ThumbnailViewSet(viewsets.ModelViewSet):
+    serializer_class = ThumbnailSerializer
     permission_classes = (AdminOrReadOnly,)
     filter_backends = (
         DjangoFilterBackend,
@@ -465,8 +493,11 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
-        json_models = [model.as_dict() for model in page]
-        return self.get_paginated_response(json_models)
+        if page is not None:
+            json_models = [model.as_dict() for model in page]
+            return self.get_paginated_response(json_models)
+        return Response(self.get_serializer(queryset, many=True).data)
+
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
