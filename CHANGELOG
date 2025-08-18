@@ -1,3 +1,8 @@
+2.6.2
+2025-08-18
+Added `force_count` param to force count, but otherwise default to not getting an exact count unless query is sufficiently filtered down
+Added option for cursor pagination of `/frames/` endpoint with `?pagination_style=cursor`
+
 2.6.1
 2025-07-22
 Add submitter filter to check fitsheaders USERID field, and have target name and user id filters convert to ascii for queries
