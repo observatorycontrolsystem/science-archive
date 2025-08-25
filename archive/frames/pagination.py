@@ -107,6 +107,9 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
                 # Or up to 2 months of querys with some other bounding params
                 elif timespan <= timedelta(weeks=9) and any(field in query_params for field in ['proposal_id', 'target_name_exact']):
                     self.small_query = True
+        else:
+            self.force_count = False
+            self.small_query = False
 
         return super().paginate_queryset(queryset, request, view)
 
