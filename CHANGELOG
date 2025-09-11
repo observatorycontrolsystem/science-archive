@@ -1,3 +1,7 @@
+2.6.3
+2025-09-09
+Fixed count pagination issues with `/thumbnails/` and `/versions/` endpoints
+
 2.6.2
 2025-08-18
 Added `force_count` param to force count, but otherwise default to not getting an exact count unless query is sufficiently filtered down
