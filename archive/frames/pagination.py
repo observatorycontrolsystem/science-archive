@@ -88,16 +88,28 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
         if 'force_count' in query_params and request.user.is_authenticated:
             self.force_count = True
             self.small_query = True
-        elif 'request_id' in query_params or 'observation_id' in query_params:
+        # /versions/?md5= queries need the accurate count for shipping data in
+        elif request.path == '/versions/' and 'md5' in query_params:
+            self.force_count = True
             self.small_query = True
-        elif 'start' in query_params and 'end' in query_params:
-            timespan = dateparse.parse_datetime(request.query_params.get('end')) - dateparse.parse_datetime(request.query_params.get('start'))
-            # Allow 1 week of querys with no other params
-            if timespan <= timedelta(days=7):
+        # /thumbnails/ queries with indexed fields can have the full count
+        elif request.path == '/thumbnails/' and ('frame_basename' in query_params or 'observation_id' in query_params or 'request_id' in query_params):
+            self.small_query = True
+        elif request.path == '/frames/':
+            # /frames/ queries with indexed fields, or with a small timerange and other common fields.
+            if 'request_id' in query_params or 'observation_id' in query_params or 'basename_exact' in query_params:
                 self.small_query = True
-            # Or up to 2 months of querys with some other bounding params
-            elif timespan <= timedelta(weeks=9) and any(field in query_params for field in ['proposal_id', 'target_name_exact', 'basename_exact']):
-                self.small_query = True
+            elif 'start' in query_params and 'end' in query_params:
+                timespan = dateparse.parse_datetime(request.query_params.get('end')) - dateparse.parse_datetime(request.query_params.get('start'))
+                # Allow 1 week of querys with no other params
+                if timespan <= timedelta(days=7):
+                    self.small_query = True
+                # Or up to 2 months of querys with some other bounding params
+                elif timespan <= timedelta(weeks=9) and any(field in query_params for field in ['proposal_id', 'target_name_exact']):
+                    self.small_query = True
+        else:
+            self.force_count = False
+            self.small_query = False
 
         return super().paginate_queryset(queryset, request, view)
 
