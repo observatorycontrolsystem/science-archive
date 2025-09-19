@@ -110,8 +110,13 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
         else:
             self.force_count = False
             self.small_query = False
-
-        return super().paginate_queryset(queryset, request, view)
+        result = super().paginate_queryset(queryset, request, view)
+        # If the count was estimated and we have an offset, then correct the results!
+        # This is needed because the base code returns an empty list if offset > count
+        if self.count_estimated and (self.count == 0 or self.offset > self.count):
+            return list(queryset[self.offset:self.offset + self.limit])
+        else:
+            return result
 
     def get_paginated_response(self, data):
         resp = super().get_paginated_response(data)
