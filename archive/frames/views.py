@@ -256,16 +256,13 @@ class FrameViewSet(SelectablePaginationMixin, viewsets.ModelViewSet):
         # back and forth in short bursts of activity.
         private_cache_timeout = 5 * 60
 
-        if not is_authenticated:
-            # limit unauthenticated users to a smaller query timeout (500 ms)
-            query_timeout = min(query_timeout, 1000)
-
-
+        # Aggregates are costly queries, so limit it to superusers but just return all cached values for
+        # everyone else. Leaving the full query in for superusers in case staff want to use them for specific queries.
         if all(
             x is None for x in [
               start, end, include_public, site_id, telescope_id, primary_optical_element,
               instrument_id, configuration_type, proposal_id
-            ]
+            ] or not is_superuser
         ):
             return self._agg_frames_all_resp()
 
