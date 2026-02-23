@@ -91,7 +91,7 @@ class FrameViewSet(SelectablePaginationMixin, viewsets.ModelViewSet):
         Non authenticated see all frames with a PUBDAT in the past
         """
         queryset = (
-            Frame.objects.exclude(observation_date=None)
+            Frame.objects.exclude(observation_date=None).exclude(version__isnull=True)
             .prefetch_related('version_set')
             .prefetch_related('thumbnails')
         )
@@ -120,7 +120,6 @@ class FrameViewSet(SelectablePaginationMixin, viewsets.ModelViewSet):
         page = self.paginate_queryset(queryset)
         if page is not None:
             json_models = [model.as_dict(include_thumbnails, include_related_frames) for model in page]
-            json_models = [model for model in json_models if model['version_set']]  # Filter out frames with no versions
             return self.get_paginated_response(json_models)
         else:
             return Response(self.get_serializer(queryset, many=True).data)
