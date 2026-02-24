@@ -1,7 +1,8 @@
 from archive.frames.tests.factories import FrameFactory, VersionFactory, PublicFrameFactory, ThumbnailFactory
-from archive.frames.models import Frame, Thumbnail
+from archive.frames.models import Frame, Thumbnail, Version
 from archive.frames.utils import get_configuration_type_tuples, aggregate_frames_sql, set_cached_frames_aggregates
 from archive.authentication.models import Profile
+from archive.frames.signals.handlers import version_post_delete
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from unittest.mock import MagicMock, patch
@@ -11,6 +12,7 @@ from rest_framework.reverse import reverse as reverse_drf
 from archive.test_helpers import ReplicationTestCase
 from django.test import override_settings
 from django.conf import settings
+from django.db.models import signals
 from django.contrib.gis.geos import Point
 from pytz import UTC
 from rest_framework import status
@@ -60,6 +62,26 @@ class TestFrameGet(ReplicationTestCase):
         self.assertContains(response, self.frame.basename)
         self.assertContains(response, 'related_frames')
         self.assertEqual(self.mock_prefetch.call_count, 1)
+
+    def test_exclude_frames_without_versions(self):
+        # Remove the version set from 4 of the 5 frames, then see that they aren't returned
+        response = self.client.get(reverse('frame-list') + '?force_count')
+        self.assertEqual(response.json()['count'], 5)
+
+        # Disable post delete version signal
+        signals.post_delete.disconnect(version_post_delete, sender=Version)
+
+        # Delete the newest 4 frames, which would've triggered a blank result before
+        sorted_frames = sorted(self.frames, reverse=True, key=lambda x: x.observation_date)
+        for i in range(4):
+            sorted_frames[i].version_set.all().delete()
+        # Now get the results with a limit of 1 to make sure we still see a result
+        response = self.client.get(reverse('frame-list') + '?force_count&limit=1')
+        self.assertEqual(response.json()['count'], 1)
+        self.assertEqual(len(response.json()['results']), 1)
+
+        # Enable post delete version signal
+        signals.post_delete.connect(version_post_delete, sender=Version)
 
     def test_get_frame_list_exclude_related_frames(self):
         response = self.client.get(reverse('frame-list'),

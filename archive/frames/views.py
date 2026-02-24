@@ -95,6 +95,9 @@ class FrameViewSet(SelectablePaginationMixin, viewsets.ModelViewSet):
             .prefetch_related('version_set')
             .prefetch_related('thumbnails')
         )
+        if self.action == 'list':
+            # Exclude frames without a version in list searches
+            queryset = queryset.exclude(version__isnull=True)
         # Only prefetch related frames if we're including them in the response
         if self.request.query_params.get('include_related_frames', '').lower() != 'false':
             queryset = queryset.prefetch_related(Prefetch('related_frames', queryset=Frame.objects.all().only('id')))
@@ -120,7 +123,6 @@ class FrameViewSet(SelectablePaginationMixin, viewsets.ModelViewSet):
         page = self.paginate_queryset(queryset)
         if page is not None:
             json_models = [model.as_dict(include_thumbnails, include_related_frames) for model in page]
-            json_models = [model for model in json_models if model['version_set']]  # Filter out frames with no versions
             return self.get_paginated_response(json_models)
         else:
             return Response(self.get_serializer(queryset, many=True).data)
