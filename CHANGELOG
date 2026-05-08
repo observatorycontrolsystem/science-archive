@@ -1,3 +1,7 @@
+2.7.0
+2026-05-08
+Update dependencies to latest, supporting python 3.12+ and django6
+
 2.6.5
 2026-02-24
 Fix bug in displaying results when frame's without versions exist

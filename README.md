@@ -10,7 +10,7 @@ An application providing an API to save, retrieve, and view an observatory's sci
 
 Optional prerequisites can be skipped for reduced functionality.
 
--   Python >= 3.7
+-   Python >= 3.12
 -   PostgreSQL with the PostGIS extension installed
 -   A FileStore (S3 recommended) with read/write privileges and versioning enabled (if S3)
 -   System dependencies to install the [psycopg2](https://pypi.org/project/psycopg2/) package
