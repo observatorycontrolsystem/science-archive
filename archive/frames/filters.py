@@ -4,7 +4,7 @@ from archive.settings import SCIENCE_CONFIGURATION_TYPES
 from django.contrib.gis.geos import GEOSGeometry
 from django.contrib.gis.geos.error import GEOSException
 from rest_framework.exceptions import ValidationError
-from django.utils import timezone
+import datetime
 from django.conf import settings
 from django_filters import rest_framework as django_filters
 from anyascii import anyascii
@@ -79,7 +79,7 @@ class FrameFilter(django_filters.FilterSet):
                 if user_proposals:
                     return queryset.filter(proposal_id__in=user_proposals)
             else:
-                return queryset.exclude(public_date__lt=timezone.now())
+                return queryset.exclude(public_date__lt=datetime.datetime.now(datetime.timezone.utc))
         return queryset
 
     def exclude_calibrations_filter(self, queryset, name, value):

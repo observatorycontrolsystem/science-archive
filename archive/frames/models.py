@@ -1,6 +1,6 @@
 from archive.frames.utils import get_file_store_path
 from django.utils.functional import cached_property
-from django.db.models import JSONField
+from django.db.models import JSONField, Index
 import logging
 import json
 from django.contrib.gis.db import models
@@ -95,7 +95,9 @@ class Frame(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        index_together = ["observation_date", "public_date", "site_id", "telescope_id", "instrument_id", "configuration_type", "primary_optical_element", "proposal_id"]
+        indexes = [
+            Index(fields=["observation_date", "public_date", "site_id", "telescope_id", "instrument_id", "configuration_type", "primary_optical_element", "proposal_id"]),
+        ]
         ordering = ['-observation_date']
 
     def __str__(self):

@@ -6,7 +6,6 @@ from archive.frames.signals.handlers import version_post_delete
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from unittest.mock import MagicMock, patch
-from django.utils import timezone
 from django.urls import reverse
 from rest_framework.reverse import reverse as reverse_drf
 from archive.test_helpers import ReplicationTestCase
@@ -14,7 +13,6 @@ from django.test import override_settings
 from django.conf import settings
 from django.db.models import signals
 from django.contrib.gis.geos import Point
-from pytz import UTC
 from rest_framework import status
 from django.core.cache import cache
 
@@ -275,9 +273,9 @@ class TestFrameFiltering(ReplicationTestCase):
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile.objects.update_or_create(user=self.normal_user, defaults={'access_token': 'test', 'refresh_token': 'test'})
         AuthProfile.objects.create(user=self.normal_user)
-        self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=UTC))
-        self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
-        self.not_owned = FrameFactory(proposal_id='notyours', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
+        self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=datetime.timezone.utc))
+        self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=datetime.timezone.utc))
+        self.not_owned = FrameFactory(proposal_id='notyours', public_date=datetime.datetime(2099, 1, 1, tzinfo=datetime.timezone.utc))
 
     def test_admin_view_all(self):
         self.client.login(username='admin', password='password')
@@ -310,7 +308,7 @@ class TestFrameFiltering(ReplicationTestCase):
 
 class TestQueryFiltering(ReplicationTestCase):
     def test_start_end(self):
-        frame = PublicFrameFactory(observation_date=datetime.datetime(2011, 2, 1, tzinfo=UTC))
+        frame = PublicFrameFactory(observation_date=datetime.datetime(2011, 2, 1, tzinfo=datetime.timezone.utc))
         response = self.client.get(reverse('frame-list') + '?start=2011-01-01&end=2011-03-01')
         self.assertContains(response, frame.basename)
         response = self.client.get(reverse('frame-list') + '?start=2012-01-01&end=2012-03-01')
@@ -357,9 +355,9 @@ class TestQueryFiltering(ReplicationTestCase):
             content_type='application/json'
         )
         self.client.force_login(user)
-        proposal_proprietary_frame = FrameFactory(public_date=datetime.datetime(2999, 1, 1, tzinfo=UTC), proposal_id='prop1')
-        proposal_public_frame = FrameFactory(public_date=datetime.datetime(1992, 11, 14, tzinfo=UTC), proposal_id='prop1')
-        non_proposal_proprietary_frame = FrameFactory(public_date=datetime.datetime(2999, 1, 1, tzinfo=UTC), proposal_id='prop2')
+        proposal_proprietary_frame = FrameFactory(public_date=datetime.datetime(2999, 1, 1, tzinfo=datetime.timezone.utc), proposal_id='prop1')
+        proposal_public_frame = FrameFactory(public_date=datetime.datetime(1992, 11, 14, tzinfo=datetime.timezone.utc), proposal_id='prop1')
+        non_proposal_proprietary_frame = FrameFactory(public_date=datetime.datetime(2999, 1, 1, tzinfo=datetime.timezone.utc), proposal_id='prop2')
         public_frame = PublicFrameFactory()
 
         # If public=false, then a logged in user should see all of their own data, proprietary or not
@@ -411,8 +409,8 @@ class TestQueryFiltering(ReplicationTestCase):
 
     @responses.activate
     def test_exclude_calibrations_filter(self):
-        science_frame = FrameFactory(public_date=datetime.datetime(2020, 11, 14, tzinfo=UTC), configuration_type='EXPOSE')
-        bias_frame = FrameFactory(public_date=datetime.datetime(2020, 11, 14, tzinfo=UTC), configuration_type='BIAS')
+        science_frame = FrameFactory(public_date=datetime.datetime(2020, 11, 14, tzinfo=datetime.timezone.utc), configuration_type='EXPOSE')
+        bias_frame = FrameFactory(public_date=datetime.datetime(2020, 11, 14, tzinfo=datetime.timezone.utc), configuration_type='BIAS')
 
         for false_string in ['false', 'False', '0']:
             response = self.client.get(reverse('frame-list') + '?exclude_calibrations={}'.format(false_string))
@@ -479,9 +477,9 @@ class TestZipDownload(ReplicationTestCase):
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile.objects.update_or_create(user=self.normal_user, defaults={'access_token': 'test', 'refresh_token': 'test'})
         self.auth_profile = AuthProfile.objects.create(user=self.normal_user, api_token='myApiToken')
-        self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=UTC))
-        self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
-        self.not_owned = FrameFactory(proposal_id='notyours', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
+        self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=datetime.timezone.utc))
+        self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=datetime.timezone.utc))
+        self.not_owned = FrameFactory(proposal_id='notyours', public_date=datetime.datetime(2099, 1, 1, tzinfo=datetime.timezone.utc))
 
     def test_public_download(self):
         response = self.client.post(
@@ -617,7 +615,7 @@ class TestZipDownload(ReplicationTestCase):
 
 class TestFunpackViewSet(ReplicationTestCase):
     def setUp(self):
-        self.frame = FrameFactory(observation_day=datetime.datetime(2020, 11, 18, tzinfo=UTC))
+        self.frame = FrameFactory(observation_day=datetime.datetime(2020, 11, 18, tzinfo=datetime.timezone.utc))
 
     @patch('archive.frames.views.subprocess')
     def test_funpack_download(self, mock_subprocess):
@@ -650,9 +648,9 @@ class TestFrameAggregate(ReplicationTestCase):
         Profile.objects.update_or_create(user=self.normal_user, defaults={'access_token': 'test', 'refresh_token': 'test'})
         AuthProfile.objects.create(user=self.normal_user)
 
-        is_public_date = timezone.now() - datetime.timedelta(days=7)
-        is_not_public_date = timezone.now() + datetime.timedelta(days=7)
-        obs_date = datetime.datetime.now(tz=UTC) - datetime.timedelta(days=90)
+        is_public_date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=7)
+        is_not_public_date = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7)
+        obs_date = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=90)
 
         FrameFactory.create(configuration_type='EXPOSE', telescope_id='1m0a', site_id='bpl', instrument_id='kb46',
                             proposal_id='prop1', primary_optical_element='rp', public_date=is_public_date, observation_date=obs_date)
@@ -681,8 +679,8 @@ class TestFrameAggregate(ReplicationTestCase):
           reverse('frame-aggregate'),
           {
             "public": "true",
-            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
-            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+            "start": datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=180),
           }
         )
         self.assertEqual(response.status_code, 200)
@@ -700,8 +698,8 @@ class TestFrameAggregate(ReplicationTestCase):
           reverse('frame-aggregate'),
           {
             "public": "false",
-            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
-            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+            "start": datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=180),
           }
         )
         self.assertEqual(response.status_code, 200)
@@ -728,8 +726,8 @@ class TestFrameAggregate(ReplicationTestCase):
           reverse('frame-aggregate'),
           {
             "public": "false",
-            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
-            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+            "start": datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=180),
           }
         )
         self.assertEqual(response.status_code, 200)
@@ -747,8 +745,8 @@ class TestFrameAggregate(ReplicationTestCase):
           {
             "site_id": "ogg",
             "public": "true",
-            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
-            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+            "start": datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=180),
           }
         )
         self.assertEqual(response.status_code, 200)
@@ -766,8 +764,8 @@ class TestFrameAggregate(ReplicationTestCase):
           {
             "telescope_id": "2m0b",
             "public": "true",
-            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
-            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+            "start": datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=180),
           }
         )
         self.assertEqual(response.status_code, 200)
@@ -785,8 +783,8 @@ class TestFrameAggregate(ReplicationTestCase):
           {
             "instrument_id": "fl10",
             "public": "true",
-            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
-            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+            "start": datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=180),
           }
         )
         self.assertEqual(response.status_code, 200)
@@ -804,8 +802,8 @@ class TestFrameAggregate(ReplicationTestCase):
           {
             "configuration_type": "SKYFLAT",
             "public": "true",
-            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
-            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+            "start": datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=180),
           }
         )
         self.assertEqual(response.status_code, 200)
@@ -823,8 +821,8 @@ class TestFrameAggregate(ReplicationTestCase):
           {
             "primary_optical_element": "B",
             "public": "true",
-            "start": datetime.datetime.now(tz=UTC) - datetime.timedelta(days=180),
-            "end": datetime.datetime.now(tz=UTC) + datetime.timedelta(days=180),
+            "start": datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=180),
           }
         )
         self.assertEqual(response.status_code, 200)
@@ -867,9 +865,9 @@ class TestThumbnailFiltering(ReplicationTestCase):
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile.objects.update_or_create(user=self.normal_user, defaults={'access_token': 'test', 'refresh_token': 'test'})
         AuthProfile.objects.create(user=self.normal_user)
-        self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=UTC))
-        self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
-        self.not_owned = FrameFactory(proposal_id='notyours', public_date=datetime.datetime(2099, 1, 1, tzinfo=UTC))
+        self.public_frame = FrameFactory(proposal_id='public', public_date=datetime.datetime(2000, 1, 1, tzinfo=datetime.timezone.utc))
+        self.proposal_frame = FrameFactory(proposal_id='prop1', public_date=datetime.datetime(2099, 1, 1, tzinfo=datetime.timezone.utc))
+        self.not_owned = FrameFactory(proposal_id='notyours', public_date=datetime.datetime(2099, 1, 1, tzinfo=datetime.timezone.utc))
         self.public_thumbnail = ThumbnailFactory(frame=self.public_frame)
         self.proposal_thumbnail = ThumbnailFactory(frame=self.proposal_frame)
         self.not_owned_thumbnail = ThumbnailFactory(frame=self.not_owned)
@@ -993,7 +991,7 @@ class TestThumbnailPost(ReplicationTestCase):
             reverse('thumbnail-list'), json.dumps(self.single_thumbnail_payload), content_type='application/json'
         )
         self.assertEqual(response.status_code, 400)
-        self.assertEquals(response.json()['size'],  ["This field is required."])
+        self.assertEqual(response.json()['size'],  ["This field is required."])
 
     def test_multiple_thumbnails_created_different_basenames(self):
         second_thumbnail_payload = copy.deepcopy(self.single_thumbnail_payload)
