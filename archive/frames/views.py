@@ -28,7 +28,6 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from django.conf import settings
-from pytz import UTC
 from django.db import OperationalError
 from django.db.models.functions import Now
 from django.utils.cache import patch_response_headers
@@ -77,7 +76,7 @@ class FrameViewSet(SelectablePaginationMixin, viewsets.ModelViewSet):
         DjangoFilterBackend,
         filters.OrderingFilter,
     )
-    filter_class = FrameFilter
+    filterset_class = FrameFilter
     ordering_fields = ('id', 'basename', 'observation_date', 'primary_optical_element', 'configuration_type',
                        'proposal_id', 'instrument_id', 'target_name', 'reduction_level', 'exposure_time')
     ordering = ['-observation_date']
@@ -274,8 +273,8 @@ class FrameViewSet(SelectablePaginationMixin, viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        start = start.replace(tzinfo=UTC, second=0, microsecond=0)
-        end = end.replace(tzinfo=UTC, second=0, microsecond=0)
+        start = start.replace(tzinfo=datetime.timezone.utc, second=0, microsecond=0)
+        end = end.replace(tzinfo=datetime.timezone.utc, second=0, microsecond=0)
 
         if (end - start) > datetime.timedelta(days=365):
             return Response(
@@ -285,7 +284,7 @@ class FrameViewSet(SelectablePaginationMixin, viewsets.ModelViewSet):
 
         # Expire the public cache quicker if the query window is in the future
         # to avoid serving stale public aggregates for too long.
-        if end >= datetime.datetime.now(tz=UTC):
+        if end >= datetime.datetime.now(tz=datetime.timezone.utc):
             # 1 hour
             public_cache_timeout = 60 * 60
 
@@ -465,7 +464,7 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
     filter_backends = (
         DjangoFilterBackend,
     )
-    filter_class = ThumbnailFilter
+    filterset_class = ThumbnailFilter
 
     def get_queryset(self):
         """

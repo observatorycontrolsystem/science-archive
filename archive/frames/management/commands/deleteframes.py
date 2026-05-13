@@ -1,7 +1,6 @@
-from datetime import timedelta, date
+from datetime import timedelta, date, datetime, timezone
 
 from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
 
 from archive.frames.models import Frame
 import logging
@@ -49,7 +48,7 @@ class Command(BaseCommand):
             raise CommandError("Cannot specify both --days-old days and --start and --end isoformat dates, exiting.")
         if options['days_old']:
             logger.warning(f"Filtering by {options['days_old']} days old")
-            frames = frames.filter(observation_date__lt=timezone.now() - timedelta(days=options['days_old']))
+            frames = frames.filter(observation_date__lt=datetime.now(timezone.utc) - timedelta(days=options['days_old']))
         elif options['start'] and options['end']:
             frames = frames.filter(observation_day__lt=options['end'], observation_day__gt=options['start'])
         else:

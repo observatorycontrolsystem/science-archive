@@ -1,6 +1,4 @@
-from datetime import timedelta
-
-from django.utils import timezone
+from datetime import timedelta, datetime, timezone
 
 from archive.frames.models import Frame, Version
 
@@ -25,7 +23,7 @@ class DBClusterRouter:
         created = getattr(instance, 'created', None)
 
         if isinstance(instance, new_instance_delay_models) and created is not None:
-            if created > timezone.now() - timedelta(minutes=new_instance_delay_minutes):
+            if created > datetime.now(timezone.utc) - timedelta(minutes=new_instance_delay_minutes):
                 return 'default'
 
         if 'archive.frames.models' in str(model):

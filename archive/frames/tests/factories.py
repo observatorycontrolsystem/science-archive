@@ -5,8 +5,6 @@ import datetime
 import json
 import os
 from archive.frames.models import Frame, Thumbnail, Version, Headers
-from django.utils import timezone
-from pytz import UTC
 
 
 INSTRUMENTS = (
@@ -125,8 +123,8 @@ class VersionFactory(factory.django.DjangoModelFactory):
         model = Version
 
     created = factory.fuzzy.FuzzyDateTime(
-        datetime.datetime(2015, 1, 1, tzinfo=UTC),
-        datetime.datetime(2025, 1, 1, tzinfo=UTC)
+        datetime.datetime(2015, 1, 1, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2025, 1, 1, tzinfo=datetime.timezone.utc)
     )
     key = factory.fuzzy.FuzzyText(length=32)
     md5 = factory.fuzzy.FuzzyText(length=32)
@@ -141,12 +139,12 @@ class FrameFactory(factory.django.DjangoModelFactory):
     basename = FuzzyBasename()
     area = FuzzyArea()
     observation_date = factory.fuzzy.FuzzyDateTime(
-        datetime.datetime(2015, 1, 1, tzinfo=UTC),
-        timezone.now()
+        datetime.datetime(2015, 1, 1, tzinfo=datetime.timezone.utc),
+        datetime.datetime.now(datetime.timezone.utc)
     )
     observation_day = factory.fuzzy.FuzzyDate(
         datetime.date(2015, 1, 1),
-        timezone.now().date()
+        datetime.datetime.now(datetime.timezone.utc).date()
     )
     proposal_id = factory.fuzzy.FuzzyChoice(PROPOSALS)
     instrument_id = factory.fuzzy.FuzzyChoice(INSTRUMENTS)
@@ -156,8 +154,8 @@ class FrameFactory(factory.django.DjangoModelFactory):
     exposure_time = factory.fuzzy.FuzzyFloat(0.0, 10000.0)
     primary_optical_element = factory.fuzzy.FuzzyChoice(FILTERS)
     public_date = factory.fuzzy.FuzzyDateTime(
-        datetime.datetime(2015, 1, 1, tzinfo=UTC),
-        datetime.datetime(2025, 1, 1, tzinfo=UTC)
+        datetime.datetime(2015, 1, 1, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2025, 1, 1, tzinfo=datetime.timezone.utc)
     )
     configuration_type = factory.fuzzy.FuzzyChoice(OBSERVATION_TYPES)
     observation_id = factory.fuzzy.FuzzyInteger(9000000)
@@ -185,7 +183,7 @@ class FrameFactory(factory.django.DjangoModelFactory):
 
 
 class PublicFrameFactory(FrameFactory):
-    public_date = datetime.datetime(2000, 1, 1, tzinfo=UTC)
+    public_date = datetime.datetime(2000, 1, 1, tzinfo=datetime.timezone.utc)
 
 
 class ThumbnailFactory(factory.django.DjangoModelFactory):
