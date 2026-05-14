@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "science-archive"
-version = "2.7.1"
+version = "2.7.2"
 description = ""
 authors = ["Jashandeep Sohi <jsohi@lco.global>"]
 readme = "README.md"
@@ -16,7 +16,7 @@ PyYAML = "^6.0"
 boto3 = "<2.0"
 astropy = ">=7,<9.0"
 Markdown = ">=3.0,<3.1"
-gunicorn = {version = "25.3.0", extras = ["gevent"]}
+gunicorn = {version = "22.0.0", extras = ["gevent"]}
 django-cors-headers = "^4.9.0"
 drf-yasg = "^1.21"
 python3-memcached = ">=1.51,<2.0"
