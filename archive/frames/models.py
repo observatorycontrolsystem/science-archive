@@ -96,7 +96,7 @@ class Frame(models.Model):
 
     class Meta:
         indexes = [
-            Index(fields=["observation_date", "public_date", "site_id", "telescope_id", "instrument_id", "configuration_type", "primary_optical_element", "proposal_id"]),
+            Index(fields=["observation_date", "public_date", "site_id", "telescope_id", "instrument_id", "configuration_type", "primary_optical_element", "proposal_id"], name='frames_frame_aggregate'),
         ]
         ordering = ['-observation_date']
 

@@ -239,6 +239,9 @@ if os.getenv('CACHE_LOC', None) is not None:
     if CACHES['default']['BACKEND'] == 'django_redis.cache.RedisCache':
         CACHES['default']['OPTIONS']['CLIENT_CLASS'] = 'django_redis.client.DefaultClient'
 
+# Set the default AUTO_FIELD to the old 32 bit ones for posterity.
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
 # Settings pertaining to posting messages to the post archived fits exchange
 QUEUE_BROKER_URL = os.getenv('QUEUE_BROKER_URL', 'memory://localhost')
 PROCESSED_EXCHANGE_ENABLED = ast.literal_eval(os.getenv('PROCESSED_EXCHANGE_ENABLED', 'True'))
@@ -261,7 +264,7 @@ PAGINATION_DEFAULT_LIMIT = int(os.getenv('PAGINATION_DEFAULT_LIMIT', 100))
 PAGINATION_MAX_LIMIT = int(os.getenv('PAGINATION_MAX_LIMIT', 1000))
 
 try:
-    from .local_settings import *
+    from local_settings import *
 except ImportError:
     pass
 
