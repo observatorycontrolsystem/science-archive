@@ -23,7 +23,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import APIException
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
-from django.db.models import Q, Prefetch, Count
+from django.db.models import Q, Prefetch, Count, Exists, OuterRef
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
@@ -92,14 +92,23 @@ class FrameViewSet(SelectablePaginationMixin, viewsets.ModelViewSet):
         queryset = (
             Frame.objects.exclude(observation_date=None)
             .prefetch_related('version_set')
-            .prefetch_related('thumbnails')
         )
+        if self.request.query_params.get('include_thumbnails', '').lower() == 'true':
+            queryset = queryset.prefetch_related('thumbnails')
         if self.action == 'list':
-            # Exclude frames without a version in list searches
-            queryset = queryset.exclude(version__isnull=True)
-        # Only prefetch related frames if we're including them in the response
-        if self.request.query_params.get('include_related_frames', '').lower() != 'false':
-            queryset = queryset.prefetch_related(Prefetch('related_frames', queryset=Frame.objects.all().only('id')))
+            # Exclude frames without a version in list searches.
+            # Exists() with a direct FK lookup lets PostgreSQL check only the versions
+            # for each frame it scans (O(1) per frame via the FK index on frame_id).
+            # exclude(version__isnull=True) generates a correlated NOT EXISTS self-join
+            # So this method uses no joins and is ~2x faster.
+            queryset = queryset.filter(Exists(Version.objects.filter(frame=OuterRef('pk'))))
+        elif self.request.query_params.get('include_related_frames', '').lower() != 'false':
+            # For non-list actions (retrieve, etc.) prefetch related frames normally.
+            # The list action loads related IDs directly from the through table instead
+            # (see list()) to avoid the redundant JOIN back to frames_frame.
+            queryset = queryset.prefetch_related(
+                Prefetch('related_frames', queryset=Frame.objects.only('id').order_by())
+            )
         if self.request.user.is_superuser:
             return queryset
         elif self.request.user.is_authenticated:
@@ -113,14 +122,25 @@ class FrameViewSet(SelectablePaginationMixin, viewsets.ModelViewSet):
     # These two method overrides just force the use of the as_dict method for serialization for list and detail endpoints
     def list(self, request, *args, **kwargs):
         # TODO: Default to not include related frames once we've announced it to users
-        include_related_frames = True
-        if request.query_params.get('include_related_frames', '').lower() == 'false':
-            include_related_frames = False
-        include_thumbnails = True if request.query_params.get('include_thumbnails', '').lower() == 'true' else False
+        include_related_frames = request.query_params.get('include_related_frames', '').lower() != 'false'
+        include_thumbnails = request.query_params.get('include_thumbnails', '').lower() == 'true'
 
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
         if page is not None:
+            if include_related_frames and page:
+                # Query the M2M through table directly — to_frame_id IS the related frame id,
+                # so no join back to frames_frame is needed. prefetch_related always generates
+                # that join because it must construct Frame instances.
+                RelatedThrough = Frame.related_frames.through
+                rows = RelatedThrough.objects.filter(
+                    from_frame_id__in=[f.id for f in page]
+                ).values_list('from_frame_id', 'to_frame_id')
+                related_map = {}
+                for from_id, to_id in rows:
+                    related_map.setdefault(from_id, []).append(to_id)
+                for frame in page:
+                    frame._related_frame_ids = related_map.get(frame.id, [])
             json_models = [model.as_dict(include_thumbnails, include_related_frames) for model in page]
             return self.get_paginated_response(json_models)
         else:

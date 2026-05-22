@@ -69,12 +69,16 @@ class FrameSerializer(serializers.ModelSerializer):
     area = PolygonField(allow_null=True, help_text='GeoJSON area that this frame covers')
     observation_day = serializers.DateField(input_formats=['iso-8601', '%Y%m%d'], help_text='Observation day in %Y%m%d format')
     headers = serializers.JSONField(required=True, write_only=True)
-    configuration_type = serializers.ChoiceField(choices=get_configuration_type_tuples())
+    configuration_type = serializers.ChoiceField(choices=[])
     related_frame_filenames = serializers.ListField(
         child=serializers.CharField(), required=True, write_only=True,
         style={'base_template': 'input.html'},
         help_text='Set of related frames for this file'
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['configuration_type'].choices = get_configuration_type_tuples()
 
     class Meta:
         model = Frame

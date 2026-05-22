@@ -4,6 +4,7 @@ from django.db import connections, transaction, OperationalError, InternalError
 from django.utils import dateparse
 
 from datetime import timedelta
+import re
 import sys
 import logging
 logger = logging.getLogger(__name__)
@@ -68,12 +69,18 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
             try:
                 with transaction.atomic(using='replica'), connections['replica'].cursor() as cursor:
                     # Obtain estimated values using the query planner (only valid with PostgreSQL)
-                    sql = cursor.mogrify(*queryset.query.sql_with_params()).decode("utf-8")
-                    cursor.execute(
-                        "SELECT count_estimate(%s);",
-                        [sql]
-                    )
-                    estimate = int(cursor.fetchone()[0])
+                    sql, params = queryset.query.sql_with_params()
+                    inner = cursor.cursor
+                    # Inline params client-side so PostgreSQL sees a custom plan.
+                    # psycopg2 mogrify returns bytes; psycopg3 returns str.
+                    mogrified = inner.mogrify(sql, params)
+                    if not isinstance(mogrified, str):
+                        mogrified = mogrified.decode("utf-8")
+                    explain_sql = "EXPLAIN " + mogrified
+                    cursor.execute(explain_sql)
+                    first_line = cursor.fetchone()[0]
+                    estimate = int(re.search(r'rows=(\d+)', first_line).group(1))
+                    logger.debug("EXPLAIN estimate: %d (first plan line: %s)", estimate, first_line)
                     return estimate
             except Exception as e:
                 logger.warning("Failed to estimate count", exc_info=e)
