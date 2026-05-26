@@ -208,14 +208,10 @@ def aggregate_frames_sql(frames, timeout=0, user_proposals=None):
 
     with connections["replica"].cursor() as cursor:
         django_sql, params = frames.query.sql_with_params()
-        params = (timeout, ) + params + (user_proposals,)
+        cursor.execute("SET LOCAL statement_timeout TO %s", (timeout,))
+        cursor.execute("SET LOCAL enable_sort = off")
+        params = params + (user_proposals,)
         query_sql = f"""
-          SET LOCAL statement_timeout TO %s;
-
-          -- Disabling sort biases the planner to use HashAggreate which performs
-          -- better on large time windows.
-          SET LOCAL enable_sort = off;
-
           -- "WITH" statements are lazy definitions and only executed if needed
           -- by the "real" query further below.
           WITH
