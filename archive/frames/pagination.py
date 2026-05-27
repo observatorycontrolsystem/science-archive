@@ -4,7 +4,6 @@ from django.db import connections, transaction, OperationalError, InternalError
 from django.utils import dateparse
 
 from datetime import timedelta
-import re
 import sys
 import logging
 logger = logging.getLogger(__name__)
