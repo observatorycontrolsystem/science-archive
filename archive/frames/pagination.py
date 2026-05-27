@@ -67,8 +67,7 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
             logger.warning("Estimating the count using the postgres query planner")
             try:
                 with transaction.atomic(using='replica'), connections['replica'].cursor() as cursor:
-                    # Obtain estimated values using the query planner (only valid with PostgreSQL)
-                    sql = cursor.mogrify(*queryset.query.sql_with_params()).decode("utf-8")
+                    sql = cursor.mogrify(*queryset.query.sql_with_params())
                     cursor.execute(
                         "SELECT count_estimate(%s);",
                         [sql]

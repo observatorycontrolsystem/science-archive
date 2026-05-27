@@ -59,7 +59,7 @@ class TestFrameGet(ReplicationTestCase):
         self.assertEqual(response.json()['count'], 5)
         self.assertContains(response, self.frame.basename)
         self.assertContains(response, 'related_frames')
-        self.assertEqual(self.mock_prefetch.call_count, 1)
+        self.assertEqual(self.mock_prefetch.call_count, 0)
 
     def test_exclude_frames_without_versions(self):
         # Remove the version set from 4 of the 5 frames, then see that they aren't returned

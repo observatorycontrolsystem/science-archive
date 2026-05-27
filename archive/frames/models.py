@@ -141,7 +141,7 @@ class Frame(models.Model):
         ret_dict['url'] = self.url if self.version_set.exists() else None
         ret_dict['filename'] = self.filename if self.version_set.exists() else None
         if include_thumbnails:
-            ret_dict['thumbnails'] = [t.as_dict() for t in Thumbnail.objects.filter(frame=self)]
+            ret_dict['thumbnails'] = [t.as_dict() for t in self.thumbnails.all()]
         # TODO: Remove these old model field names once users have migrated their code
         ret_dict['DATE_OBS'] = ret_dict['observation_date']
         ret_dict['DAY_OBS'] = ret_dict['observation_day']
@@ -161,9 +161,12 @@ class Frame(models.Model):
         if self.area:
             ret_dict['area'] = json.loads(self.area.geojson)
         if include_thumbnails:
-            ret_dict['thumbnails'] = [t.as_dict() for t in Thumbnail.objects.filter(frame=self)]
+            ret_dict['thumbnails'] = [t.as_dict() for t in self.thumbnails.all()]
         if include_related_frames:
-            ret_dict['related_frames'] = list(self.related_frames.all().values_list('id', flat=True))
+            if hasattr(self, '_related_frame_ids'):
+                ret_dict['related_frames'] = self._related_frame_ids
+            else:
+                ret_dict['related_frames'] = [rf.id for rf in self.related_frames.all()]
         return ret_dict
 
 
