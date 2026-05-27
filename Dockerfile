@@ -18,3 +18,5 @@ RUN poetry export > requirements.txt \
   && pip --no-cache-dir install -r requirements.txt
 
 COPY . ./
+
+ENTRYPOINT [ "gunicorn", "--config gunicorn_config.py", "--worker-class=gevent", "--workers=4", "--access-logfile=-", "--error-logfile=-", "archive.wsgi:application"]

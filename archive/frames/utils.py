@@ -209,6 +209,7 @@ def aggregate_frames_sql(frames, timeout=0, user_proposals=None):
     with connections["replica"].cursor() as cursor:
         django_sql, params = frames.query.sql_with_params()
         cursor.execute("SET LOCAL statement_timeout TO %s", (timeout,))
+        # Disabling sort biases the planner to use HashAggreate which performs better on large time windows.
         cursor.execute("SET LOCAL enable_sort = off")
         params = params + (user_proposals,)
         query_sql = f"""
