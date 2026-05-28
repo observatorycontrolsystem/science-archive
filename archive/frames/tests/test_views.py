@@ -1065,3 +1065,24 @@ class TestUtils(ReplicationTestCase):
         self.assertTrue(('CT1', 'CT1') in configuration_type_tuples)
         self.assertTrue(('CT2', 'CT2') in configuration_type_tuples)
         self.assertTrue(('CT3', 'CT3') in configuration_type_tuples)
+
+
+class TestVersionGet(ReplicationTestCase):
+    def setUp(self):
+        user = User.objects.create(username='admin', password='admin', is_superuser=True, is_staff=True)
+        user.backend = settings.AUTHENTICATION_BACKENDS[0]
+        self.client.force_login(user)
+        self.versions = VersionFactory.create_batch(5)
+        self.target_version = self.versions[0]
+
+    def test_md5_filter_returns_only_matching_version(self):
+        response = self.client.get(reverse('version-list'), {'md5': self.target_version.md5})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['count'], 1)
+        self.assertEqual(data['results'][0]['md5'], self.target_version.md5)
+
+    def test_md5_filter_returns_empty_for_unknown_md5(self):
+        response = self.client.get(reverse('version-list'), {'md5': 'doesnotexist'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['count'], 0)

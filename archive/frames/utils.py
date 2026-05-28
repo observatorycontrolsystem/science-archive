@@ -6,7 +6,7 @@ from urllib.parse import urlsplit, urljoin
 from django.conf import settings
 from django.core.cache import cache
 from django.urls import reverse
-from django.db import connections
+from django.db import connections, transaction
 from django.db.models.query import EmptyQuerySet
 from astropy.io import fits
 
@@ -206,13 +206,17 @@ def aggregate_frames_sql(frames, timeout=0, user_proposals=None):
     user_proposals_not_none = user_proposals is not None
     user_proposals = user_proposals if user_proposals_not_none else []
 
-    with connections["replica"].cursor() as cursor:
-        django_sql, params = frames.query.sql_with_params()
-        cursor.execute("SET LOCAL statement_timeout TO %s", (timeout,))
-        # Disabling sort biases the planner to use HashAggreate which performs better on large time windows.
-        cursor.execute("SET LOCAL enable_sort = off")
-        params = params + (user_proposals,)
-        query_sql = f"""
+    with transaction.atomic(using="replica"):
+        with connections["replica"].cursor() as cursor:
+            django_sql, params = frames.query.sql_with_params()
+            params = (timeout,) + params + (user_proposals,)
+            query_sql = f"""
+          SET LOCAL statement_timeout TO %s;
+
+          -- Disabling sort biases the planner to use HashAggreate which performs
+          -- better on large time windows.
+          SET LOCAL enable_sort = off;
+
           -- "WITH" statements are lazy definitions and only executed if needed
           -- by the "real" query further below.
           WITH
@@ -279,10 +283,14 @@ def aggregate_frames_sql(frames, timeout=0, user_proposals=None):
             array_agg(DISTINCT primary_optical_element) FILTER (WHERE primary_optical_element <> '') AS filters,
             to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS generated_at
           FROM filtered_distinct;
-        """ # nosec B608
-        logger.debug("executing aggregate query: %s (params: %s)", query_sql, params)
-        cursor.execute(query_sql, params)
-        row = cursor.fetchone()
+            """ # nosec B608
+            logger.debug("executing aggregate query: %s (params: %s)", query_sql, params)
+            cursor.execute(query_sql, params)
+            # psycopg3 positions the cursor on the first statement result (SET).
+            # Advance through non-row-producing results until we reach the SELECT.
+            while cursor.description is None:
+                cursor.nextset()
+            row = cursor.fetchone()
 
     return {
         "proposals": set(row[0] or []),

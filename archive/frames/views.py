@@ -569,7 +569,7 @@ class VersionViewSet(viewsets.ReadOnlyModelViewSet):
     # already exists before attempting to ingest a new version.
     queryset = Version.objects.using('default').all()
     filter_backends = (DjangoFilterBackend,)
-    filter_fields = ('md5',)
+    filterset_fields = ('md5',)
 
 
 class FunpackViewSet(viewsets.ViewSet):
