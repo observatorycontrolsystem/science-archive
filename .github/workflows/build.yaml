@@ -1,12 +1,12 @@
 name: Build
 
 on:
-  # Run this workflow for pushes on all branches
+  # Run this workflow for pushes on all branches except the update container image one
   push:
     branches:
       - '**'
-  # Run this workflow when a tag or branch is created
-  create:
+      - '!chore/k8s-update-images-component/**'
+
   # Run this workflow for pull requests
   pull_request:
 
