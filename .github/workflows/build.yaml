@@ -5,7 +5,8 @@ on:
   push:
     branches:
       - '**'
-      - '!chore/k8s-update-images-component/**'
+    paths:
+      - '!k8s/**'
 
   # Run this workflow for pull requests
   pull_request:
