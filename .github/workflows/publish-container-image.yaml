@@ -4,7 +4,8 @@ on:
     paths:
       - "**"
       - "!k8s/**"
-    
+      - "k8s/base/**"
+      - "!k8s/base/components/ghcr-images"
     branches:
       - "main"
 
@@ -108,7 +109,36 @@ jobs:
             echo "EOF" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Docker meta
+        uses: docker/metadata-action@v6
+        with:
+          sep-tags: ","
+          tags: |
+              type=ref,event=branch
+              type=ref,event=tag
+              type=ref,event=pr
+              type=sha,enable=true,priority=100,prefix=,suffix=,format=long
+
+      - name: Push base Kustomization to GHCR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          commitTitle: ${{ steps.commitInfo.outputs.title || '' }}
+          commitBody: ${{ steps.commitInfo.outputs.body || '' }}
+        run: |-
+          # Update base Kustomization w/ built images
+          pushd k8s/base/
+          jq -r '.builds[] | "\(.imageName)=\(.tag)"' "$GITHUB_WORKSPACE/built-images.json" | xargs -L1 nix run .#kustomize -- edit set image
+
+          # Upload to ghcr.io
+          echo "$GITHUB_TOKEN" | nix run .#oras -- login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          nix run .#oras -- push \
+            --annotation "org.opencontainers.image.title=$commitTitle" \
+            --annotation "org.opencontainers.image.description=$commitBody" \
+            --annotation "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$GITHUB_SHA" \
+            "ghcr.io/${GITHUB_REPOSITORY,,}/k8s-base:$DOCKER_METADATA_OUTPUT_TAGS" ./:application/vnd.oci.image.layer.v1.tar+gzip
+
       - name: Create a PR to merge the Component into the default branch
+        if: github.event_name == 'release'
         env:
           actorName: ${{ format('{0}', github.actor) }}
           actorEmail: ${{ format('{1}+{0}@users.noreply.github.com', github.actor, github.actor_id) }}
@@ -153,7 +183,7 @@ jobs:
             --pr-body "$pr_body_template" \
             --pr-base-branch "$DEFAULT_BRANCH_NAME" \
             --pr-merge \
-            --pr-merge-branch-protection all \
+            --pr-merge-branch-protection bypass \
             --pr-merge-method squash \
             --pr-merge-commit-title "$commit_title_template" \
             --pr-merge-commit-message "$commit_body_template" \
