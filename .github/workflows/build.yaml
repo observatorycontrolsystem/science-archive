@@ -1,7 +1,7 @@
 name: Build
 
 on:
-  # Run this workflow for pushes on all branches except the update container image one
+  # Run this workflow for pushes on all branches except when only the k8s folder is changed.
   push:
     branches:
       - '**'
