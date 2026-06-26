@@ -65,6 +65,10 @@ Workflows expect the following secrets:
     - Limited to this repo
     - Contents: write
     - PR: write
+  - `GH_TOKEN_DEPLOY_REPO_WORKFLOW_DISPATCH`
+    - Fine-grained personal access token
+    - Limited to the deploy repo
+    - Actions: write
 
 Github user that's used to generate these tokens also **needs** to be added
 to this repo with the `Write` role.

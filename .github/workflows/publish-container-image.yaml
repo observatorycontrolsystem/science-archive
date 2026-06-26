@@ -27,6 +27,7 @@ jobs:
     permissions:
       packages: write
       contents: read
+      statuses: write
 
     steps:
 
@@ -136,6 +137,31 @@ jobs:
             --annotation "org.opencontainers.image.description=$commitBody" \
             --annotation "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$GITHUB_SHA" \
             "ghcr.io/${GITHUB_REPOSITORY,,}/k8s-base:$DOCKER_METADATA_OUTPUT_TAGS" ./:application/vnd.oci.image.layer.v1.tar+gzip
+      - name: Trigger K8s base update workflow in the deploy repo
+        id: trigger
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN_DEPLOY_REPO_WORKFLOW_DISPATCH }}
+        run: |-
+          shopt -s inherit_errexit
+          repo="https://github.com/LCOGT/science-archive-deploy"
+          workflow_url="$(gh workflow --repo "$repo" run update-kustomize-base.yaml --ref main -f "ref=$GITHUB_SHA" -f "mergePR=true")"
+          echo "base_update_workflow_url=$workflow_url" >> "$GITHUB_OUTPUT"
+
+      - name: Add triggered workflow URL to commit status
+        uses: actions/github-script@v8
+        env:
+          base_update_workflow_url: ${{ steps.trigger.outputs.base_update_workflow_url }}
+        with:
+          script: |
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'success',
+              context: 'Deploy Repo Base Update Workflow',
+              description: 'Deploy Repo Base Update Workflow',
+              target_url: `${process.env.base_update_workflow_url}`
+            })
 
       - name: Create a PR to merge the Component into the default branch
         if: github.event_name == 'release'
