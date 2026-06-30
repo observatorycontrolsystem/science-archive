@@ -1,11 +1,12 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: v2.1.0
+_commit: v2.2.0
 _src_path: gh:LCOGT/k8s-application-copier-template
 app_description: Science archive for astronomical data
 app_name: science-archive
 build_container_on_every_push: true
 default_branch_bypass_branch_protection_rules: true
 default_branch_name: main
+delete_branches_on_merge: true
 deploy_repo: https://github.com/LCOGT/science-archive-deploy
 dockerfile_path: Dockerfile
 have_deploy_repo: true
