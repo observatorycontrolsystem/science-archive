@@ -7,9 +7,7 @@ from rest_framework.request import Request
 class RemoteUserLogMiddleware(object):
     ''' This Middleware sets request.META['REMOTE_USER'] to the authenticated username (or 'anonymous')
 
-        Gunicorn logs the WSGI environ's REMOTE_USER via the %(u)s access log format variable.
-        Since request.META is the same dict as the WSGI environ, setting it here makes the
-        username available to Gunicorn's access logger.
+        It can be added to the gunicorn access log with the token: %({remote_user}e)s
 
         It should be placed after Authentication middleware (and DRFTokenAuthMiddleware) so that
         request.user is populated by the time this runs.
