@@ -1,3 +1,8 @@
+# Access log format. %({remote_user}e)s reads the WSGI environ's REMOTE_USER,
+# which RemoteUserLogMiddleware sets to the authenticated username (or 'anonymous').
+access_log_format = '%(h)s %(l)s %({remote_user}e)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
+
+
 def post_worker_init(worker):
     # Warm botocore's S3 service model cache before this worker accepts requests.
     # This runs after gevent's monkey.patch_all(), so the SSL context created here
