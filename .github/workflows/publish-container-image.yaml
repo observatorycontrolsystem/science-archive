@@ -2,12 +2,14 @@ name: "Publish Container Image"
 on:
   push:
     paths:
+      # On Release we build the container and check-in the Component back into the default branch.
+      # These rules prevent this workflow from going into an infinite loop.
       - "**"
       - "!k8s/**"
       - "k8s/base/**"
       - "!k8s/base/components/ghcr-images"
     branches:
-      - "main"
+      - "**"
 
   workflow_dispatch:
 
@@ -50,7 +52,6 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
           extra_nix_config: |
             accept-flake-config = true
-
 
       - name: Login to GHCR Registry
         uses: docker/login-action@v4
@@ -126,28 +127,52 @@ jobs:
           commitTitle: ${{ steps.commitInfo.outputs.title || '' }}
           commitBody: ${{ steps.commitInfo.outputs.body || '' }}
         run: |-
+          set -eo pipefail
+
+          # expand_github_links <text> <default_owner/repo>
+          expand_github_links() {
+              local text="$1"
+              local default_target="$2"
+
+              # 1. Expand standard shortlinks: #123 -> https://github.com
+              # 2. Expand cross-repo shortlinks: owner/repo#123 -> https://github.com
+              # 3. Expand commit SHAs: #abc1234 -> https://github.com
+              echo "$text" | sed -E \
+                  -e "s|([a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+)#([0-9]+)|https://github.com/\1/issues/\2|g" \
+                  -e "s|#([0-9]+)|https://github.com{default_target}/issues/\1|g" \
+                  -e "s|#([0-9a-fA-F]{7,40})|https://github.com{default_target}/commit/\1|g"
+          }
+
           # Update base Kustomization w/ built images
           pushd k8s/base/
           jq -r '.builds[] | "\(.imageName)=\(.tag)"' "$GITHUB_WORKSPACE/built-images.json" | xargs -L1 nix run .#kustomize -- edit set image
 
+          # Create an annotations file to avoid complex escaping
+          tmp=$(mktemp -d)
+          jq -n \
+            --arg title "$(expand_github_links "$commitTitle" "$GITHUB_REPOSITORY")" \
+            --arg description "$(expand_github_links "$commitBody" "$GITHUB_REPOSITORY")" \
+            --arg source "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$GITHUB_SHA" \
+            '{"$manifest": {"org.opencontainers.image.title": $title, "org.opencontainers.image.description": $description, "org.opencontainers.image.source": $source}}' > "$tmp/annotations.json"
+
           # Upload to ghcr.io
-          echo "$GITHUB_TOKEN" | nix run .#oras -- login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
-          nix run .#oras -- push \
-            --annotation "org.opencontainers.image.title=$commitTitle" \
-            --annotation "org.opencontainers.image.description=$commitBody" \
-            --annotation "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$GITHUB_SHA" \
-            "ghcr.io/${GITHUB_REPOSITORY,,}/k8s-base:$DOCKER_METADATA_OUTPUT_TAGS" ./:application/vnd.oci.image.layer.v1.tar+gzip
+          echo "$GITHUB_TOKEN" | nix run --inputs-from . nixpkgs#oras -- login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          nix run --inputs-from . nixpkgs#oras -- push \
+            --annotation-file "$tmp/annotations.json" \
+            "ghcr.io/${GITHUB_REPOSITORY,,}/k8s/base:$DOCKER_METADATA_OUTPUT_TAGS" ./:application/vnd.oci.image.layer.v1.tar+gzip
       - name: Trigger K8s base update workflow in the deploy repo
+        if: github.ref_name == 'main'
         id: trigger
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN_DEPLOY_REPO_WORKFLOW_DISPATCH }}
         run: |-
           shopt -s inherit_errexit
           repo="https://github.com/LCOGT/science-archive-deploy"
-          workflow_url="$(gh workflow --repo "$repo" run update-kustomize-base.yaml --ref main -f "ref=$GITHUB_SHA" -f "mergePR=true")"
+          workflow_url="$(gh workflow --repo "$repo" run update-upstream-artifacts.yaml --ref main -f "ref=$GITHUB_SHA" -f "mergePR=true")"
           echo "base_update_workflow_url=$workflow_url" >> "$GITHUB_OUTPUT"
 
       - name: Add triggered workflow URL to commit status
+        if: github.ref_name == 'main'
         uses: actions/github-script@v8
         env:
           base_update_workflow_url: ${{ steps.trigger.outputs.base_update_workflow_url }}

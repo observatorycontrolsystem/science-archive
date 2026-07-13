@@ -86,8 +86,6 @@
               $buildx_cmd build "$BUILD_CONTEXT" --tag "$IMAGE" "''${args[@]}" "$@"
             '';
           };
-
-          oras = pkgs.oras;
         };
 
         # https://devenv.sh/basics/
