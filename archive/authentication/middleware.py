@@ -1,7 +1,11 @@
+import logging
+
 from django.conf import settings
 from django.http import HttpResponseBadRequest
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.request import Request
+
+logger = logging.getLogger(__name__)
 
 
 class RemoteUserLogMiddleware(object):
@@ -64,5 +68,9 @@ class DRFTokenAuthMiddleware(object):
                 if user_auth:
                     request.user = user_auth[0]
             except Exception:
-                pass
+                # Mask the token: it's a live credential, so only log a short prefix
+                # to allow correlation/debugging without leaking a replayable secret.
+                token = request.headers.get('Authorization', '').split(' ', 1)[-1]
+                masked_token = f'{token[:6]}...' if token else '(none)'
+                logger.warning('DRFTokenAuthMiddleware: Failed to authenticate with token %s', masked_token, exc_info=True)
         return self.get_response(request)
