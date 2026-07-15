@@ -2,7 +2,7 @@ import logging
 
 from django.conf import settings
 from django.http import HttpResponseBadRequest
-from rest_framework.authentication import TokenAuthentication
+from ocs_authentication.backends import OCSTokenAuthentication
 from rest_framework.request import Request
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ class DRFTokenAuthMiddleware(object):
         if request.method == 'GET' and request.headers.get('Authorization', '').startswith('Token'):
             drf_request = Request(request)
             try:
-                user_auth = TokenAuthentication().authenticate(drf_request)
+                user_auth = OCSTokenAuthentication().authenticate(drf_request)
                 # Set the request.user field if we successfully authenticate with TokenAuthentication
                 if user_auth:
                     request.user = user_auth[0]
