@@ -57,8 +57,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'archive.authentication.middleware.DRFTokenAuthMiddleware',
+    'archive.authentication.middleware.RemoteUserLogMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'archive.authentication.middleware.LimitAnonymousAccessMiddleware',
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -224,6 +227,11 @@ OCS_AUTHENTICATION = {
     'OAUTH_SERVER_KEY': os.getenv('OAUTH_SERVER_KEY', ''),
     'REQUESTS_TIMEOUT_SECONDS': 60
 }
+
+# Anonymous requests with offsets > this will be blocked - to stop the bots
+MAX_UNAUTHENTICATED_OFFSET = os.getenv('MAX_UNAUTHENTICATED_OFFSET', 10000)
+# Anonymous requests with limits > this will be blocked - to slow the bots
+MAX_UNAUTHENTICATED_LIMIT = os.getenv('MAX_UNAUTHENTICATED_LIMIT', 100)
 
 CORS_ORIGIN_ALLOW_ALL = True
 
