@@ -229,9 +229,9 @@ OCS_AUTHENTICATION = {
 }
 
 # Anonymous requests with offsets > this will be blocked - to stop the bots
-MAX_UNAUTHENTICATED_OFFSET = os.getenv('MAX_UNAUTHENTICATED_OFFSET', 10000)
+MAX_UNAUTHENTICATED_OFFSET = int(os.getenv('MAX_UNAUTHENTICATED_OFFSET', 10000))
 # Anonymous requests with limits > this will be blocked - to slow the bots
-MAX_UNAUTHENTICATED_LIMIT = os.getenv('MAX_UNAUTHENTICATED_LIMIT', 100)
+MAX_UNAUTHENTICATED_LIMIT = int(os.getenv('MAX_UNAUTHENTICATED_LIMIT', 100))
 
 CORS_ORIGIN_ALLOW_ALL = True
 
