@@ -7,7 +7,7 @@ on:
       - "**"
       - "!k8s/**"
       - "k8s/base/**"
-      - "!k8s/base/components/ghcr-images"
+      - "!k8s/base/components/ghcr-images/**"
     branches:
       - "**"
 
@@ -139,8 +139,8 @@ jobs:
               # 3. Expand commit SHAs: #abc1234 -> https://github.com
               echo "$text" | sed -E \
                   -e "s|([a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+)#([0-9]+)|https://github.com/\1/issues/\2|g" \
-                  -e "s|#([0-9]+)|https://github.com{default_target}/issues/\1|g" \
-                  -e "s|#([0-9a-fA-F]{7,40})|https://github.com{default_target}/commit/\1|g"
+                  -e "s|#([0-9]+)|https://github.com/${default_target}/issues/\1|g" \
+                  -e "s|#([0-9a-fA-F]{7,40})|https://github.com/${default_target}/commit/\1|g"
           }
 
           # Update base Kustomization w/ built images
@@ -161,7 +161,7 @@ jobs:
             --annotation-file "$tmp/annotations.json" \
             "ghcr.io/${GITHUB_REPOSITORY,,}/k8s/base:$DOCKER_METADATA_OUTPUT_TAGS" ./:application/vnd.oci.image.layer.v1.tar+gzip
       - name: Trigger K8s base update workflow in the deploy repo
-        if: github.ref_name == 'main'
+        if: github.event_name == 'release' || github.ref_name == 'main'
         id: trigger
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN_DEPLOY_REPO_WORKFLOW_DISPATCH }}
@@ -172,7 +172,7 @@ jobs:
           echo "base_update_workflow_url=$workflow_url" >> "$GITHUB_OUTPUT"
 
       - name: Add triggered workflow URL to commit status
-        if: github.ref_name == 'main'
+        if: github.event_name == 'release' || github.ref_name == 'main'
         uses: actions/github-script@v8
         env:
           base_update_workflow_url: ${{ steps.trigger.outputs.base_update_workflow_url }}

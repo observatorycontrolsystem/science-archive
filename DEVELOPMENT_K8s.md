@@ -72,3 +72,11 @@ Workflows expect the following secrets:
 
 Github user that's used to generate these tokens also **needs** to be added
 to this repo with the `Write` role.
+### Rulesets
+
+Whenever a Release is created, a workflow will create a PR with the built
+images as a Kustomize Component and attempt to merge it into the
+`main` branch.
+
+If this branch has any branch protection rules, then the user used to generate
+the `GH_TOKEN_OCTOPILOT` token should be added to the bypass list.
