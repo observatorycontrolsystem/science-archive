@@ -345,12 +345,12 @@ class TestQueryFiltering(ReplicationTestCase):
         # frame2 is created after frame1, so it has a higher auto-increment id
         frame1 = PublicFrameFactory()
         frame2 = PublicFrameFactory()
-        response = self.client.get(reverse('frame-list') + '?id_gt={}'.format(frame1.id))
-        # id_gt is strictly greater than, so the boundary frame itself is excluded
+        response = self.client.get(reverse('frame-list') + '?id__gt={}'.format(frame1.id))
+        # id__gt is strictly greater than, so the boundary frame itself is excluded
         self.assertNotContains(response, frame1.basename)
         self.assertContains(response, frame2.basename)
         # Nothing has an id greater than the last-created frame
-        response = self.client.get(reverse('frame-list') + '?id_gt={}'.format(frame2.id))
+        response = self.client.get(reverse('frame-list') + '?id__gt={}'.format(frame2.id))
         self.assertNotContains(response, frame1.basename)
         self.assertNotContains(response, frame2.basename)
 
