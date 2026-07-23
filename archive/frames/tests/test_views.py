@@ -341,6 +341,19 @@ class TestQueryFiltering(ReplicationTestCase):
         response = self.client.get(reverse('frame-list') + '?EXPTIME=900')
         self.assertNotContains(response, frame.basename)
 
+    def test_id_gt(self):
+        # frame2 is created after frame1, so it has a higher auto-increment id
+        frame1 = PublicFrameFactory()
+        frame2 = PublicFrameFactory()
+        response = self.client.get(reverse('frame-list') + '?id_gt={}'.format(frame1.id))
+        # id_gt is strictly greater than, so the boundary frame itself is excluded
+        self.assertNotContains(response, frame1.basename)
+        self.assertContains(response, frame2.basename)
+        # Nothing has an id greater than the last-created frame
+        response = self.client.get(reverse('frame-list') + '?id_gt={}'.format(frame2.id))
+        self.assertNotContains(response, frame1.basename)
+        self.assertNotContains(response, frame2.basename)
+
     @responses.activate
     def test_filters_public(self):
         user = User.objects.create(username='frodo', password='theone')
