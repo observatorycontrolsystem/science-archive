@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "science-archive"
-version = "2.7.5"
+version = "2.7.6"
 description = ""
 authors = ["Jashandeep Sohi <jsohi@lco.global>"]
 readme = "README.md"

@@ -1,3 +1,7 @@
+2.7.6
+2026-07-23
+Add `id__gt` filter to efficiently query for newly added frames
+
 2.7.5
 2026-07-20
 Add in unauthenticated limit/offset limits to GET API requests

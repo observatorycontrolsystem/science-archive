@@ -36,6 +36,7 @@ class FrameFilter(django_filters.FilterSet):
     BLKUID = django_filters.NumberFilter(field_name='observation_id', lookup_expr='exact')
     REQNUM = django_filters.NumberFilter(field_name='request_id', lookup_expr='exact')
     RLEVEL = django_filters.NumberFilter(field_name='reduction_level', lookup_expr='exact')
+    id__gt = django_filters.NumberFilter(field_name='id', lookup_expr='gt')
     covers = django_filters.CharFilter(method='covers_filter')
     submitter = django_filters.CharFilter(method='submitter_filter')
     exclude_OBSTYPE = django_filters.MultipleChoiceFilter(
