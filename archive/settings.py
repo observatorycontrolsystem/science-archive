@@ -58,6 +58,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'archive.authentication.middleware.DRFTokenAuthMiddleware',
+    'archive.dbrouters.ReadRoutingMiddleware',
     'archive.authentication.middleware.RemoteUserLogMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -209,7 +210,7 @@ REST_FRAMEWORK = {
         'user': '50000/day',
     },
     'DEFAULT_FILTER_BACKENDS': (
-        'django_filters.rest_framework.DjangoFilterBackend',
+        'archive.schema.DocumentedDjangoFilterBackend',
     ),
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',

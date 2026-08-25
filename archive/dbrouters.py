@@ -1,6 +1,34 @@
-from datetime import timedelta, datetime, timezone
+from contextvars import ContextVar
 
-from archive.frames.models import Frame, Version
+# Set per request by ReadRoutingMiddleware - keeps track of if an authenticated user
+# was found in the middleware. Used in the Database reader routing.
+authenticated_request = ContextVar('authenticated_request', default=False)
+
+# Logging in writes a session and reads it back, along with the user row, on the very next
+# request - too soon to rely on replication.
+AUTHENTICATION_APPS = frozenset(['sessions', 'auth'])
+
+
+class ReadRoutingMiddleware:
+    """
+    Record whether the request is authenticated so that DBClusterRouter can route
+    unauthenticated reads to the replica DB
+
+    Database routers aren't given the request, so the decision has to be passed to the router
+    out of band. This must run after AuthenticationMiddleware and DRFTokenAuthMiddleware,
+    which are what populate request.user.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # request.user is missing if this middleware is ever placed before the auth middleware
+        user = getattr(request, 'user', None)
+        token = authenticated_request.set(user is not None and user.is_authenticated)
+        try:
+            return self.get_response(request)
+        finally:
+            authenticated_request.reset(token)
 
 
 class DBClusterRouter:
@@ -9,27 +37,13 @@ class DBClusterRouter:
     """
     def db_for_read(self, model, **hints):
         """
-        Reads for the archive frames models go to the reader endpoint.
-
-        Reads for certain frames models are directed to the writer endpoint if the
-        instance was recently created in order to prevent a race condition. This
-        could happen if, for example, data that has been committed has not been
-        replicated fast enough. This is an issue specifically in the frame
-        creation view.
+        Reads for authenticated requests go to the writer endpoint, and reads for
+        unauthenticated ones go to the reader endpoint
         """
-        new_instance_delay_minutes = 10
-        new_instance_delay_models = (Frame, Version,)
-        instance = hints.get('instance')
-        created = getattr(instance, 'created', None)
+        if authenticated_request.get() or model._meta.app_label in AUTHENTICATION_APPS:
+            return 'default'
 
-        if isinstance(instance, new_instance_delay_models) and created is not None:
-            if created > datetime.now(timezone.utc) - timedelta(minutes=new_instance_delay_minutes):
-                return 'default'
-
-        if 'archive.frames.models' in str(model):
-            return 'replica'
-
-        return 'default'
+        return 'replica'
 
     def db_for_write(self, model, **hints):
         """

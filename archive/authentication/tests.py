@@ -1,7 +1,11 @@
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AnonymousUser, User
 from django.conf import settings
+from django.http import HttpResponse
+from django.test import RequestFactory
 from unittest.mock import patch
+from archive.authentication.middleware import DRFTokenAuthMiddleware
 from archive.authentication.models import Profile
+from rest_framework.authtoken.models import Token
 from archive.frames.tests.factories import FrameFactory
 from archive.test_helpers import ReplicationTestCase
 from archive.frames.utils import aggregate_frames_sql, set_cached_frames_aggregates
@@ -14,7 +18,45 @@ import json
 
 
 
-class TestRevokeTokenAPI(APITestCase):
+class TestDRFTokenAuthMiddleware(ReplicationTestCase):
+    """
+    Verify that the middleware properly validates for an authenticated users
+    """
+    def setUp(self):
+        self.user = User.objects.create(username='ingest')
+        self.token, _ = Token.objects.get_or_create(user=self.user)
+        self.factory = RequestFactory()
+
+    def is_authenticated_at_middleware_time(self, method, **headers):
+        request = getattr(self.factory, method)('/frames/', **headers)
+        request.user = AnonymousUser()
+        seen = {}
+
+        def get_response(request):
+            seen['authenticated'] = request.user.is_authenticated
+            return HttpResponse()
+
+        DRFTokenAuthMiddleware(get_response)(request)
+        return seen['authenticated']
+
+    def test_token_is_resolved_for_reads(self):
+        authorization = f'Token {self.token.key}'
+        self.assertTrue(self.is_authenticated_at_middleware_time('get', HTTP_AUTHORIZATION=authorization))
+
+    def test_token_is_resolved_for_writes(self):
+        authorization = f'Token {self.token.key}'
+        for method in ('post', 'put', 'patch', 'delete'):
+            with self.subTest(method=method):
+                self.assertTrue(self.is_authenticated_at_middleware_time(method, HTTP_AUTHORIZATION=authorization))
+
+    def test_request_without_a_token_stays_anonymous(self):
+        self.assertFalse(self.is_authenticated_at_middleware_time('post'))
+
+    def test_invalid_token_stays_anonymous(self):
+        self.assertFalse(self.is_authenticated_at_middleware_time('post', HTTP_AUTHORIZATION='Token notarealtoken'))
+
+
+class TestRevokeTokenAPI(ReplicationTestCase, APITestCase):
     def setUp(self) -> None:
         super(TestRevokeTokenAPI, self).setUp()
         self.user = User.objects.create(username='test_revoke_token_user')

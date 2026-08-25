@@ -9,6 +9,42 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def is_small_query(request):
+    """
+    Determine whether a request is constrained enough by indexed or otherwise bounded
+    filters that a real count (and an arbitrary sort) is safe to attempt.
+
+    Returns a (small_query, force_count) tuple.
+    """
+    query_params = dict(request.query_params)
+    # If these indexed fields are in the query params, query should be small and bounded so allow full count
+    # Also have a fallback 'force_count' param to force it to attempt the full count
+    if 'force_count' in query_params and request.user.is_authenticated:
+        return True, True
+    # /versions/?md5= queries need the accurate count for shipping data in
+    elif request.path == '/versions/' and 'md5' in query_params:
+        return True, True
+    # /thumbnails/ queries with indexed fields can have the full count
+    elif request.path == '/thumbnails/' and ('frame_basename' in query_params or 'observation_id' in query_params or 'request_id' in query_params):
+        return True, False
+    elif request.path == '/frames/':
+        # /frames/ queries with indexed fields, or with a small timerange and other common fields.
+        if 'request_id' in query_params or 'observation_id' in query_params or 'basename_exact' in query_params:
+            return True, False
+        elif 'start' in query_params and 'end' in query_params:
+            end = dateparse.parse_datetime(request.query_params.get('end')).replace(tzinfo=None)
+            start = dateparse.parse_datetime(request.query_params.get('start')).replace(tzinfo=None)
+            timespan = end - start
+            # Allow 1 week of querys with no other params
+            if timespan <= timedelta(days=7):
+                return True, False
+            # Or up to 2 months of querys with some other bounding params
+            elif timespan <= timedelta(weeks=9) and any(field in query_params for field in ['proposal_id', 'target_name_exact']):
+                return True, False
+
+    return False, False
+
+
 class CustomCursorPagination(CursorPagination):
     page_size_query_param='limit'
     page_size = settings.PAGINATION_DEFAULT_LIMIT
@@ -38,12 +74,15 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
         - If any other exception occured fall back to no count (large number returned).
         """
         self.count_estimated = False
+        # Whichever endpoint the router sent this query to is the one that has to be
+        # timed out and estimated against - see archive.dbrouters
+        db = queryset.db
         # Only attempt to get the real count if we have already determined this is a "small" query
         if self.small_query:
             # Limit to 5000 ms if force_count is used, otherwise 1500 ms
             timeout = '5000' if self.force_count else '1500'
             try:
-                with transaction.atomic(using='replica'), connections['replica'].cursor() as cursor:
+                with transaction.atomic(using=db), connections[db].cursor() as cursor:
                     cursor.execute(f'SET LOCAL statement_timeout TO {timeout};')
                     return super().get_count(queryset)
             except (OperationalError, InternalError):
@@ -53,7 +92,7 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
         if not queryset.query.where:
             logger.warning("Estimating the count using postgres stats table")
             try:
-                with transaction.atomic(using='replica'), connections['replica'].cursor() as cursor:
+                with transaction.atomic(using=db), connections[db].cursor() as cursor:
                     # Obtain estimated values (only valid with PostgreSQL)
                     cursor.execute(
                         "SELECT reltuples FROM pg_class WHERE relname = %s",
@@ -66,7 +105,7 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
         else:
             logger.warning("Estimating the count using the postgres query planner")
             try:
-                with transaction.atomic(using='replica'), connections['replica'].cursor() as cursor:
+                with transaction.atomic(using=db), connections[db].cursor() as cursor:
                     sql = cursor.mogrify(*queryset.query.sql_with_params())
                     cursor.execute(
                         "SELECT count_estimate(%s);",
@@ -81,34 +120,7 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
 
     def paginate_queryset(self, queryset, request, view=None):
         # If certain conditions are met, this is a "small" query and we can attempt a real count
-        query_params = dict(request.query_params)
-        # If these indexed fields are in the query params, query should be small and bounded so allow full count
-        # Also have a fallback 'force_count' param to force it to attempt the full count
-        if 'force_count' in query_params and request.user.is_authenticated:
-            self.force_count = True
-            self.small_query = True
-        # /versions/?md5= queries need the accurate count for shipping data in
-        elif request.path == '/versions/' and 'md5' in query_params:
-            self.force_count = True
-            self.small_query = True
-        # /thumbnails/ queries with indexed fields can have the full count
-        elif request.path == '/thumbnails/' and ('frame_basename' in query_params or 'observation_id' in query_params or 'request_id' in query_params):
-            self.small_query = True
-        elif request.path == '/frames/':
-            # /frames/ queries with indexed fields, or with a small timerange and other common fields.
-            if 'request_id' in query_params or 'observation_id' in query_params or 'basename_exact' in query_params:
-                self.small_query = True
-            elif 'start' in query_params and 'end' in query_params:
-                timespan = dateparse.parse_datetime(request.query_params.get('end')) - dateparse.parse_datetime(request.query_params.get('start'))
-                # Allow 1 week of querys with no other params
-                if timespan <= timedelta(days=7):
-                    self.small_query = True
-                # Or up to 2 months of querys with some other bounding params
-                elif timespan <= timedelta(weeks=9) and any(field in query_params for field in ['proposal_id', 'target_name_exact']):
-                    self.small_query = True
-        else:
-            self.force_count = False
-            self.small_query = False
+        self.small_query, self.force_count = is_small_query(request)
         result = super().paginate_queryset(queryset, request, view)
         # If the count was estimated and we have an offset, then correct the results!
         # This is needed because the base code returns an empty list if offset > count

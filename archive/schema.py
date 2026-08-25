@@ -4,12 +4,53 @@ from rest_framework.schemas.utils import is_list_view
 from setuptools_scm import get_version
 from setuptools_scm.version import ScmVersion
 from django.conf import settings
+from django_filters.rest_framework import DjangoFilterBackend
+
+import logging
+logger = logging.getLogger(__name__)
+
 
 def version_scheme(version: ScmVersion) -> str:
     """Simply return the string representation of the version object tag, which is the latest git tag.
     setuptools_scm does not provide a simple semantic versioning format without trying to guess the next release, or adding some metadata to the version.
     """
     return str(version.tag)
+
+
+class DocumentedDjangoFilterBackend(DjangoFilterBackend):
+    """
+    django-filter dropped DRF schema support in 25.1 (DRF's own schema generation is
+    deprecated in favour of drf-spectacular), but DRF's AutoSchema still calls
+    get_schema_operation_parameters() on every filter backend, so schema generation raises
+    an AttributeError without this.
+    """
+    def get_schema_operation_parameters(self, view):
+        # Views with no filters have nothing to document, so ignore them
+        if not getattr(view, 'filterset_class', None) and not getattr(view, 'filterset_fields', None):
+            return []
+
+        try:
+            queryset = view.get_queryset()
+        except Exception:
+            queryset = None
+            logger.warning(f'{view.__class__} is not compatible with schema generation')
+
+        filterset_class = self.get_filterset_class(view, queryset)
+        if not filterset_class:
+            return []
+
+        return [
+            {
+                'name': field_name,
+                'required': field.extra['required'],
+                'in': 'query',
+                'description': field.label if field.label is not None else field_name,
+                'schema': {
+                    'type': 'string',
+                },
+            }
+            for field_name, field in filterset_class.base_filters.items()
+        ]
 
 
 class ScienceArchiveSchemaGenerator(SchemaGenerator):
@@ -77,31 +118,6 @@ class ScienceArchiveSchema(AutoSchema):
 
         return super().get_filter_parameters(path, method)
 
-    # The following class methods are based off a change merged to master in the DRF repository
-    # that allows for the specification of separate request and response serializers for view introspection.
-    # See https://github.com/encode/django-rest-framework/pull/7424
-
-    # These overrides can be removed once a new release containing these changes is available.
-    # TODO: Remove these when the next version of DRF is released
-
-    def get_components(self, path, method):
-        request_serializer = self.get_request_serializer(path, method)
-        response_serializer = self.get_response_serializer(path, method)
-
-        components = {}
-
-        if isinstance(request_serializer, serializers.Serializer):
-            component_name = self.get_component_name(request_serializer)
-            content = self.map_serializer(request_serializer)
-            components.setdefault(component_name, content)
-
-        if isinstance(response_serializer, serializers.Serializer):
-            component_name = self.get_component_name(response_serializer)
-            content = self.map_serializer(response_serializer)
-            components.setdefault(component_name, content)
-
-        return components
-
     def get_request_serializer(self, path, method):
         view = self.view
 
@@ -125,64 +141,3 @@ class ScienceArchiveSchema(AutoSchema):
                 return view.get_serializer()
         else:
             return view.get_response_serializer()
-
-    def get_request_body(self, path, method):
-        if method not in ('PUT', 'PATCH', 'POST'):
-            return {}
-
-        self.request_media_types = self.map_parsers(path, method)
-
-        serializer = self.get_request_serializer(path, method)
-
-        if not isinstance(serializer, serializers.Serializer):
-            item_schema = {}
-        else:
-            item_schema = self._get_reference(serializer)
-
-        return {
-            'content': {
-                ct: {'schema': item_schema}
-                for ct in self.request_media_types
-            }
-        }
-
-    def get_responses(self, path, method):
-        if method == 'DELETE':
-            return {
-                '204': {
-                    'description': ''
-                }
-            }
-
-        self.response_media_types = self.map_renderers(path, method)
-
-        serializer = self.get_response_serializer(path, method)
-
-        if not isinstance(serializer, serializers.Serializer):
-            item_schema = {}
-        else:
-            item_schema = self._get_reference(serializer)
-
-        if is_list_view(path, method, self.view):
-            response_schema = {
-                'type': 'array',
-                'items': item_schema,
-            }
-            paginator = self.get_paginator()
-            if paginator:
-                response_schema = paginator.get_paginated_response_schema(response_schema)
-        else:
-            response_schema = item_schema
-        status_code = '201' if method == 'POST' else '200'
-        return {
-            status_code: {
-                'content': {
-                    ct: {'schema': response_schema}
-                    for ct in self.response_media_types
-                },
-                # description is a mandatory property,
-                # https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#responseObject
-                # TODO: put something meaningful into it
-                'description': ""
-            }
-        }
