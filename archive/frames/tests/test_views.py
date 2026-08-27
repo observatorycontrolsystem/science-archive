@@ -147,6 +147,18 @@ class TestFramePost(ReplicationTestCase):
         ]
         self.single_frame_payload = f
 
+    def test_post_frame_with_token_auth(self):
+        # Ingestion authenticates with a token, and DRFTokenAuthMiddleware wraps the request in
+        # a DRF Request to resolve it - which must not consume the body before the view reads it
+        self.client.logout()
+        token, _ = Token.objects.get_or_create(user=User.objects.get(username='admin'))
+        response = self.client.post(
+            reverse('frame-list'), json.dumps(self.single_frame_payload),
+            content_type='application/json', HTTP_AUTHORIZATION=f'Token {token.key}'
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Frame.objects.filter(basename=self.single_frame_payload['basename']).exists())
+
     def test_post_frame(self):
         total_frames = len(self.header_json)
         for extension in self.header_json:
@@ -516,6 +528,18 @@ class TestFrameOrdering(ReplicationTestCase):
     def test_unsafe_ordering_field_rejected_alongside_safe_one(self):
         response = self.client.get(reverse('frame-list'), {'ordering': 'observation_date,exposure_time'})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_unsafe_ordering_field_rejected_in_the_browsable_api(self):
+        # The browsable API renderer rebuilds the ordering form while rendering the response,
+        # which is past the point where DRF can turn an exception into a 400
+        response = self.client.get(reverse('frame-list'), {'ordering': 'primary_optical_element'},
+                                   HTTP_ACCEPT='text/html')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_safe_ordering_field_renders_in_the_browsable_api(self):
+        response = self.client.get(reverse('frame-list'), {'ordering': '-observation_date'},
+                                   HTTP_ACCEPT='text/html')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_unknown_ordering_field_still_falls_back_to_default(self):
         response = self.client.get(reverse('frame-list'), {'ordering': 'not_a_field'})

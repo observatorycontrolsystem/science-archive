@@ -1,8 +1,11 @@
+from archive.schema import PYPROJECT_PATH, get_archive_version
 from archive.test_helpers import ReplicationTestCase
 from django.urls import reverse
 from rest_framework import status
+from unittest.mock import patch
 
 import json
+import tomllib
 
 
 class TestOpenApiSchema(ReplicationTestCase):
@@ -30,3 +33,15 @@ class TestOpenApiSchema(ReplicationTestCase):
         parameters = self.get_schema()['paths']['/frames/']['get']['parameters']
         ordering = next(p for p in parameters if p['name'] == 'ordering')
         self.assertIn('observation_date', ordering['description'])
+
+    def test_schema_reports_the_release_version(self):
+        with open(PYPROJECT_PATH, 'rb') as pyproject:
+            expected = tomllib.load(pyproject)['tool']['poetry']['version']
+        self.assertEqual(self.get_schema()['info']['version'], expected)
+
+    def test_schema_generates_without_a_version_to_report(self):
+        # The deployed image has no .git and could have no pyproject.toml either, which used to
+        # take the whole endpoint down rather than just the version string
+        with patch('archive.schema.PYPROJECT_PATH', '/nonexistent/pyproject.toml'):
+            self.assertEqual(get_archive_version(), 'unknown')
+            self.assertEqual(self.get_schema()['info']['version'], 'unknown')

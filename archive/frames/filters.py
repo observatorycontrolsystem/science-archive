@@ -28,21 +28,22 @@ class SafeOrderingFilter(OrderingFilter):
         )
     )
 
-    def remove_invalid_fields(self, queryset, fields, view, request):
-        valid_fields = super().remove_invalid_fields(queryset, fields, view, request)
-        small_query, _ = is_small_query(request)
-        if small_query:
-            return valid_fields
-        rejected_fields = [field for field in valid_fields if field.lstrip('-') not in SAFE_ORDERING_FIELDS]
-        if rejected_fields:
-            raise ValidationError(
-                'Ordering by {} requires a more constrained query. Either narrow the search '
-                '(for example with request_id, observation_id, basename_exact, or a start/end '
-                'range of a week or less) or order by one of: {}.'.format(
-                    ', '.join(rejected_fields), ', '.join(sorted(SAFE_ORDERING_FIELDS))
+    def filter_queryset(self, request, queryset, view):
+        requested = request.query_params.get(self.ordering_param)
+        if requested:
+            fields = [field.strip() for field in requested.split(',')]
+            valid_fields = self.remove_invalid_fields(queryset, fields, view, request)
+            rejected_fields = [field for field in valid_fields if field.lstrip('-') not in SAFE_ORDERING_FIELDS]
+            if rejected_fields and not is_small_query(request)[0]:
+                raise ValidationError(
+                    'Ordering by {} requires a more constrained query. Either narrow the search '
+                    '(for example with request_id, observation_id, basename_exact, or a start/end '
+                    'range of a week or less) or order by one of: {}.'.format(
+                        ', '.join(rejected_fields), ', '.join(sorted(SAFE_ORDERING_FIELDS))
+                    )
                 )
-            )
-        return valid_fields
+
+        return super().filter_queryset(request, queryset, view)
 
 
 class FrameFilter(django_filters.FilterSet):

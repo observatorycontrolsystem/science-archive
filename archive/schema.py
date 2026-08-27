@@ -1,20 +1,25 @@
 from rest_framework.schemas.openapi import AutoSchema, SchemaGenerator
-from rest_framework import serializers
-from rest_framework.schemas.utils import is_list_view
-from setuptools_scm import get_version
-from setuptools_scm.version import ScmVersion
 from django.conf import settings
 from django_filters.rest_framework import DjangoFilterBackend
 
+from pathlib import Path
+import tomllib
 import logging
 logger = logging.getLogger(__name__)
 
+PYPROJECT_PATH = Path(__file__).resolve().parent.parent / 'pyproject.toml'
 
-def version_scheme(version: ScmVersion) -> str:
-    """Simply return the string representation of the version object tag, which is the latest git tag.
-    setuptools_scm does not provide a simple semantic versioning format without trying to guess the next release, or adding some metadata to the version.
+
+def get_archive_version():
     """
-    return str(version.tag)
+    The version reported in the OpenAPI schema, read from pyproject.toml.
+    """
+    try:
+        with open(PYPROJECT_PATH, 'rb') as pyproject:
+            return tomllib.load(pyproject)['tool']['poetry']['version']
+    except (OSError, KeyError, tomllib.TOMLDecodeError):
+        logger.warning('Could not read the archive version from %s', PYPROJECT_PATH, exc_info=True)
+        return 'unknown'
 
 
 class DocumentedDjangoFilterBackend(DjangoFilterBackend):
@@ -58,7 +63,7 @@ class ScienceArchiveSchemaGenerator(SchemaGenerator):
         schema = super().get_schema(*args, **kwargs)
         schema['info']['title'] = settings.NAVBAR_TITLE_TEXT
         schema['info']['description'] = 'API documentation for the OCS Science Archive'
-        schema['info']['version'] = get_version(version_scheme=version_scheme, local_scheme='no-local-version')
+        schema['info']['version'] = get_archive_version()
         return schema
 
 
