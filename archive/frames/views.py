@@ -1,4 +1,4 @@
-from archive.schema import ScienceArchiveSchema
+from archive.schema import DocumentedDjangoFilterBackend, ScienceArchiveSchema
 from archive.frames.exceptions import FunpackError
 from archive.frames.models import Frame, Thumbnail, Version
 from archive.frames.serializers import (
@@ -11,17 +11,16 @@ from archive.frames.utils import (
 
 )
 from archive.frames.permissions import AdminOrReadOnly
-from archive.frames.filters import FrameFilter, ThumbnailFilter
+from archive.frames.filters import FrameFilter, SafeOrderingFilter, ThumbnailFilter
 
 from archive.doc_examples import EXAMPLE_RESPONSES, QUERY_PARAMETERS
 from archive.frames.pagination import LimitedLimitOffsetPagination, CustomCursorPagination
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
-from rest_framework import status, filters, viewsets
+from rest_framework import status, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import APIException
-from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
 from django.db.models import Q, Prefetch, Count, Exists, OuterRef
 from django.views.decorators.clickjacking import xframe_options_exempt
@@ -73,8 +72,8 @@ class FrameViewSet(SelectablePaginationMixin, viewsets.ModelViewSet):
     schema = ScienceArchiveSchema(tags=['Frames'])
     serializer_class = FrameSerializer
     filter_backends = (
-        DjangoFilterBackend,
-        filters.OrderingFilter,
+        DocumentedDjangoFilterBackend,
+        SafeOrderingFilter,
     )
     filterset_class = FrameFilter
     ordering_fields = ('id', 'basename', 'observation_date', 'primary_optical_element', 'configuration_type',
@@ -482,7 +481,7 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
     serializer_class = ThumbnailSerializer
     permission_classes = (AdminOrReadOnly,)
     filter_backends = (
-        DjangoFilterBackend,
+        DocumentedDjangoFilterBackend,
     )
     filterset_class = ThumbnailFilter
 
@@ -568,7 +567,7 @@ class VersionViewSet(viewsets.ReadOnlyModelViewSet):
     # data, as the available endpoint on this admin viewset is used to check whether a version
     # already exists before attempting to ingest a new version.
     queryset = Version.objects.using('default').all()
-    filter_backends = (DjangoFilterBackend,)
+    filter_backends = (DocumentedDjangoFilterBackend,)
     filterset_fields = ('md5',)
 
 

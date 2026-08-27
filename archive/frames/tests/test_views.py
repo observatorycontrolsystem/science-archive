@@ -483,6 +483,78 @@ class TestQueryFiltering(ReplicationTestCase):
         response = self.client.get(reverse('frame-list') + '?RLEVEL=11')
         self.assertNotContains(response, frame.basename)
 
+    def test_start_end_with_mixed_naive_and_aware_bounds(self):
+        frame = PublicFrameFactory(observation_date=datetime.datetime(2011, 2, 1, tzinfo=datetime.timezone.utc))
+        response = self.client.get(reverse('frame-list') + '?start=2011-01-01&end=2011-03-01T00:00:00Z')
+        self.assertContains(response, frame.basename)
+
+
+class TestFrameOrdering(ReplicationTestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_superuser(username='admin', email='a@a.com', password='password')
+        self.admin_user.backend = settings.AUTHENTICATION_BACKENDS[0]
+        self.frames = [
+            PublicFrameFactory(exposure_time=exposure_time, request_id=42,
+                               observation_date=datetime.datetime(2011, 2, day, tzinfo=datetime.timezone.utc))
+            for day, exposure_time in enumerate([30.0, 10.0, 20.0], start=1)
+        ]
+
+    def test_safe_ordering_field_allowed_on_unbounded_query(self):
+        for ordering in ('id', '-id', 'observation_date', '-observation_date'):
+            response = self.client.get(reverse('frame-list'), {'ordering': ordering})
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_unsafe_ordering_field_rejected_on_unbounded_query(self):
+        response = self.client.get(reverse('frame-list'), {'ordering': 'exposure_time'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertContains(response, 'requires a more constrained query', status_code=400)
+
+    def test_descending_unsafe_ordering_field_rejected(self):
+        response = self.client.get(reverse('frame-list'), {'ordering': '-exposure_time'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_unsafe_ordering_field_rejected_alongside_safe_one(self):
+        response = self.client.get(reverse('frame-list'), {'ordering': 'observation_date,exposure_time'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_unknown_ordering_field_still_falls_back_to_default(self):
+        response = self.client.get(reverse('frame-list'), {'ordering': 'not_a_field'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_unsafe_ordering_field_allowed_on_indexed_query(self):
+        response = self.client.get(reverse('frame-list'), {'request_id': 42, 'ordering': 'exposure_time'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [frame['exposure_time'] for frame in response.json()['results']], [10.0, 20.0, 30.0]
+        )
+
+    def test_unsafe_ordering_field_allowed_on_short_timerange_query(self):
+        response = self.client.get(
+            reverse('frame-list'), {'start': '2011-02-01', 'end': '2011-02-04', 'ordering': 'exposure_time'}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_unsafe_ordering_field_rejected_on_long_timerange_query(self):
+        response = self.client.get(
+            reverse('frame-list'), {'start': '2011-01-01', 'end': '2011-06-01', 'ordering': 'exposure_time'}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_unsafe_ordering_field_allowed_with_force_count(self):
+        self.client.force_login(self.admin_user)
+        response = self.client.get(reverse('frame-list'), {'force_count': True, 'ordering': 'exposure_time'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_unsafe_ordering_field_rejected_for_anonymous_force_count(self):
+        response = self.client.get(reverse('frame-list'), {'force_count': True, 'ordering': 'exposure_time'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_unsafe_ordering_field_rejected_with_cursor_pagination(self):
+        response = self.client.get(
+            reverse('frame-list'), {'pagination_style': 'cursor', 'ordering': 'exposure_time'}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 class TestZipDownload(ReplicationTestCase):
     def setUp(self):

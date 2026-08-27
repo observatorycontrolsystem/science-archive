@@ -1,13 +1,48 @@
 from archive.frames.models import Frame, Thumbnail
+from archive.frames.pagination import is_small_query
 from archive.frames.utils import get_configuration_type_tuples
 from archive.settings import SCIENCE_CONFIGURATION_TYPES
 from django.contrib.gis.geos import GEOSGeometry
 from django.contrib.gis.geos.error import GEOSException
 from rest_framework.exceptions import ValidationError
+from rest_framework.filters import OrderingFilter
 import datetime
 from django.conf import settings
 from django_filters import rest_framework as django_filters
 from anyascii import anyascii
+
+# Ordering by any other field requires sorting the entire result set, so it is only
+# allowed on queries that is_small_query() determines are sufficiently bounded.
+SAFE_ORDERING_FIELDS = frozenset(['id', 'observation_date'])
+
+
+class SafeOrderingFilter(OrderingFilter):
+    """
+    Restricts ordering to indexed fields unless the query is bounded enough that
+    sorting on an arbitrary field is cheap.
+    """
+    ordering_description = (
+        'Which field to use when ordering the results. Ordering by a field other than '
+        '{} is only allowed on queries constrained by an indexed field or a short time range.'.format(
+            ' or '.join(sorted(SAFE_ORDERING_FIELDS))
+        )
+    )
+
+    def remove_invalid_fields(self, queryset, fields, view, request):
+        valid_fields = super().remove_invalid_fields(queryset, fields, view, request)
+        small_query, _ = is_small_query(request)
+        if small_query:
+            return valid_fields
+        rejected_fields = [field for field in valid_fields if field.lstrip('-') not in SAFE_ORDERING_FIELDS]
+        if rejected_fields:
+            raise ValidationError(
+                'Ordering by {} requires a more constrained query. Either narrow the search '
+                '(for example with request_id, observation_id, basename_exact, or a start/end '
+                'range of a week or less) or order by one of: {}.'.format(
+                    ', '.join(rejected_fields), ', '.join(sorted(SAFE_ORDERING_FIELDS))
+                )
+            )
+        return valid_fields
 
 
 class FrameFilter(django_filters.FilterSet):

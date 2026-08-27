@@ -60,7 +60,7 @@ class DRFTokenAuthMiddleware(object):
 
     def __call__(self, request):
         # Check if this is a Token Auth request based on the Auth header having `Token` in it.
-        if request.method == 'GET' and request.headers.get('Authorization', '').startswith('Token'):
+        if request.headers.get('Authorization', '').startswith('Token'):
             drf_request = Request(request)
             try:
                 user_auth = OCSTokenAuthentication().authenticate(drf_request)
