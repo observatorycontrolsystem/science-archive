@@ -1,3 +1,9 @@
+2.7.7
+2026-08-27
+Fix /openapi/ endpoints
+Block expensive sort params if query is too large
+Route anonymous traffic to read replica
+
 2.7.6
 2026-07-23
 Add `id__gt` filter to efficiently query for newly added frames
