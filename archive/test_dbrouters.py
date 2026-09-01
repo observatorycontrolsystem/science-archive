@@ -6,6 +6,7 @@ from django.contrib.sessions.models import Session
 from django.db import router
 from django.http import HttpResponse
 from django.test import RequestFactory
+from ocs_authentication.auth_profile.models import AuthProfile
 from rest_framework.authtoken.models import Token
 
 
@@ -80,13 +81,11 @@ class TestReadRouting(ReplicationTestCase):
         request.user = AnonymousUser()
 
         def get_response(request):
-            # A session and its user are read back on the request right after logging in,
-            # which is sooner than they can be expected to have replicated
-            for model in (Session, User):
+            # A request counts as anonymous until its credentials are read, so these lookups
+            # happen before the routing is settled. Sending them to the reader would make
+            # authentication fail whenever the reader is unhealthy.
+            for model in (Session, User, Token, AuthProfile):
                 self.assertEqual(router.db_for_read(model), 'default', model.__name__)
-            # API tokens only change when a user regenerates one by hand, so the reader is
-            # current enough for them
-            self.assertEqual(router.db_for_read(Token), 'replica')
             return HttpResponse()
 
         ReadRoutingMiddleware(get_response)(request)

@@ -751,11 +751,19 @@ class TestFunpackViewSet(ReplicationTestCase):
 
 
 class TestFrameAggregate(ReplicationTestCase):
+    """
+    Filtered aggregates run a costly query, so they are restricted to staff - everyone else is
+    served the pre-computed cache. The tests that exercise the filtering itself therefore log
+    in as a superuser.
+    """
     def setUp(self):
         self.normal_user = User.objects.create(username='frodo', password='theone')
         self.normal_user.backend = settings.AUTHENTICATION_BACKENDS[0]
         Profile.objects.update_or_create(user=self.normal_user, defaults={'access_token': 'test', 'refresh_token': 'test'})
         AuthProfile.objects.create(user=self.normal_user)
+
+        self.admin_user = User.objects.create_superuser(username='admin', email='a@a.com', password='password')
+        self.admin_user.backend = settings.AUTHENTICATION_BACKENDS[0]
 
         is_public_date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=7)
         is_not_public_date = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7)
@@ -783,7 +791,26 @@ class TestFrameAggregate(ReplicationTestCase):
         self.assertEqual(set(response.json()['filters']), set(['rp', 'V', 'B']))
         self.assertEqual(set(response.json()['proposals']), set(['prop1', 'prop3', 'prop2']))
 
+    @patch('archive.frames.views.aggregate_frames_sql', wraps=aggregate_frames_sql)
+    def test_filtered_aggregate_is_restricted_to_superusers(self, aggregate_spy):
+        response = self.client.get(
+          reverse('frame-aggregate'),
+          {
+            "public": "true",
+            "start": datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=180),
+            "end": datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=180),
+          }
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            aggregate_spy.called,
+            'an anonymous request ran the costly aggregation instead of being served from cache'
+        )
+
     def test_frame_aggregate_filtered_time_public_all(self):
+        # Staff get the public aggregate unioned with the private one, so everything in the
+        # window shows up here - the public only frames are in test_frame_aggregate_all
+        self.client.force_login(self.admin_user)
         response = self.client.get(
           reverse('frame-aggregate'),
           {
@@ -794,15 +821,16 @@ class TestFrameAggregate(ReplicationTestCase):
         )
         self.assertEqual(response.status_code, 200)
 
-        self.assertEqual(set(response.json()['obstypes']), set(['EXPOSE', 'SKYFLAT']))
-        self.assertEqual(set(response.json()['telescopes']), set(['2m0b', '1m0a']))
-        self.assertEqual(set(response.json()['sites']), set(['ogg', 'bpl']))
-        self.assertEqual(set(response.json()['instruments']), set(['fl10', 'kb46']))
-        self.assertEqual(set(response.json()['filters']), set(['B', 'rp']))
-        self.assertEqual(set(response.json()['proposals']), set(['prop3', 'prop1']))
+        self.assertEqual(set(response.json()['obstypes']), set(['EXPOSE', 'SKYFLAT', 'BIAS']))
+        self.assertEqual(set(response.json()['telescopes']), set(['2m0b', '1m0a', '0m4a']))
+        self.assertEqual(set(response.json()['sites']), set(['ogg', 'bpl', 'coj']))
+        self.assertEqual(set(response.json()['instruments']), set(['fl10', 'kb46', 'en05']))
+        self.assertEqual(set(response.json()['filters']), set(['B', 'rp', 'V']))
+        self.assertEqual(set(response.json()['proposals']), set(['prop3', 'prop1', 'prop2']))
 
     def test_frame_aggregate_filtered_time_nopublic_all(self):
-        response = self.client.get(reverse('frame-list'))
+        # Staff see the frames that are not public yet
+        self.client.force_login(self.admin_user)
         response = self.client.get(
           reverse('frame-aggregate'),
           {
@@ -813,22 +841,16 @@ class TestFrameAggregate(ReplicationTestCase):
         )
         self.assertEqual(response.status_code, 200)
 
-        self.assertEqual(set(response.json()['obstypes']), set())
-        self.assertEqual(set(response.json()['telescopes']), set())
-        self.assertEqual(set(response.json()['sites']), set())
-        self.assertEqual(set(response.json()['instruments']), set())
-        self.assertEqual(set(response.json()['filters']), set())
-        self.assertEqual(set(response.json()['proposals']), set())
+        self.assertEqual(set(response.json()['obstypes']), set(['BIAS']))
+        self.assertEqual(set(response.json()['telescopes']), set(['0m4a']))
+        self.assertEqual(set(response.json()['sites']), set(['coj']))
+        self.assertEqual(set(response.json()['instruments']), set(['en05']))
+        self.assertEqual(set(response.json()['filters']), set(['V']))
+        self.assertEqual(set(response.json()['proposals']), set(['prop2']))
 
-    @responses.activate
-    def test_frame_aggregate_filtered_time_nopublic_all_authed(self):
-        responses.add(
-            responses.GET,
-            settings.OCS_AUTHENTICATION['OAUTH_PROFILE_URL'],
-            body=json.dumps({'proposals': [{'id': 'prop2'}]}),
-            status=200,
-            content_type='application/json'
-        )
+    @patch('archive.frames.views.aggregate_frames_sql', wraps=aggregate_frames_sql)
+    def test_filtered_aggregate_is_restricted_for_authenticated_non_staff(self, aggregate_spy):
+        # Being logged in isn't enough - the costly aggregation is staff only
         self.client.force_login(self.normal_user)
 
         response = self.client.get(
@@ -840,15 +862,12 @@ class TestFrameAggregate(ReplicationTestCase):
           }
         )
         self.assertEqual(response.status_code, 200)
-
-        self.assertEqual(set(response.json()['proposals']), set(['prop2']))
-        self.assertEqual(set(response.json()['obstypes']), set(['BIAS']))
-        self.assertEqual(set(response.json()['telescopes']), set(['0m4a']))
-        self.assertEqual(set(response.json()['sites']), set(['coj']))
-        self.assertEqual(set(response.json()['instruments']), set(['en05']))
-        self.assertEqual(set(response.json()['filters']), set(['V']))
+        self.assertFalse(aggregate_spy.called)
+        # They are served the pre-computed aggregate over everything instead
+        self.assertEqual(set(response.json()['obstypes']), set(['EXPOSE', 'BIAS', 'SKYFLAT']))
 
     def test_frame_aggregate_filtered_site(self):
+        self.client.force_login(self.admin_user)
         response = self.client.get(
           reverse('frame-aggregate'),
           {
@@ -868,6 +887,7 @@ class TestFrameAggregate(ReplicationTestCase):
         self.assertEqual(set(response.json()['proposals']), set(['prop3']))
 
     def test_frame_aggregate_filtered_telescope(self):
+        self.client.force_login(self.admin_user)
         response = self.client.get(
           reverse('frame-aggregate'),
           {
@@ -887,6 +907,7 @@ class TestFrameAggregate(ReplicationTestCase):
         self.assertEqual(set(response.json()['proposals']), set(['prop3']))
 
     def test_frame_aggregate_filtered_instrument(self):
+        self.client.force_login(self.admin_user)
         response = self.client.get(
           reverse('frame-aggregate'),
           {
@@ -906,6 +927,7 @@ class TestFrameAggregate(ReplicationTestCase):
         self.assertEqual(set(response.json()['proposals']), set(['prop3']))
 
     def test_frame_aggregate_filtered_obstype(self):
+        self.client.force_login(self.admin_user)
         response = self.client.get(
           reverse('frame-aggregate'),
           {
@@ -925,6 +947,7 @@ class TestFrameAggregate(ReplicationTestCase):
         self.assertEqual(set(response.json()['proposals']), set(['prop3']))
 
     def test_frame_aggregate_filtered_filter(self):
+        self.client.force_login(self.admin_user)
         response = self.client.get(
           reverse('frame-aggregate'),
           {
