@@ -282,8 +282,8 @@ class FrameViewSet(SelectablePaginationMixin, viewsets.ModelViewSet):
             x is None for x in [
               start, end, include_public, site_id, telescope_id, primary_optical_element,
               instrument_id, configuration_type, proposal_id
-            ] or not is_superuser
-        ):
+            ]
+        ) or not is_superuser:
             return self._agg_frames_all_resp()
 
         if start is None or end is None:
