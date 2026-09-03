@@ -12,6 +12,7 @@ from archive.test_helpers import ReplicationTestCase
 from django.test import override_settings
 from django.conf import settings
 from django.db.models import signals
+from django.db import OperationalError
 from django.contrib.gis.geos import Point
 from rest_framework import status
 from django.core.cache import cache
@@ -1218,3 +1219,12 @@ class TestVersionGet(ReplicationTestCase):
         response = self.client.get(reverse('version-list'), {'md5': 'doesnotexist'})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['count'], 0)
+
+    @patch('rest_framework.pagination.LimitOffsetPagination.get_count')
+    def test_md5_filter_errors_instead_of_estimating_the_count(self, mock_get_count):
+        # The ingester reads a non-zero count as "already ingested", so a database failure must
+        # not fall back to an estimated (or sys.maxsize) count on this endpoint
+        mock_get_count.side_effect = OperationalError('canceling statement due to statement timeout')
+        response = self.client.get(reverse('version-list'), {'md5': 'doesnotexist'})
+        self.assertEqual(response.status_code, 503)
+        self.assertNotIn('count', response.json())
