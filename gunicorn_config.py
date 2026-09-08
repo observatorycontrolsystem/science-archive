@@ -1,6 +1,11 @@
+import os
+
 # Access log format. %({remote_user}e)s reads the WSGI environ's REMOTE_USER,
 # which RemoteUserLogMiddleware sets to the authenticated username (or 'anonymous').
 access_log_format = '%(h)s %(l)s %({remote_user}e)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
+
+# Cap how many requests each worker handles at once. Gevent otherwise allows 1000 per worker.
+worker_connections = int(os.getenv('GUNICORN_WORKER_CONNECTIONS', '12'))
 
 
 def post_worker_init(worker):

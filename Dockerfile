@@ -19,4 +19,4 @@ RUN poetry export > requirements.txt \
 
 COPY . ./
 
-ENTRYPOINT [ "gunicorn", "--config gunicorn_config.py", "--worker-class=gevent", "--workers=4", "--access-logfile=-", "--error-logfile=-", "archive.wsgi:application"]
+ENTRYPOINT [ "gunicorn", "--config=gunicorn_config.py", "--worker-class=gevent", "--workers=4", "--access-logfile=-", "--error-logfile=-", "archive.wsgi:application"]

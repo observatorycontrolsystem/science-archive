@@ -4,9 +4,9 @@ from contextvars import ContextVar
 # was found in the middleware. Used in the Database reader routing.
 authenticated_request = ContextVar('authenticated_request', default=False)
 
-# Logging in writes a session and reads it back, along with the user row, on the very next
-# request - too soon to rely on replication.
-AUTHENTICATION_APPS = frozenset(['sessions', 'auth'])
+# We want to route authentication models to the writer, so issues with the read replica
+# do not impact authenticated users
+AUTHENTICATION_APPS = frozenset(['sessions', 'auth', 'authtoken', 'auth_profile'])
 
 
 class ReadRoutingMiddleware:

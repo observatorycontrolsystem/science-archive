@@ -3,6 +3,8 @@ from django.conf import settings
 from django.db import connections, transaction, OperationalError, InternalError
 from django.utils import dateparse
 
+from archive.frames.exceptions import ExactCountUnavailable
+
 from datetime import timedelta
 import sys
 import logging
@@ -71,7 +73,8 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
         - If large query or count takes longer than 5000 ms the database kills the query and raises OperationError. In that case,
         get an estimate instead of actual count when not filtered (this estimate can be stale and hence not fit for
         situations where the count of objects actually matter).
-        - If any other exception occured fall back to no count (large number returned).
+        - If any other exception occured fall back to no count (large number returned), unless force_count
+        was set, in which case we return a 503 Exception.
         """
         self.count_estimated = False
         # Whichever endpoint the router sent this query to is the one that has to be
@@ -85,8 +88,12 @@ class LimitedLimitOffsetPagination(LimitOffsetPagination):
                 with transaction.atomic(using=db), connections[db].cursor() as cursor:
                     cursor.execute(f'SET LOCAL statement_timeout TO {timeout};')
                     return super().get_count(queryset)
-            except (OperationalError, InternalError):
-                logger.warning(f"Getting the count timed out after {timeout} milliseconds")
+            except (OperationalError, InternalError) as e:
+                logger.warning(f"Getting the count failed or timed out after {timeout} milliseconds", exc_info=e)
+                # If the caller wants an exact count and we can't get one, raise an error
+                # rather than return a fake one.
+                if self.force_count:
+                    raise ExactCountUnavailable() from e
 
         self.count_estimated = True
         if not queryset.query.where:
