@@ -488,6 +488,24 @@ class TestQueryFiltering(ReplicationTestCase):
         )
         self.assertContains(response, frame.basename)
 
+    def test_area_intersects_point(self):
+        frame = PublicFrameFactory.create(
+            area='POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))'
+        )
+        response = self.client.get(reverse('frame-list') + '?intersects=POINT(5 5)')
+        self.assertContains(response, frame.basename)
+        response = self.client.get(reverse('frame-list') + '?intersects=POINT(20 20)')
+        self.assertNotContains(response, frame.basename)
+
+    def test_area_malformed_geometry_is_a_bad_request(self):
+        # Unrecognized input raises ValueError out of GEOSGeometry rather than GEOSException,
+        # so it has to be caught explicitly to avoid a 500
+        for query in ('covers=garbage', 'covers=POINT(banana)', 'intersects=garbage',
+                      'intersects=POINT(banana)', 'intersects=POLYGON((0 0, 0 1, 1 1))'):
+            with self.subTest(query=query):
+                response = self.client.get('{0}?{1}'.format(reverse('frame-list'), query))
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_rlevel(self):
         frame = PublicFrameFactory(reduction_level=10)
         response = self.client.get(reverse('frame-list') + '?RLEVEL=10')

@@ -96,17 +96,22 @@ class FrameFilter(django_filters.FilterSet):
     intersects = django_filters.CharFilter(method='intersects_filter')
 
     def covers_filter(self, queryset, name, value):
+        # GEOSGeometry raises GEOSException for input that parses as WKT but is not a valid
+        # geometry, and ValueError for input it cannot recognize as WKT, HEXEWKB or GeoJSON
         try:
             geo = GEOSGeometry(value)
-        except GEOSException:
+        except (GEOSException, ValueError):
             raise ValidationError("Error with covers query: Point must be specified with exact format 'POINT(RA DEC)'")
         return queryset.filter(area__covers=geo)
 
     def intersects_filter(self, queryset, name, value):
         try:
             geo = GEOSGeometry(value)
-        except GEOSException:
-            raise ValidationError("Error with intersects query: Point must be specified with exact format 'POINT(RA DEC)'")
+        except (GEOSException, ValueError):
+            raise ValidationError(
+                "Error with intersects query: must be a valid geometry, for example "
+                "'POINT(RA DEC)' or 'POLYGON((RA DEC, RA DEC, RA DEC, RA DEC))'"
+            )
         return queryset.filter(area__intersects=geo)
 
     def public_filter(self, queryset, name, value):
