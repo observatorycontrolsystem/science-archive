@@ -41,7 +41,7 @@ def is_small_query(request):
             if timespan <= timedelta(days=7):
                 return True, False
             # Or up to 2 months of querys with some other bounding params
-            elif timespan <= timedelta(weeks=9) and any(field in query_params for field in ['proposal_id', 'target_name_exact']):
+            elif timespan <= timedelta(weeks=9) and any(field in query_params for field in ['proposal_id', 'target_name_exact', 'target_name_iexact']):
                 return True, False
 
     return False, False

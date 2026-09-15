@@ -345,6 +345,23 @@ class TestQueryFiltering(ReplicationTestCase):
         response = self.client.get(reverse('frame-list') + '?OBJECT=mars')
         self.assertNotContains(response, frame.basename)
 
+    def test_target_name_iexact(self):
+        frame = PublicFrameFactory(target_name='NGC 1234')
+        for query in ('NGC 1234', 'ngc 1234', 'nGc 1234'):
+            with self.subTest(query=query):
+                response = self.client.get(reverse('frame-list') + '?target_name_iexact=' + query)
+                self.assertContains(response, frame.basename)
+        # iexact is still an exact match, not a substring one
+        response = self.client.get(reverse('frame-list') + '?target_name_iexact=ngc')
+        self.assertNotContains(response, frame.basename)
+
+    def test_target_name_exact_stays_case_sensitive(self):
+        frame = PublicFrameFactory(target_name='NGC 1234')
+        response = self.client.get(reverse('frame-list') + '?target_name_exact=NGC 1234')
+        self.assertContains(response, frame.basename)
+        response = self.client.get(reverse('frame-list') + '?target_name_exact=ngc 1234')
+        self.assertNotContains(response, frame.basename)
+
     def test_exptime(self):
         frame = PublicFrameFactory(exposure_time=300)
         response = self.client.get(reverse('frame-list') + '?EXPTIME=300')

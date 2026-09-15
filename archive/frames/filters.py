@@ -57,6 +57,7 @@ class FrameFilter(django_filters.FilterSet):
     basename_exact = django_filters.CharFilter(field_name='basename', lookup_expr='exact')
     OBJECT = django_filters.CharFilter(field_name='target_name', lookup_expr='icontains')
     target_name = django_filters.CharFilter(method='target_filter')
+    target_name_iexact = django_filters.CharFilter(method='target_filter_iexact')
     target_name_exact = django_filters.CharFilter(method='target_filter_exact')
     empty_target_name = django_filters.CharFilter(method='empty_target_filter')
     L1PUBDAT = django_filters.DateTimeFilter(field_name='public_date')
@@ -149,6 +150,13 @@ class FrameFilter(django_filters.FilterSet):
         if value:
             target = anyascii(value)
             return queryset.filter(target_name__exact=target)
+        return queryset
+
+    def target_filter_iexact(self, queryset, name, value):
+        # Use the anyascii version of the target name
+        if value:
+            target = anyascii(value)
+            return queryset.filter(target_name__iexact=target)
         return queryset
 
     def empty_target_filter(self, queryset, name, value):
