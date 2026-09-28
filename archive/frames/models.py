@@ -1,6 +1,7 @@
 from archive.frames.utils import get_file_store_path
 from django.utils.functional import cached_property
 from django.db.models import JSONField, Index
+from django.db.models.functions import Upper
 import logging
 import json
 from django.contrib.gis.db import models
@@ -97,6 +98,8 @@ class Frame(models.Model):
     class Meta:
         indexes = [
             Index(fields=["observation_date", "public_date", "site_id", "telescope_id", "instrument_id", "configuration_type", "primary_optical_element", "proposal_id"], name='frames_frame_aggregate'),
+            # Backs the target_name_iexact filter.
+            Index(Upper('target_name'), name='frames_frame_target_upper'),
         ]
         ordering = ['-observation_date']
 

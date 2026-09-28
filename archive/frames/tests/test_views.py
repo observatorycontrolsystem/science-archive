@@ -345,6 +345,23 @@ class TestQueryFiltering(ReplicationTestCase):
         response = self.client.get(reverse('frame-list') + '?OBJECT=mars')
         self.assertNotContains(response, frame.basename)
 
+    def test_target_name_iexact(self):
+        frame = PublicFrameFactory(target_name='NGC 1234')
+        for query in ('NGC 1234', 'ngc 1234', 'nGc 1234'):
+            with self.subTest(query=query):
+                response = self.client.get(reverse('frame-list') + '?target_name_iexact=' + query)
+                self.assertContains(response, frame.basename)
+        # iexact is still an exact match, not a substring one
+        response = self.client.get(reverse('frame-list') + '?target_name_iexact=ngc')
+        self.assertNotContains(response, frame.basename)
+
+    def test_target_name_exact_stays_case_sensitive(self):
+        frame = PublicFrameFactory(target_name='NGC 1234')
+        response = self.client.get(reverse('frame-list') + '?target_name_exact=NGC 1234')
+        self.assertContains(response, frame.basename)
+        response = self.client.get(reverse('frame-list') + '?target_name_exact=ngc 1234')
+        self.assertNotContains(response, frame.basename)
+
     def test_exptime(self):
         frame = PublicFrameFactory(exposure_time=300)
         response = self.client.get(reverse('frame-list') + '?EXPTIME=300')
@@ -487,6 +504,24 @@ class TestQueryFiltering(ReplicationTestCase):
             reverse('frame-list') + '?intersects=POLYGON((-10 -10, -10 20, 20 20, 20 0, -10 -10))'
         )
         self.assertContains(response, frame.basename)
+
+    def test_area_intersects_point(self):
+        frame = PublicFrameFactory.create(
+            area='POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))'
+        )
+        response = self.client.get(reverse('frame-list') + '?intersects=POINT(5 5)')
+        self.assertContains(response, frame.basename)
+        response = self.client.get(reverse('frame-list') + '?intersects=POINT(20 20)')
+        self.assertNotContains(response, frame.basename)
+
+    def test_area_malformed_geometry_is_a_bad_request(self):
+        # Unrecognized input raises ValueError out of GEOSGeometry rather than GEOSException,
+        # so it has to be caught explicitly to avoid a 500
+        for query in ('covers=garbage', 'covers=POINT(banana)', 'intersects=garbage',
+                      'intersects=POINT(banana)', 'intersects=POLYGON((0 0, 0 1, 1 1))'):
+            with self.subTest(query=query):
+                response = self.client.get('{0}?{1}'.format(reverse('frame-list'), query))
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_rlevel(self):
         frame = PublicFrameFactory(reduction_level=10)

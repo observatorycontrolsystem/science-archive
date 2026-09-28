@@ -57,6 +57,7 @@ class FrameFilter(django_filters.FilterSet):
     basename_exact = django_filters.CharFilter(field_name='basename', lookup_expr='exact')
     OBJECT = django_filters.CharFilter(field_name='target_name', lookup_expr='icontains')
     target_name = django_filters.CharFilter(method='target_filter')
+    target_name_iexact = django_filters.CharFilter(method='target_filter_iexact')
     target_name_exact = django_filters.CharFilter(method='target_filter_exact')
     empty_target_name = django_filters.CharFilter(method='empty_target_filter')
     L1PUBDAT = django_filters.DateTimeFilter(field_name='public_date')
@@ -96,17 +97,22 @@ class FrameFilter(django_filters.FilterSet):
     intersects = django_filters.CharFilter(method='intersects_filter')
 
     def covers_filter(self, queryset, name, value):
+        # GEOSGeometry raises GEOSException for input that parses as WKT but is not a valid
+        # geometry, and ValueError for input it cannot recognize as WKT, HEXEWKB or GeoJSON
         try:
             geo = GEOSGeometry(value)
-        except GEOSException:
+        except Exception:
             raise ValidationError("Error with covers query: Point must be specified with exact format 'POINT(RA DEC)'")
         return queryset.filter(area__covers=geo)
 
     def intersects_filter(self, queryset, name, value):
         try:
             geo = GEOSGeometry(value)
-        except GEOSException:
-            raise ValidationError("Error with intersects query: Point must be specified with exact format 'POINT(RA DEC)'")
+        except Exception:
+            raise ValidationError(
+                "Error with intersects query: must be a valid geometry, for example "
+                "'POINT(RA DEC)' or 'POLYGON((RA DEC, RA DEC, RA DEC, RA DEC))'"
+            )
         return queryset.filter(area__intersects=geo)
 
     def public_filter(self, queryset, name, value):
@@ -144,6 +150,13 @@ class FrameFilter(django_filters.FilterSet):
         if value:
             target = anyascii(value)
             return queryset.filter(target_name__exact=target)
+        return queryset
+
+    def target_filter_iexact(self, queryset, name, value):
+        # Use the anyascii version of the target name
+        if value:
+            target = anyascii(value)
+            return queryset.filter(target_name__iexact=target)
         return queryset
 
     def empty_target_filter(self, queryset, name, value):
