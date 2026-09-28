@@ -4,7 +4,7 @@
 apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 images:
-- digest: sha256:50b14baadc43df55d92ff675c8e43e5e7244358d6b88a8ba66ce13611046a2f2
+- digest: sha256:b0bd002ac733e806320e24a184f328bbd75dba7e8ba7ea76488b3f4f7f4a5154
   name: science-archive
   newName: ghcr.io/observatorycontrolsystem/science-archive/science-archive
-  newTag: v2.7.8
+  newTag: v2.7.9
