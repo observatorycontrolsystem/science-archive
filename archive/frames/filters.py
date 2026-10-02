@@ -94,6 +94,7 @@ class FrameFilter(django_filters.FilterSet):
         label='Include Configuration Types',
     )
     exclude_calibrations = django_filters.BooleanFilter(field_name='exclude_calibrations', method='exclude_calibrations_filter')
+    processed = django_filters.BooleanFilter(field_name='processed', method='processed_filter')
     intersects = django_filters.CharFilter(method='intersects_filter')
 
     def covers_filter(self, queryset, name, value):
@@ -129,7 +130,13 @@ class FrameFilter(django_filters.FilterSet):
         if value:
             return queryset.filter(configuration_type__in=SCIENCE_CONFIGURATION_TYPES)
         return queryset
-    
+
+    def processed_filter(self, queryset, name, value):
+        # Raw frames are reduction level 0, every processed level is above that
+        if value:
+            return queryset.filter(reduction_level__gt=0)
+        return queryset.filter(reduction_level=0)
+
     def submitter_filter(self, queryset, name, value):
         # looks in a proposal for frames by a user in it's headers
         if value:
