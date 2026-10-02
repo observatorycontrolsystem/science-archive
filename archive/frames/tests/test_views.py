@@ -469,6 +469,27 @@ class TestQueryFiltering(ReplicationTestCase):
         self.assertContains(response, science_frame.basename)
         self.assertContains(response, bias_frame.basename)
 
+    def test_processed_filter(self):
+        raw_frame = PublicFrameFactory(reduction_level=0)
+        processed_frames = [PublicFrameFactory(reduction_level=level) for level in (11, 91)]
+
+        for false_string in ['false', 'False', '0']:
+            response = self.client.get(reverse('frame-list') + '?processed={}'.format(false_string))
+            self.assertContains(response, raw_frame.basename)
+            for frame in processed_frames:
+                self.assertNotContains(response, frame.basename)
+
+        for true_string in ['true', 'True', '1']:
+            response = self.client.get(reverse('frame-list') + '?processed={}'.format(true_string))
+            self.assertNotContains(response, raw_frame.basename)
+            for frame in processed_frames:
+                self.assertContains(response, frame.basename)
+
+        response = self.client.get(reverse('frame-list'))
+        self.assertContains(response, raw_frame.basename)
+        for frame in processed_frames:
+            self.assertContains(response, frame.basename)
+
 
     def test_area_covers(self):
         frame = PublicFrameFactory.create(
