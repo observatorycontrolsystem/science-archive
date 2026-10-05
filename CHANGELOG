@@ -1,3 +1,7 @@
+2.8.2
+2026-10-05
+Added a `processed` filter param to get either all processed reduction levels if true, or raw if false, or both if left out.
+
 2.8.1
 2026-09-28
 Added an index for target_name upper, backing a new filter for case-insensitive target name lookups (`target_name_iexact`)
