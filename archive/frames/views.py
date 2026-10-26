@@ -543,9 +543,10 @@ class ThumbnailViewSet(viewsets.ModelViewSet):
             # Remove the version set as this version does not correspond to the frame object, but rather the thumbnail.
             del frame_serializer.validated_data['version_set']
 
-            # Check if the frame already exists by basename, if not, create it.
+            # Create the frame if it does not exist. A frame without versions was itself created from
+            # thumbnail metadata, so refresh it and its headers from this (newer) thumbnail's metadata.
             frame = Frame.objects.filter(basename=request.data['frame_basename']).first()
-            if frame is None:
+            if frame is None or not frame.version_set.exists():
                 frame = frame_serializer.save(basename=request.data['frame_basename'])
 
             thumbnail = thumbnail_serializer.save(frame=frame)

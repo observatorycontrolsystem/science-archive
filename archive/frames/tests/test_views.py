@@ -1174,6 +1174,37 @@ class TestThumbnailPost(ReplicationTestCase):
         self.mock_archive_fits_publish.assert_called_once()
 
 
+    def test_thumbnail_repost_refreshes_frame_headers(self):
+        self.client.post(
+            reverse('thumbnail-list'), json.dumps(self.single_thumbnail_payload), content_type='application/json'
+        )
+        self.single_thumbnail_payload['headers']['NCOMBINE'] = 7
+        self.single_thumbnail_payload['version_set'][0]['key'] = VersionFactory.key.fuzz()
+
+        response = self.client.post(
+            reverse('thumbnail-list'), json.dumps(self.single_thumbnail_payload), content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.mock_archive_fits_publish.assert_not_called()
+        frame = Frame.objects.get(basename=self.single_thumbnail_payload['frame_basename'])
+        self.assertEqual(frame.headers.data['NCOMBINE'], 7)
+        self.assertEqual(frame.thumbnails.count(), 1)
+
+    def test_thumbnail_post_does_not_overwrite_frame_with_versions(self):
+        self.client.post(
+            reverse('frame-list'), json.dumps(self.single_frame_payload), content_type='application/json'
+        )
+        self.single_thumbnail_payload['headers']['NCOMBINE'] = 7
+
+        response = self.client.post(
+            reverse('thumbnail-list'), json.dumps(self.single_thumbnail_payload), content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 201)
+        frame = Frame.objects.get(basename=self.single_thumbnail_payload['frame_basename'])
+        self.assertNotIn('NCOMBINE', frame.headers.data)
+
     def test_thumbnail_post_with_no_size(self):
         del self.single_thumbnail_payload['size']
         response = self.client.post(
