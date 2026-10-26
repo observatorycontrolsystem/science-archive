@@ -1,3 +1,7 @@
+2.8.3
+2026-10-26
+Re-posting a thumbnail for a frame that has no versions now refreshes that frame and its headers from the thumbnail metadata, so header-only preview frames (e.g. smartstack previews) report up-to-date values such as `NCOMBINE`.
+
 2.8.2
 2026-10-05
 Added a `processed` filter param to get either all processed reduction levels if true, or raw if false, or both if left out.
